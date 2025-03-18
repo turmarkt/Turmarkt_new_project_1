@@ -137,6 +137,11 @@ export default function Home() {
             >
               <Card className="bg-gray-900 border-gray-800">
                 <CardContent className="p-4 space-y-4">
+                  {/* Kategori Yolu */}
+                  <div className="text-xs text-gray-400 mb-2">
+                    {["Trendyol", ...product.categories].join(" / ")}
+                  </div>
+
                   {/* Başlık ve Fiyat */}
                   <div className="space-y-3 border-b border-gray-800 pb-4">
                     <h2 className="text-lg font-semibold">{product.title}</h2>
