@@ -8,6 +8,102 @@ import fetch from "node-fetch";
 import { TrendyolScrapingError, URLValidationError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
 
+async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<string, string>> {
+  const attributes: Record<string, string> = {};
+
+  try {
+    // 1. Schema.org verilerinden özellikleri al
+    const schemaData = $('script[type="application/ld+json"]').first().html();
+    if (schemaData) {
+      try {
+        const schema = JSON.parse(schemaData);
+        if (schema.additionalProperty) {
+          schema.additionalProperty.forEach((prop: any) => {
+            if (prop.name && prop.value) {
+              attributes[prop.name] = prop.value;
+            }
+          });
+        }
+      } catch (e) {
+        console.error('Schema parse error:', e);
+      }
+    }
+
+    // 2. Öne Çıkan Özellikler bölümünden özellikleri al
+    $('.featured-attributes-title, .product-feature-title').each((_, titleEl) => {
+      const title = $(titleEl).text().trim();
+      if (title.includes('Öne Çıkan Özellikler')) {
+        const container = $(titleEl).next();
+        container.find('li, .featured-attributes-item, .product-feature-item').each((_, item) => {
+          const label = $(item).find('.featured-attributes-label, .product-feature-label').text().trim();
+          const value = $(item).find('.featured-attributes-value, .product-feature-value').text().trim();
+          if (label && value) {
+            attributes[label] = value;
+          }
+        });
+      }
+    });
+
+    // 3. Ürün detay tablosundan özellikleri al
+    $('.detail-attr-container tr, .product-feature-table tr').each((_, row) => {
+      const label = $(row).find('th, td:first-child').text().trim();
+      const value = $(row).find('td:last-child').text().trim();
+      if (label && value) {
+        attributes[label] = value;
+      }
+    });
+
+    // 4. Alternatif özellik listesinden al
+    $('.product-feature-list li, .detail-attr-item').each((_, item) => {
+      const text = $(item).text().trim();
+      const [label, value] = text.split(':').map(s => s.trim());
+      if (label && value) {
+        attributes[label] = value;
+      }
+    });
+
+    // 5. Özel özellik selektörlerini kontrol et
+    const specialAttributes = {
+      'Materyal': ['Materyal', 'Kumaş', 'Material'],
+      'Parça Sayısı': ['Parça Sayısı', 'Adet'],
+      'Renk': ['Renk', 'Color'],
+      'Desen': ['Desen', 'Pattern'],
+      'Yıkama Talimatı': ['Yıkama Talimatı', 'Yıkama'],
+      'Menşei': ['Menşei', 'Üretim Yeri', 'Origin']
+    };
+
+    for (const [key, alternatives] of Object.entries(specialAttributes)) {
+      if (!attributes[key]) {
+        for (const alt of alternatives) {
+          const selector = `[data-attribute="${alt}"], [data-property="${alt}"], .detail-attr-item:contains("${alt}")`;
+          $(selector).each((_, el) => {
+            const value = $(el).find('.detail-attr-value, .property-value').text().trim();
+            if (value) {
+              attributes[key] = value;
+            }
+          });
+        }
+      }
+    }
+
+    // 6. Diğer özellik alanlarını kontrol et
+    $('.detail-attr-item, .product-properties li').each((_, item) => {
+      const label = $(item).find('.detail-attr-label, .property-label').text().trim();
+      const value = $(item).find('.detail-attr-value, .property-value').text().trim();
+      if (label && value) {
+        attributes[label] = value;
+      }
+    });
+
+    console.log("Bulunan özellikler:", attributes);
+    return attributes;
+
+  } catch (error) {
+    console.error("Özellik çekme hatası:", error);
+    return {};
+  }
+}
+
 async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]> {
   let categories: string[] = [];
 
@@ -58,69 +154,6 @@ async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]
   }
 }
 
-
-async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<string, string>> {
-  const attributes: Record<string, string> = {};
-
-  try {
-    // 1. Öne Çıkan Özellikler bölümünü bul
-    $('.featured-attributes-title, .product-feature-title').each((_, titleEl) => {
-      const title = $(titleEl).text().trim();
-      if (title.includes('Öne Çıkan Özellikler')) {
-        const container = $(titleEl).next();
-        container.find('li, .featured-attributes-item, .product-feature-item').each((_, item) => {
-          const label = $(item).find('.featured-attributes-label, .product-feature-label').text().trim();
-          const value = $(item).find('.featured-attributes-value, .product-feature-value').text().trim();
-          if (label && value) {
-            attributes[label] = value;
-          }
-        });
-      }
-    });
-
-    // 2. Eğer öne çıkan özellikler bulunamazsa, tüm özellik tablosunu tara
-    if (Object.keys(attributes).length === 0) {
-      $('.detail-attr-container tr, .product-feature-table tr').each((_, row) => {
-        const label = $(row).find('th, td:first-child').text().trim();
-        const value = $(row).find('td:last-child').text().trim();
-        if (label && value) {
-          attributes[label] = value;
-        }
-      });
-    }
-
-    // 3. Özel özellik listelerini kontrol et
-    const specialAttributes = {
-      'Materyal': ['Materyal', 'Kumaş', 'Material'],
-      'Parça Sayısı': ['Parça Sayısı', 'Adet'],
-      'Renk': ['Renk', 'Color'],
-      'Desen': ['Desen', 'Pattern'],
-      'Yıkama Talimatı': ['Yıkama Talimatı', 'Yıkama'],
-      'Menşei': ['Menşei', 'Üretim Yeri', 'Origin']
-    };
-
-    for (const [key, alternatives] of Object.entries(specialAttributes)) {
-      if (!attributes[key]) {
-        for (const alt of alternatives) {
-          const selector = `[data-attribute="${alt}"], [data-property="${alt}"], .detail-attr-item:contains("${alt}")`;
-          $(selector).each((_, el) => {
-            const value = $(el).find('.detail-attr-value, .property-value').text().trim();
-            if (value) {
-              attributes[key] = value;
-            }
-          });
-        }
-      }
-    }
-
-    console.log("Bulunan özellikler:", attributes);
-    return attributes;
-
-  } catch (error) {
-    console.error("Özellik çekme hatası:", error);
-    return {};
-  }
-}
 
 // Routes düzenlemesi
 export async function registerRoutes(app: Express) {
