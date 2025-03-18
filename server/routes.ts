@@ -254,6 +254,80 @@ async function scrapePrice($: cheerio.CheerioAPI): Promise<{ price: string, base
   }
 }
 
+//Varyant çekme fonksiyonu
+async function scrapeVariants($: cheerio.CheerioAPI, schema: any): Promise<{ sizes: string[], colors: string[] }> {
+  const variants = {
+    sizes: [] as string[],
+    colors: [] as string[]
+  };
+
+  try {
+    console.log("Varyant çekme başladı");
+
+    // 1. Beden varyantlarını çek
+    const sizeSelectors = [
+      '.sp-itm:not(.so)',                    // Ana beden seçici
+      '.variant-list-item:not(.disabled)',   // Alternatif beden seçici
+      '.size-variant-wrapper:not(.disabled)', // Boyut varyant seçici
+      '.v2-size-value'                       // v2 beden değeri seçici
+    ];
+
+    for (const selector of sizeSelectors) {
+      const sizes = $(selector)
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter(Boolean);
+
+      if (sizes.length > 0) {
+        console.log(`${selector} den bulunan bedenler:`, sizes);
+        variants.sizes = sizes;
+        break;
+      }
+    }
+
+    // 2. Renk varyantlarını çek
+    const colorSelectors = [
+      '.slc-txt',                         // Ana renk seçici
+      '.color-variant-wrapper',           // Renk varyant seçici
+      '.variant-property-list span',      // Varyant özellik listesi
+      '[data-pk="color"] .variant-list-item' // Renk data attribute
+    ];
+
+    for (const selector of colorSelectors) {
+      const colors = $(selector)
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter(Boolean);
+
+      if (colors.length > 0) {
+        console.log(`${selector} den bulunan renkler:`, colors);
+        variants.colors = colors;
+        break;
+      }
+    }
+
+    // 3. Schema.org verilerinden varyantları kontrol et
+    if (schema.hasVariant) {
+      console.log("Schema.org varyant verisi bulundu");
+      schema.hasVariant.forEach((variant: any) => {
+        if (variant.size && !variants.sizes.includes(variant.size)) {
+          variants.sizes.push(variant.size);
+        }
+        if (variant.color && !variants.colors.includes(variant.color)) {
+          variants.colors.push(variant.color);
+        }
+      });
+    }
+
+    console.log("Final varyant verileri:", variants);
+    return variants;
+
+  } catch (error) {
+    console.error("Varyant çekme hatası:", error);
+    return variants;
+  }
+}
+
 // Ana scrape fonksiyonunda fiyat çekme kısmını güncelleyelim
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
@@ -350,36 +424,8 @@ export async function registerRoutes(app: Express) {
       }
 
       // Varyantları çek
-      const variants = {
-        sizes: [] as string[],
-        colors: [] as string[]
-      };
+      const variants = await scrapeVariants($, schema);
 
-      if (schema.hasVariant) {
-        schema.hasVariant.forEach((variant: any) => {
-          if (variant.size && !variants.sizes.includes(variant.size)) {
-            variants.sizes.push(variant.size);
-          }
-          if (variant.color && !variants.colors.includes(variant.color)) {
-            variants.colors.push(variant.color);
-          }
-        });
-      }
-
-      // DOM'dan varyant bilgisi
-      if (variants.sizes.length === 0) {
-        variants.sizes = $(".sp-itm:not(.so)")
-          .map((_, el) => $(el).text().trim())
-          .get()
-          .filter(Boolean);
-      }
-
-      if (variants.colors.length === 0) {
-        variants.colors = $(".slc-txt")
-          .map((_, el) => $(el).text().trim())
-          .get()
-          .filter(Boolean);
-      }
 
       const product: InsertProduct = {
         url,
@@ -463,30 +509,32 @@ export async function registerRoutes(app: Express) {
 
     const records = [mainRecord];
 
-    // Ana ürünün ek görselleri
-    for (let i = 1; i < product.images.length; i++) {
-      records.push({
-        'Handle': handle,
-        'Title': product.title,
-        'Image Src': product.images[i],
-        'Image Position': (i + 1).toString(),
-        'Image alt text': `${product.title} - Görsel ${i + 1}`,
-        'Status': 'active'
-      });
-    }
-
-    // Varyant kayıtları
+    // Varyant kayıtları - her bir varyant için tüm gerekli alanları ekle
     if (product.variants.sizes.length > 0) {
       for (let i = 1; i < product.variants.sizes.length; i++) {
         records.push({
           'Handle': handle,
+          'Title': '',
+          'Body (HTML)': mainRecord['Body (HTML)'],
+          'Vendor': mainRecord['Vendor'],
+          'Product Category': mainRecord['Product Category'],
+          'Type': mainRecord['Type'],
+          'Tags': mainRecord['Tags'],
+          'Published': mainRecord['Published'],
+          'Status': mainRecord['Status'],
           'Option1 Name': 'Size',
           'Option1 Value': product.variants.sizes[i],
+          'Option2 Name': mainRecord['Option2 Name'],
+          'Option2 Value': mainRecord['Option2 Value'],
+          'Option3 Name': '',
+          'Option3 Value': '',
           'SKU': `${handle}-size-${i}`,
           'Price': product.price,
           'Inventory policy': 'deny',
           'Inventory quantity': '100',
-          'Requires shipping': 'TRUE'
+          'Requires shipping': 'TRUE',
+          'Weight': mainRecord['Weight'],
+          'Weight unit': mainRecord['Weight unit']
         });
       }
     }
@@ -496,14 +544,29 @@ export async function registerRoutes(app: Express) {
         const variantImage = product.images[i] || product.images[0];
         records.push({
           'Handle': handle,
+          'Title': '',
+          'Body (HTML)': mainRecord['Body (HTML)'],
+          'Vendor': mainRecord['Vendor'],
+          'Product Category': mainRecord['Product Category'],
+          'Type': mainRecord['Type'],
+          'Tags': mainRecord['Tags'],
+          'Published': mainRecord['Published'],
+          'Status': mainRecord['Status'],
+          'Option1 Name': mainRecord['Option1 Name'],
+          'Option1 Value': mainRecord['Option1 Value'],
           'Option2 Name': 'Color',
           'Option2 Value': product.variants.colors[i],
+          'Option3 Name': '',
+          'Option3 Value': '',
           'SKU': `${handle}-color-${i}`,
           'Price': product.price,
           'Inventory policy': 'deny',
           'Inventory quantity': '100',
           'Requires shipping': 'TRUE',
+          'Weight': mainRecord['Weight'],
+          'Weight unit': mainRecord['Weight unit'],
           'Image Src': variantImage,
+          'Image Position': (i + 1).toString(),
           'Variant Image': variantImage
         });
       }
@@ -522,14 +585,13 @@ export async function registerRoutes(app: Express) {
         {id: 'Tags', title: 'Tags'},
         {id: 'Published', title: 'Published'},
         {id: 'Status', title: 'Status'},
-        {id: 'SKU', title: 'SKU'},
-        {id: 'Barcode', title: 'Barcode'},
         {id: 'Option1 Name', title: 'Option1 Name'},
         {id: 'Option1 Value', title: 'Option1 Value'},
         {id: 'Option2 Name', title: 'Option2 Name'},
         {id: 'Option2 Value', title: 'Option2 Value'},
         {id: 'Option3 Name', title: 'Option3 Name'},
         {id: 'Option3 Value', title: 'Option3 Value'},
+        {id: 'SKU', title: 'SKU'},
         {id: 'Price', title: 'Price'},
         {id: 'Inventory policy', title: 'Inventory policy'},
         {id: 'Inventory quantity', title: 'Inventory quantity'},
