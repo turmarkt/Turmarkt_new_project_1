@@ -176,31 +176,26 @@ async function scrapePrice($: cheerio.CheerioAPI): Promise<{ price: string, base
     if (schemaData) {
       const schema = JSON.parse(schemaData);
       if (schema.offers?.price) {
-        return {
-          price: schema.offers.price.toString(),
-          basePrice: schema.offers.price.toString()
-        };
+        const basePrice = schema.offers.price.toString();
+        const price = (parseFloat(basePrice) * 1.15).toFixed(2); // %15 kar marjı
+        return { price, basePrice };
       }
     }
 
     // 2. DOM'dan fiyat bilgisini al
     const priceEl = $('.prc-dsc, .product-price-container .current-price');
     if (priceEl.length > 0) {
-      const price = priceEl.first().text().trim().replace('TL', '').trim();
-      return {
-        price: price,
-        basePrice: price
-      };
+      const basePrice = priceEl.first().text().trim().replace('TL', '').trim();
+      const price = (parseFloat(basePrice) * 1.15).toFixed(2); // %15 kar marjı
+      return { price, basePrice };
     }
 
     // 3. Alternatif fiyat selektörleri
     const altPriceEl = $('.product-price, .discounted-price');
     if (altPriceEl.length > 0) {
-      const price = altPriceEl.first().text().trim().replace('TL', '').trim();
-      return {
-        price: price,
-        basePrice: price
-      };
+      const basePrice = altPriceEl.first().text().trim().replace('TL', '').trim();
+      const price = (parseFloat(basePrice) * 1.15).toFixed(2); // %15 kar marjı
+      return { price, basePrice };
     }
 
     throw new Error('Fiyat bilgisi bulunamadı');
@@ -341,7 +336,7 @@ export async function registerRoutes(app: Express) {
         url,
         title,
         description,
-        price, // Artık kar marjı eklemiyoruz
+        price, 
         basePrice,
         images,
         variants,
