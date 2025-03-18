@@ -33,5 +33,13 @@ export type InsertProduct = z.infer<typeof insertProductSchema>;
 export type Product = typeof products.$inferSelect;
 
 export const urlSchema = z.object({
-  url: z.string().url().startsWith("https://www.trendyol.com/")
+  url: z.string().refine((url) => {
+    try {
+      const parsedUrl = new URL(url);
+      return parsedUrl.hostname === "www.trendyol.com" && 
+             parsedUrl.pathname.includes("/p-");
+    } catch {
+      return false;
+    }
+  }, "Geçerli bir Trendyol ürün URL'si giriniz")
 });
