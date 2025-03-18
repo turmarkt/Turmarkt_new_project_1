@@ -4,7 +4,6 @@ import { storage } from "./storage";
 import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct, type Product } from "@shared/schema";
 import { ZodError } from "zod";
-import { createObjectCsvWriter } from "csv-writer";
 import fetch from "node-fetch";
 import { TrendyolScrapingError, URLValidationError, ProductDataError, handleError } from "./errors";
 
@@ -59,203 +58,84 @@ async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]
 }
 
 
-// Ürün özelliklerini çekme fonksiyonu
 async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<string, string>> {
   const attributes: Record<string, string> = {};
 
   try {
-    // 1. Ana özellik tablosundan özellikleri al
-    $(".detail-attr-container tr, .product-feature-table tr").each((_, row) => {
-      const label = $(row).find("th, td:first-child").text().trim();
-      const value = $(row).find("td:last-child").text().trim();
-      if (label && value) {
-        attributes[label] = value;
+    // 1. Tüm olası özellik selektörleri
+    const selectors = [
+      '.detail-attr-container tr',
+      '.product-feature-table tr',
+      '.product-feature-list li',
+      '.detail-attr-item',
+      '[data-drroot="properties"] .detail-attr-item',
+      '.product-properties li',
+      '.detail-border-bottom tr',
+      '.product-details tr'
+    ];
+
+    // 2. Her bir selektörü dene
+    for (const selector of selectors) {
+      $(selector).each((_, element) => {
+        let label, value;
+
+        // 2.1 Tablo yapısı için
+        if ($(element).find('th, td').length > 0) {
+          label = $(element).find('th, td:first-child').text().trim();
+          value = $(element).find('td:last-child').text().trim();
+        }
+        // 2.2 Liste yapısı için
+        else {
+          const text = $(element).text().trim();
+          [label, value] = text.split(':').map(s => s.trim());
+        }
+
+        // 2.3 Özel etiket yapıları için
+        if (!value && $(element).find('.detail-attr-label, .property-label').length > 0) {
+          label = $(element).find('.detail-attr-label, .property-label').text().trim();
+          value = $(element).find('.detail-attr-value, .property-value').text().trim();
+        }
+
+        // 2.4 Geçerli değerleri ekle
+        if (label && value && !attributes[label]) {
+          attributes[label] = value;
+        }
+      });
+
+      // Eğer özellik bulduysa döngüyü bitir
+      if (Object.keys(attributes).length > 0) {
+        break;
       }
-    });
+    }
 
-    // 2. Alternatif özellik listesinden al
+    // 3. Ek özellik alanlarını kontrol et
     if (Object.keys(attributes).length === 0) {
-      $(".product-feature-list li, .detail-attr-item").each((_, item) => {
-        const text = $(item).text().trim();
-        const [label, value] = text.split(':').map(s => s.trim());
-        if (label && value) {
-          attributes[label] = value;
+      const additionalProps = $('script[type="application/ld+json"]').map((_, el) => {
+        try {
+          const schema = JSON.parse($(el).html() || '{}');
+          if (schema.additionalProperty) {
+            return schema.additionalProperty;
+          }
+        } catch (e) {
+          console.error('JSON parse error:', e);
+        }
+        return null;
+      }).get().filter(Boolean);
+
+      additionalProps.forEach((prop: any) => {
+        if (prop.name && prop.value) {
+          attributes[prop.name] = prop.value;
         }
       });
     }
 
-    // 3. DOM'daki diğer özellik alanlarını kontrol et
-    if (Object.keys(attributes).length === 0) {
-      $("[data-drroot='properties'] .detail-attr-item, .product-properties li").each((_, item) => {
-        const label = $(item).find(".detail-attr-label, .property-label").text().trim();
-        const value = $(item).find(".detail-attr-value, .property-value").text().trim();
-        if (label && value) {
-          attributes[label] = value;
-        }
-      });
-    }
-
+    console.log("Bulunan özellikler:", attributes);
     return attributes;
+
   } catch (error) {
     console.error("Özellik çekme hatası:", error);
     return {};
   }
-}
-
-async function exportToShopify(product: Product) {
-  const handle = product.title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^-|-$/g, '');
-
-  // Ana ürün kaydı
-  const mainRecord = {
-    'Title': product.title,
-    'URL handle': handle,
-    'Description': Object.entries(product.attributes)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('\n'),
-    'Vendor': product.brand || '',
-    'Product category': 'Apparel & Accessories > Clothing',
-    'Type': 'Clothing',
-    'Tags': product.categories.join(','),
-    'Published on online store': 'TRUE',
-    'Status': 'active',
-    'SKU': `${handle}-1`,
-    'Barcode': '',
-    'Option1 Name': product.variants.sizes.length > 0 ? 'Size' : '',
-    'Option1 Value': product.variants.sizes[0] || '',
-    'Option2 Name': product.variants.colors.length > 0 ? 'Color' : '',
-    'Option2 Value': product.variants.colors[0] || '',
-    'Option3 Name': '',
-    'Option3 Value': '',
-    'Price': product.price,
-    'Charge tax': 'TRUE',
-    'Tax code': '',
-    'Inventory tracker': 'shopify',
-    'Inventory quantity': '100',
-    'Inventory policy': 'deny',
-    'Continue selling when out of stock': 'deny',
-    'Weight value (grams)': '500',
-    'Weight unit for display': 'g',
-    'Requires shipping': 'TRUE',
-    'Fulfillment service': 'manual',
-    'Product image URL': product.images[0] || '',
-    'Image position': '1',
-    'Image alt text': product.title,
-    'Variant image URL': '',
-    'Gift card': 'FALSE',
-    'SEO title': product.title,
-    'SEO description': Object.entries(product.attributes)
-      .map(([key, value]) => `${key}: ${value}`)
-      .join('. ').substring(0, 320),
-    'Google Shopping / Google product category': 'Apparel & Accessories > Clothing',
-    'Google Shopping / Gender': 'Unisex',
-    'Google Shopping / Age group': 'Adult',
-    'Google Shopping / MPN': `${handle}-${Date.now()}`,
-    'Google Shopping / AdWords Grouping': '',
-    'Google Shopping / AdWords labels': '',
-    'Google Shopping / Condition': 'new',
-    'Google Shopping / Custom product': 'FALSE'
-  };
-
-  const records = [mainRecord];
-
-  // Varyant kayıtları
-  if (product.variants.sizes.length > 0) {
-    for (let i = 1; i < product.variants.sizes.length; i++) {
-      records.push({
-        'URL handle': handle,
-        'Title': '',
-        'Option1 Name': mainRecord['Option1 Name'],
-        'Option1 Value': product.variants.sizes[i],
-        'SKU': `${handle}-size-${i}`,
-        'Price': product.price,
-        'Inventory quantity': '100',
-        'Inventory policy': 'deny',
-        'Charge tax': 'TRUE',
-        'Requires shipping': 'TRUE',
-        'Inventory tracker': 'shopify',
-        'Fulfillment service': 'manual'
-      });
-    }
-  }
-
-  if (product.variants.colors.length > 0) {
-    for (let i = 1; i < product.variants.colors.length; i++) {
-      const variantImage = product.images[i] || product.images[0];
-      records.push({
-        'URL handle': handle,
-        'Title': '',
-        'Option2 Name': mainRecord['Option2 Name'],
-        'Option2 Value': product.variants.colors[i],
-        'SKU': `${handle}-color-${i}`,
-        'Price': product.price,
-        'Inventory quantity': '100',
-        'Inventory policy': 'deny',
-        'Charge tax': 'TRUE',
-        'Requires shipping': 'TRUE',
-        'Inventory tracker': 'shopify',
-        'Fulfillment service': 'manual',
-        'Product image URL': variantImage,
-        'Variant image URL': variantImage
-      });
-    }
-  }
-
-  // CSV başlıkları
-  const csvWriter = createObjectCsvWriter({
-    path: 'products.csv',
-    header: [
-      {id: 'Title', title: 'Title'},
-      {id: 'URL handle', title: 'URL handle'},
-      {id: 'Description', title: 'Description'},
-      {id: 'Vendor', title: 'Vendor'},
-      {id: 'Product category', title: 'Product category'},
-      {id: 'Type', title: 'Type'},
-      {id: 'Tags', title: 'Tags'},
-      {id: 'Published on online store', title: 'Published on online store'},
-      {id: 'Status', title: 'Status'},
-      {id: 'SKU', title: 'SKU'},
-      {id: 'Barcode', title: 'Barcode'},
-      {id: 'Option1 Name', title: 'Option1 Name'},
-      {id: 'Option1 Value', title: 'Option1 Value'},
-      {id: 'Option2 Name', title: 'Option2 Name'},
-      {id: 'Option2 Value', title: 'Option2 Value'},
-      {id: 'Option3 Name', title: 'Option3 Name'},
-      {id: 'Option3 Value', title: 'Option3 Value'},
-      {id: 'Price', title: 'Price'},
-      {id: 'Charge tax', title: 'Charge tax'},
-      {id: 'Tax code', title: 'Tax code'},
-      {id: 'Inventory tracker', title: 'Inventory tracker'},
-      {id: 'Inventory quantity', title: 'Inventory quantity'},
-      {id: 'Inventory policy', title: 'Inventory policy'},
-      {id: 'Continue selling when out of stock', title: 'Continue selling when out of stock'},
-      {id: 'Weight value (grams)', title: 'Weight value (grams)'},
-      {id: 'Weight unit for display', title: 'Weight unit for display'},
-      {id: 'Requires shipping', title: 'Requires shipping'},
-      {id: 'Fulfillment service', title: 'Fulfillment service'},
-      {id: 'Product image URL', title: 'Product image URL'},
-      {id: 'Image position', title: 'Image position'},
-      {id: 'Image alt text', title: 'Image alt text'},
-      {id: 'Variant image URL', title: 'Variant image URL'},
-      {id: 'Gift card', title: 'Gift card'},
-      {id: 'SEO title', title: 'SEO title'},
-      {id: 'SEO description', title: 'SEO description'},
-      {id: 'Google Shopping / Google product category', title: 'Google Shopping / Google product category'},
-      {id: 'Google Shopping / Gender', title: 'Google Shopping / Gender'},
-      {id: 'Google Shopping / Age group', title: 'Google Shopping / Age group'},
-      {id: 'Google Shopping / MPN', title: 'Google Shopping / MPN'},
-      {id: 'Google Shopping / AdWords Grouping', title: 'Google Shopping / AdWords Grouping'},
-      {id: 'Google Shopping / AdWords labels', title: 'Google Shopping / AdWords labels'},
-      {id: 'Google Shopping / Condition', title: 'Google Shopping / Condition'},
-      {id: 'Google Shopping / Custom product', title: 'Google Shopping / Custom product'}
-    ]
-  });
-
-  await csvWriter.writeRecords(records);
-  return 'products.csv';
 }
 
 // Routes düzenlemesi
@@ -475,25 +355,6 @@ export async function registerRoutes(app: Express) {
 
     } catch (error) {
       console.error("Hata oluştu:", error);
-      const { status, message, details } = handleError(error);
-      res.status(status).json({ message, details });
-    }
-  });
-
-  app.post("/api/export", async (req, res) => {
-    try {
-      console.log("CSV export başlatıldı");
-      const { product } = req.body;
-
-      if (!product) {
-        throw new ProductDataError("Ürün verisi bulunamadı", "product");
-      }
-
-      const csvFile = await exportToShopify(product);
-      res.download(csvFile);
-
-    } catch (error) {
-      console.error("CSV export hatası:", error);
       const { status, message, details } = handleError(error);
       res.status(status).json({ message, details });
     }

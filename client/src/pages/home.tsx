@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Tag, Package, ArrowRight, FileText } from "lucide-react";
+import { Loader2, Package, ArrowRight, FileText } from "lucide-react";
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
@@ -153,55 +153,13 @@ export default function Home() {
                       <h3 className="text-xs font-semibold text-gray-400">Ürün Özellikleri</h3>
                     </div>
                     <div className="bg-gray-800/50 rounded p-3">
-                      <div className="space-y-2">
+                      <div className="grid grid-cols-1 gap-2">
                         {Object.entries(product.attributes).map(([key, value]) => (
-                          <div key={key} className="flex text-xs">
-                            <span className="text-gray-400 w-1/2">{key}</span>
-                            <span className="text-gray-300 w-1/2">{value as string}</span>
+                          <div key={key} className="flex items-center py-2 border-b border-gray-700/50 last:border-0">
+                            <span className="text-xs text-gray-400 w-1/3 font-medium">{key}</span>
+                            <span className="text-xs text-gray-300 w-2/3">{value as string}</span>
                           </div>
                         ))}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* CSV Önizleme */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-gray-400" />
-                      <h3 className="text-xs font-semibold text-gray-400">CSV Önizleme</h3>
-                    </div>
-                    <div className="bg-gray-800/50 rounded p-3">
-                      <div className="space-y-2 text-xs">
-                        <div className="grid grid-cols-2 gap-2">
-                          <div>
-                            <span className="text-gray-400">Title:</span>
-                            <span className="text-gray-300 ml-2">{product.title}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400">Vendor:</span>
-                            <span className="text-gray-300 ml-2">{product.brand}</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400">Type:</span>
-                            <span className="text-gray-300 ml-2">Clothing</span>
-                          </div>
-                          <div>
-                            <span className="text-gray-400">Price:</span>
-                            <span className="text-gray-300 ml-2">{product.price} TL</span>
-                          </div>
-                          {product.variants.sizes.length > 0 && (
-                            <div>
-                              <span className="text-gray-400">Size Options:</span>
-                              <span className="text-gray-300 ml-2">{product.variants.sizes.join(', ')}</span>
-                            </div>
-                          )}
-                          {product.variants.colors.length > 0 && (
-                            <div>
-                              <span className="text-gray-400">Color Options:</span>
-                              <span className="text-gray-300 ml-2">{product.variants.colors.join(', ')}</span>
-                            </div>
-                          )}
-                        </div>
                       </div>
                     </div>
                   </div>
