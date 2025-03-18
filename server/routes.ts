@@ -96,6 +96,7 @@ export async function registerRoutes(app: Express) {
         title,
         description,
         price: priceWithProfit,
+        basePrice: price, // Added basePrice
         images,
         variants,
         attributes,
@@ -126,19 +127,22 @@ export async function registerRoutes(app: Express) {
           {id: 'title', title: 'Title'},
           {id: 'body', title: 'Body (HTML)'},
           {id: 'vendor', title: 'Vendor'},
+          {id: 'product_category', title: 'Product category'},
           {id: 'type', title: 'Type'},
           {id: 'tags', title: 'Tags'},
-          {id: 'published', title: 'Published'},
-          {id: 'price', title: 'Price'},
+          {id: 'published', title: 'Published on online store'},
+          {id: 'status', title: 'Status'},
           {id: 'option1_name', title: 'Option1 Name'},
           {id: 'option1_value', title: 'Option1 Value'},
           {id: 'option2_name', title: 'Option2 Name'},
           {id: 'option2_value', title: 'Option2 Value'},
-          {id: 'image_src', title: 'Image Src'}
+          {id: 'price', title: 'Price'},
+          {id: 'compare_at_price', title: 'Compare-at price'},
+          {id: 'requires_shipping', title: 'Requires shipping'},
+          {id: 'image_src', title: 'Product image URL'},
+          {id: 'image_position', title: 'Image position'}
         ]
       });
-
-      const records = [];
 
       // Varyant kontrolü yaparak ana ürün kaydını oluştur
       const hasSizes = product.variants.sizes && product.variants.sizes.length > 0;
@@ -156,20 +160,30 @@ export async function registerRoutes(app: Express) {
         htmlDescription += '</ul>';
       }
 
-      records.push({
-        handle: product.title.toLowerCase().replace(/\s+/g, '-'),
-        title: product.title,
-        body: htmlDescription,
-        vendor: 'Trendyol',
-        type: product.categories[product.categories.length - 1] || 'Giyim',
-        tags: product.tags.join(', '),
-        published: 'TRUE',
-        price: product.price,
-        option1_name: hasSizes ? 'Size' : '',
-        option1_value: hasSizes ? product.variants.sizes[0] : '',
-        option2_name: hasColors ? 'Color' : '',
-        option2_value: hasColors ? product.variants.colors[0] : '',
-        image_src: product.images[0] || ''
+      const records = [];
+
+      // Ana ürün ve görselleri
+      product.images.forEach((image: string, index: number) => {
+        records.push({
+          handle: product.title.toLowerCase().replace(/\s+/g, '-'),
+          title: product.title,
+          body: htmlDescription,
+          vendor: 'Trendyol',
+          product_category: product.categories.join(' > '),
+          type: product.categories[product.categories.length - 1] || 'Giyim',
+          tags: product.tags.join(', '),
+          published: 'TRUE',
+          status: 'active',
+          option1_name: hasSizes ? 'Size' : '',
+          option1_value: hasSizes ? product.variants.sizes[0] : '',
+          option2_name: hasColors ? 'Color' : '',
+          option2_value: hasColors ? product.variants.colors[0] : '',
+          price: product.price,
+          compare_at_price: product.basePrice,
+          requires_shipping: 'TRUE',
+          image_src: image,
+          image_position: index + 1
+        });
       });
 
       // Tüm varyantları ayrı kayıtlar olarak ekle
@@ -184,15 +198,20 @@ export async function registerRoutes(app: Express) {
               title: product.title,
               body: htmlDescription,
               vendor: 'Trendyol',
+              product_category: product.categories.join(' > '),
               type: product.categories[product.categories.length - 1] || 'Giyim',
               tags: product.tags.join(', '),
               published: 'TRUE',
-              price: product.price,
+              status: 'active',
               option1_name: 'Size',
               option1_value: size,
               option2_name: 'Color',
               option2_value: color,
-              image_src: product.images[0] || ''
+              price: product.price,
+              compare_at_price: product.basePrice,
+              requires_shipping: 'TRUE',
+              image_src: product.images[0] || '',
+              image_position: 1
             });
           }
         }

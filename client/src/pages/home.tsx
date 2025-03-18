@@ -182,7 +182,10 @@ export default function Home() {
                     {/* Sağ Kolon: Fiyat ve Varyantlar */}
                     <div className="space-y-6">
                       <div className="bg-gray-800 rounded-lg p-6">
-                        <p className="text-3xl font-bold mb-2">{product.price} TL</p>
+                        <div className="flex items-baseline justify-between mb-2">
+                          <p className="text-3xl font-bold">{product.price} TL</p>
+                          <p className="text-lg text-gray-400 line-through">{product.basePrice} TL</p>
+                        </div>
                         <p className="text-sm text-gray-400">Kar marjı dahil fiyat</p>
                       </div>
 
