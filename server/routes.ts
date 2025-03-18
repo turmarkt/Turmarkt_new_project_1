@@ -154,20 +154,16 @@ async function exportToShopify(product: Product) {
     'Google Shopping / Condition': 'new',
     'Google Shopping / Custom product': 'FALSE',
     'Body (HTML)': `
-      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-        <div style="margin-bottom: 20px;">
-          <h3 style="font-size: 18px; color: #333; margin-bottom: 10px;">Ürün Açıklaması</h3>
-          <p style="color: #666; line-height: 1.6;">${product.description}</p>
-        </div>
-        <div style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
-          <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Ürün Özellikleri</h3>
-          <table style="width: 100%; border-collapse: collapse; background: white;">
+      <div style="font-family: system-ui, -apple-system, sans-serif;">
+        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 20px 0;">
+          <h3 style="font-size: 18px; color: #212529; margin: 0 0 15px 0;">Ürün Özellikleri</h3>
+          <table style="width: 100%; border-collapse: collapse;">
             <tbody>
               ${Object.entries(product.attributes)
                 .map(([key, value]) => `
-                  <tr>
-                    <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${key}</td>
-                    <td style="padding: 8px; border-bottom: 1px solid #eee;">${value}</td>
+                  <tr style="border-bottom: 1px solid #e9ecef;">
+                    <td style="padding: 12px 8px; color: #495057; font-weight: 500; width: 40%;">${key}</td>
+                    <td style="padding: 12px 8px; color: #212529;">${value}</td>
                   </tr>
                 `).join('')}
             </tbody>
@@ -485,16 +481,6 @@ export async function registerRoutes(app: Express) {
 
       // Ürün özelliklerini çek
       const attributes = await scrapeProductAttributes($);
-
-      // Özellikler
-      //const attributes: Record<string, string> = {};
-      //if (Array.isArray(schema.additionalProperty)) {
-      //  schema.additionalProperty.forEach((prop: any) => {
-      //    if (prop.name && prop.value) {
-      //      attributes[prop.name] = prop.value;
-      //    }
-      //  });
-      //}
 
       const product: InsertProduct = {
         url,
