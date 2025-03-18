@@ -15,11 +15,22 @@ export const CategoryConfig = z.object({
 
 type CategoryMapping = Record<string, z.infer<typeof CategoryConfig>>;
 
-// Shopify standart kategori yapısı kullanılıyor
+// Shopify'ın resmi kategori yapısına göre eşleştirme
 export const categoryMapping: CategoryMapping = {
   // Giyim Kategorileri
-  "giyim": {
-    shopifyCategory: "Apparel & Accessories > Clothing",
+  "erkek": {
+    shopifyCategory: "Apparel & Accessories > Clothing > Men's Clothing",
+    variantConfig: {
+      sizeLabel: "Beden",
+      colorLabel: "Renk",
+      defaultStock: 50,
+      hasVariants: true
+    },
+    attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
+    inventoryTracking: true
+  },
+  "kadın": {
+    shopifyCategory: "Apparel & Accessories > Clothing > Women's Clothing",
     variantConfig: {
       sizeLabel: "Beden",
       colorLabel: "Renk",
@@ -40,28 +51,26 @@ export const categoryMapping: CategoryMapping = {
     attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
     inventoryTracking: true
   },
-  "pantolon": {
-    shopifyCategory: "Apparel & Accessories > Clothing > Pants",
+  "cüzdan": {
+    shopifyCategory: "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips",
     variantConfig: {
-      sizeLabel: "Beden",
       colorLabel: "Renk",
+      materialLabel: "Materyal",
       defaultStock: 50,
       hasVariants: true
     },
-    attributes: ["Kumaş", "Kalıp", "Bel", "Paça"],
+    attributes: ["Malzeme", "Boyut", "Bölme Sayısı", "Kart Bölmesi"],
     inventoryTracking: true
   },
-
-  // Ayakkabı Kategorileri
-  "ayakkabı": {
-    shopifyCategory: "Apparel & Accessories > Shoes",
+  "kartlık": {
+    shopifyCategory: "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips",
     variantConfig: {
-      sizeLabel: "Numara",
       colorLabel: "Renk",
-      defaultStock: 30,
+      materialLabel: "Materyal",
+      defaultStock: 50,
       hasVariants: true
     },
-    attributes: ["Taban", "Materyal", "Bağcık", "Kullanım Alanı"],
+    attributes: ["Malzeme", "Boyut", "Kart Bölmesi"],
     inventoryTracking: true
   },
   "sneaker": {
@@ -74,48 +83,23 @@ export const categoryMapping: CategoryMapping = {
     },
     attributes: ["Taban", "Materyal", "Bağcık", "Kullanım Alanı"],
     inventoryTracking: true
-  },
-
-  // Çanta & Cüzdan Kategorileri
-  "çanta": {
-    shopifyCategory: "Apparel & Accessories > Handbags & Wallets > Handbags",
-    variantConfig: {
-      colorLabel: "Renk",
-      materialLabel: "Materyal",
-      defaultStock: 30,
-      hasVariants: true
-    },
-    attributes: ["Malzeme", "Boyut", "Bölme Sayısı", "Kullanım Alanı"],
-    inventoryTracking: true
-  },
-  "cüzdan": {
-    shopifyCategory: "Apparel & Accessories > Handbags & Wallets > Wallets & Money Clips",
-    variantConfig: {
-      colorLabel: "Renk",
-      materialLabel: "Materyal",
-      defaultStock: 50,
-      hasVariants: true
-    },
-    attributes: ["Malzeme", "Boyut", "Bölme Sayısı", "Kart Bölmesi"],
-    inventoryTracking: true
-  },
-  "kartlık": {
-    shopifyCategory: "Apparel & Accessories > Handbags & Wallets > Wallets & Money Clips",
-    variantConfig: {
-      colorLabel: "Renk",
-      materialLabel: "Materyal",
-      defaultStock: 50,
-      hasVariants: true
-    },
-    attributes: ["Malzeme", "Boyut", "Kart Bölmesi"],
-    inventoryTracking: true
   }
 };
 
 export function getCategoryConfig(categories: string[]): z.infer<typeof CategoryConfig> {
   const normalizedCategories = categories.map(c => c.toLowerCase().trim());
 
-  // Her kategoriyi kontrol et
+  // Önce tam eşleşme ara
+  for (const category of normalizedCategories) {
+    const exactMatch = Object.entries(categoryMapping).find(([key]) => 
+      category === key || category.includes(key)
+    );
+    if (exactMatch) {
+      return exactMatch[1];
+    }
+  }
+
+  // Kısmi eşleşme ara
   for (const category of normalizedCategories) {
     for (const [key, config] of Object.entries(categoryMapping)) {
       if (category.includes(key)) {
@@ -124,14 +108,15 @@ export function getCategoryConfig(categories: string[]): z.infer<typeof Category
     }
   }
 
-  // Genel kategori kontrolü
-  for (const [key, config] of Object.entries(categoryMapping)) {
-    if (normalizedCategories.some(c => c.includes(key))) {
-      return config;
-    }
+  // Cinsiyet bazlı varsayılan kategori
+  if (normalizedCategories.some(c => c.includes('erkek'))) {
+    return categoryMapping['erkek'];
+  }
+  if (normalizedCategories.some(c => c.includes('kadın'))) {
+    return categoryMapping['kadın'];
   }
 
-  // Varsayılan konfigurasyon
+  // Genel varsayılan kategori
   return {
     shopifyCategory: "Apparel & Accessories > Clothing",
     variantConfig: {

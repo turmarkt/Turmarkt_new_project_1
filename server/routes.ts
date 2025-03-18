@@ -9,6 +9,46 @@ import fetch from "node-fetch";
 import { TrendyolScrapingError, URLValidationError, ProductDataError, handleError } from "./errors";
 import { getCategoryConfig } from "./category-mapping";
 
+async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]> {
+  const categories: string[] = [];
+
+  // Ana kategori yolunu al
+  const breadcrumb = $(".product-path span")
+    .map((_, el) => $(el).text().trim())
+    .get()
+    .filter(cat => cat !== ">" && cat !== "Trendyol");
+
+  if (breadcrumb.length > 0) {
+    categories.push(...breadcrumb);
+  }
+
+  // Alternatif kategori elementlerini kontrol et
+  if (categories.length === 0) {
+    const altBreadcrumb = $(".breadcrumb-wrapper span")
+      .map((_, el) => $(el).text().trim())
+      .get()
+      .filter(cat => cat !== ">" && cat !== "Trendyol");
+
+    if (altBreadcrumb.length > 0) {
+      categories.push(...altBreadcrumb);
+    }
+  }
+
+  // Ürün detay sayfasındaki kategori bilgisini kontrol et
+  if (categories.length === 0) {
+    const detailCategory = $(".product-detail-category")
+      .first()
+      .text()
+      .trim();
+
+    if (detailCategory) {
+      categories.push(detailCategory);
+    }
+  }
+
+  return categories;
+}
+
 function mapToShopifyCategory(categories: string[]): string {
   const normalizedCategories = categories.map(c => c.toLowerCase().trim());
   const config = getCategoryConfig(normalizedCategories);
@@ -105,32 +145,22 @@ export async function registerRoutes(app: Express) {
         throw new ProductDataError("Temel ürün bilgileri eksik", "basicInfo");
       }
 
-      // Kategori bilgisi
-      let categories: string[] = [];
-      try {
-        if (schema.breadcrumb?.itemListElement) {
-          categories = schema.breadcrumb.itemListElement
-            .map((item: any) => item.item?.name || item.name)
-            .filter((name: string | null) => name && name !== "Trendyol");
-        }
+      // Kategori bilgisini al
+      let categories = await scrapeTrendyolCategories($);
 
-        if (categories.length === 0) {
-          categories = $(".product-path span")
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(cat => cat !== ">" && cat !== "Trendyol");
-        }
-
-        if (categories.length === 0) {
-          throw new ProductDataError("Kategori bilgisi bulunamadı", "categories");
-        }
-      } catch (error) {
-        console.error("Kategori çekme hatası:", error);
-        throw new ProductDataError("Kategori bilgisi işlenirken hata oluştu", "categories");
+      // Schema.org'dan kategori bilgisini kontrol et
+      if (categories.length === 0 && schema.breadcrumb?.itemListElement) {
+        categories = schema.breadcrumb.itemListElement
+          .map((item: any) => item.item?.name || item.name)
+          .filter((name: string | null) => name && name !== "Trendyol");
       }
 
-      // Kategori konfigürasyonu
-      const categoryConfig = getCategoryConfig(categories);
+      if (categories.length === 0) {
+        throw new ProductDataError("Kategori bilgisi bulunamadı", "categories");
+      }
+
+      console.log("Bulunan kategoriler:", categories);
+
 
       // Görseller
       let images: string[] = [];
@@ -166,6 +196,8 @@ export async function registerRoutes(app: Express) {
         sizes: [] as string[],
         colors: [] as string[]
       };
+
+      const categoryConfig = getCategoryConfig(categories);
 
       if (categoryConfig.variantConfig.hasVariants) {
         // Schema.org varyant bilgisi
