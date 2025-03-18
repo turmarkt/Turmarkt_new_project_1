@@ -207,8 +207,8 @@ export async function registerRoutes(app: Express) {
         url,
         title,
         description,
-        price: priceWithProfit,
-        basePrice: price,
+        price: priceWithProfit.toString(), // Convert to string for schema
+        basePrice: price.toString(), // Convert to string for schema
         images,
         variants,
         attributes,
@@ -245,97 +245,121 @@ export async function registerRoutes(app: Express) {
           {id: 'title', title: 'Title'},
           {id: 'body', title: 'Body (HTML)'},
           {id: 'vendor', title: 'Vendor'},
-          {id: 'product_category', title: 'Product category'},
+          {id: 'product_category', title: 'Product Category'},
           {id: 'type', title: 'Type'},
           {id: 'tags', title: 'Tags'},
-          {id: 'published', title: 'Published on online store'},
-          {id: 'status', title: 'Status'},
-          {id: 'sku', title: 'SKU'},
-          {id: 'barcode', title: 'Barcode'},
-          {id: 'option1_name', title: 'Option1 name'},
-          {id: 'option1_value', title: 'Option1 value'},
-          {id: 'option2_name', title: 'Option2 name'},
-          {id: 'option2_value', title: 'Option2 value'},
-          {id: 'option3_name', title: 'Option3 name'},
-          {id: 'option3_value', title: 'Option3 value'},
-          {id: 'price', title: 'Price'},
-          {id: 'price_international', title: 'Price / International'},
-          {id: 'compare_at_price', title: 'Compare-at price'},
-          {id: 'compare_at_price_international', title: 'Compare-at price / International'},
-          {id: 'weight', title: 'Weight value (grams)'},
-          {id: 'weight_unit', title: 'Weight unit for display'},
-          {id: 'requires_shipping', title: 'Requires shipping'},
-          {id: 'fulfillment_service', title: 'Fulfillment service'},
-          {id: 'image_src', title: 'Product image URL'},
-          {id: 'image_position', title: 'Image position'},
-          {id: 'image_alt_text', title: 'Image alt text'},
-          {id: 'variant_image', title: 'Variant image URL'},
-          {id: 'gift_card', title: 'Gift card'},
-          {id: 'seo_title', title: 'SEO title'},
-          {id: 'seo_description', title: 'SEO description'},
-          {id: 'google_category', title: 'Google Shopping / Google product category'},
-          {id: 'gender', title: 'Google Shopping / Gender'},
-          {id: 'age_group', title: 'Google Shopping / Age group'}
+          {id: 'published', title: 'Published'},
+          {id: 'option1_name', title: 'Option1 Name'},
+          {id: 'option1_value', title: 'Option1 Value'},
+          {id: 'option2_name', title: 'Option2 Name'},
+          {id: 'option2_value', title: 'Option2 Value'},
+          {id: 'option3_name', title: 'Option3 Name'},
+          {id: 'option3_value', title: 'Option3 Value'},
+          {id: 'variant_sku', title: 'Variant SKU'},
+          {id: 'variant_inventory_policy', title: 'Variant Inventory Policy'},
+          {id: 'variant_inventory_quantity', title: 'Variant Inventory Qty'},
+          {id: 'variant_price', title: 'Variant Price'},
+          {id: 'variant_compare_at_price', title: 'Variant Compare At Price'},
+          {id: 'variant_requires_shipping', title: 'Variant Requires Shipping'},
+          {id: 'variant_taxable', title: 'Variant Taxable'},
+          {id: 'variant_weight_unit', title: 'Variant Weight Unit'},
+          {id: 'variant_weight', title: 'Variant Weight'},
+          {id: 'image_src', title: 'Image Src'},
+          {id: 'image_position', title: 'Image Position'},
+          {id: 'image_alt_text', title: 'Image Alt Text'},
+          {id: 'gift_card', title: 'Gift Card'},
+          {id: 'seo_title', title: 'SEO Title'},
+          {id: 'seo_description', title: 'SEO Description'},
+          {id: 'google_shopping_product_category', title: 'Google Shopping / Product Category'},
+          {id: 'status', title: 'Status'}
         ]
       });
 
-      // HTML açıklaması ve CSV formatı düzeltmeleri
-      const htmlDescription = `<div class="product-description">
-        <h2 style="margin-bottom: 1rem; font-size: 1.5rem;">Ürün Açıklaması</h2>
-        <p style="margin-bottom: 2rem; line-height: 1.6;">${product.description}</p>
-
-        <h2 style="margin-bottom: 1rem; font-size: 1.5rem;">Ürün Özellikleri</h2>
-        <table style="width: 100%; border-collapse: collapse;">
-          <tbody>
-            ${Object.entries(product.attributes)
-              .map(([key, value]) => `
-                <tr style="border-bottom: 1px solid #eee;">
-                  <th style="padding: 0.75rem; text-align: left; width: 40%;">${key}</th>
-                  <td style="padding: 0.75rem;">${value}</td>
-                </tr>
-              `).join('')}
-          </tbody>
-        </table>
-      </div>`;
-
-      // CSV kayıt oluşturma
-      const records = product.images.map((image: string, index: number) => ({
-        handle: product.title.toLowerCase().replace(/\s+/g, '-'),
+      // Ana ürün kaydı
+      const mainProductRecord = {
+        handle: product.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         title: product.title,
-        body: htmlDescription,
+        body: `<div style="font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+          <div style="margin-bottom: 20px;">
+            <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Ürün Açıklaması</h2>
+            <p style="color: #666; line-height: 1.6;">${product.description}</p>
+          </div>
+          <div style="margin-bottom: 20px;">
+            <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Ürün Özellikleri</h2>
+            <table style="width: 100%; border-collapse: collapse;">
+              <tbody>
+                ${Object.entries(product.attributes)
+                  .map(([key, value]) => `
+                    <tr style="border-bottom: 1px solid #eee;">
+                      <th style="padding: 8px; text-align: left; width: 40%; color: #666;">${key}</th>
+                      <td style="padding: 8px; color: #333;">${value}</td>
+                    </tr>
+                  `).join('')}
+              </tbody>
+            </table>
+          </div>
+        </div>`,
         vendor: product.title.split(' ')[0], // İlk kelimeyi marka olarak al
         product_category: product.categories.join(' > '),
         type: product.categories[product.categories.length - 1] || 'Giyim',
-        tags: product.tags.join(', '),
+        tags: product.tags.join(','),
         published: 'TRUE',
-        status: 'active',
-        sku: '',
-        barcode: '',
         option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
         option1_value: product.variants.sizes[0] || '',
         option2_name: product.variants.colors.length > 0 ? 'Color' : '',
         option2_value: product.variants.colors[0] || '',
         option3_name: '',
         option3_value: '',
-        price: product.price.toFixed(2),
-        price_international: '',
-        compare_at_price: product.basePrice.toFixed(2),
-        compare_at_price_international: '',
-        weight: '500',
-        weight_unit: 'g',
-        requires_shipping: 'TRUE',
-        fulfillment_service: 'manual',
-        image_src: image,
-        image_position: index + 1,
-        image_alt_text: `${product.title} - Görsel ${index + 1}`,
-        variant_image: '',
+        variant_sku: `${product.id}-1`,
+        variant_inventory_policy: 'deny',
+        variant_inventory_quantity: '10',
+        variant_price: product.price,
+        variant_compare_at_price: product.basePrice,
+        variant_requires_shipping: 'TRUE',
+        variant_taxable: 'TRUE',
+        variant_weight_unit: 'kg',
+        variant_weight: '0.5',
+        image_src: product.images[0] || '',
+        image_position: '1',
+        image_alt_text: product.title,
         gift_card: 'FALSE',
         seo_title: product.title,
         seo_description: product.description.substring(0, 320),
-        google_category: product.categories.join(' > '),
-        gender: 'Unisex',
-        age_group: 'Adult'
-      }));
+        google_shopping_product_category: product.categories.join(' > '),
+        status: 'active'
+      };
+
+      const records = [mainProductRecord];
+
+      // Varyant kayıtları
+      if (product.variants.sizes.length > 0 || product.variants.colors.length > 0) {
+        const sizes = product.variants.sizes.length > 0 ? product.variants.sizes : [''];
+        const colors = product.variants.colors.length > 0 ? product.variants.colors : [''];
+
+        sizes.forEach((size, sIndex) => {
+          colors.forEach((color, cIndex) => {
+            if (sIndex === 0 && cIndex === 0) return; // Ana ürün kaydını atla
+
+            records.push({
+              ...mainProductRecord,
+              option1_value: size,
+              option2_value: color,
+              variant_sku: `${product.id}-${records.length + 1}`,
+              image_src: product.images[cIndex] || product.images[0] || ''
+            });
+          });
+        });
+      }
+
+      // Ek görsel kayıtları
+      product.images.slice(1).forEach((image, index) => {
+        records.push({
+          ...mainProductRecord,
+          variant_sku: '',
+          image_src: image,
+          image_position: (index + 2).toString()
+        });
+      });
 
       await csvWriter.writeRecords(records);
       console.log("CSV başarıyla oluşturuldu");
