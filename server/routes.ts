@@ -32,6 +32,8 @@ export async function registerRoutes(app: Express) {
       const title = $("h1.pr-new-br").text().trim();
       const description = $("div.detail-border-container").text().trim();
       const price = parseFloat($("span.prc-dsc").text().replace("TL", "").trim());
+      // %15 kar ekle
+      const priceWithProfit = parseFloat((price * 1.15).toFixed(2));
 
       // Ürün özellikleri
       const attributes: Record<string, string> = {};
@@ -70,6 +72,13 @@ export async function registerRoutes(app: Express) {
           images.push(src);
         }
       });
+      // Ek görseller
+      $("img[data-gallery]").each((_, el) => {
+        const src = $(el).attr("src");
+        if (src && !images.includes(src)) {
+          images.push(src);
+        }
+      });
 
       // Beden ve renk varyantları
       const variants = {
@@ -86,7 +95,7 @@ export async function registerRoutes(app: Express) {
         url,
         title,
         description,
-        price,
+        price: priceWithProfit,
         images,
         variants,
         attributes,
