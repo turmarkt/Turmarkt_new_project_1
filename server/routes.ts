@@ -13,56 +13,66 @@ async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<st
 
   try {
     // 1. Schema.org verilerinden özellikleri al
-    const schemaData = $('script[type="application/ld+json"]').first().html();
-    if (schemaData) {
+    $('script[type="application/ld+json"]').each((_, script) => {
       try {
-        const schema = JSON.parse(schemaData);
+        const schema = JSON.parse($(script).html() || '{}');
         if (schema.additionalProperty) {
           schema.additionalProperty.forEach((prop: any) => {
-            if (prop.name && prop.value) {
-              attributes[prop.name] = prop.value;
+            if (prop.name && prop.unitText) {
+              attributes[prop.name] = prop.unitText;
             }
           });
         }
       } catch (e) {
         console.error('Schema parse error:', e);
       }
-    }
-
-    // 2. Öne Çıkan Özellikler bölümünden özellikleri al
-    $('.featured-attributes-title, .product-feature-title').each((_, titleEl) => {
-      const title = $(titleEl).text().trim();
-      if (title.includes('Öne Çıkan Özellikler')) {
-        const container = $(titleEl).next();
-        container.find('li, .featured-attributes-item, .product-feature-item').each((_, item) => {
-          const label = $(item).find('.featured-attributes-label, .product-feature-label').text().trim();
-          const value = $(item).find('.featured-attributes-value, .product-feature-value').text().trim();
-          if (label && value) {
-            attributes[label] = value;
-          }
-        });
-      }
     });
 
-    // 3. Ürün detay tablosundan özellikleri al
-    $('.detail-attr-container tr, .product-feature-table tr').each((_, row) => {
-      const label = $(row).find('th, td:first-child').text().trim();
-      const value = $(row).find('td:last-child').text().trim();
-      if (label && value) {
-        attributes[label] = value;
-      }
+    // 2. Öne Çıkan Özellikler bölümünü bul
+    $('.detail-attr-container').each((_, container) => {
+      $(container).find('tr').each((_, row) => {
+        const label = $(row).find('th').text().trim();
+        const value = $(row).find('td').text().trim();
+        if (label && value) {
+          attributes[label] = value;
+        }
+      });
     });
 
-    // 4. Alternatif özellik listesinden al
-    $('.product-feature-list li, .detail-attr-item').each((_, item) => {
-      const text = $(item).text().trim();
-      const [label, value] = text.split(':').map(s => s.trim());
-      if (label && value) {
-        attributes[label] = value;
-      }
+    // 3. Tüm olası özellik selektörleri
+    const selectors = [
+      '.product-feature-list li',
+      '.detail-attr-item',
+      '.product-properties li',
+      '.detail-border-bottom tr',
+      '.product-details tr',
+      '.featured-attributes-item'
+    ];
+
+    // Her bir selektör için kontrol
+    selectors.forEach(selector => {
+      $(selector).each((_, element) => {
+        let label, value;
+
+        // Etiket-değer çiftlerini bul
+        if ($(element).find('.detail-attr-label, .property-label').length > 0) {
+          label = $(element).find('.detail-attr-label, .property-label').text().trim();
+          value = $(element).find('.detail-attr-value, .property-value').text().trim();
+        } else if ($(element).find('th, td').length > 0) {
+          label = $(element).find('th, td:first-child').text().trim();
+          value = $(element).find('td:last-child').text().trim();
+        } else {
+          const text = $(element).text().trim();
+          [label, value] = text.split(':').map(s => s.trim());
+        }
+
+        if (label && value && !attributes[label]) {
+          attributes[label] = value;
+        }
+      });
     });
 
-    // 5. Özel özellik selektörlerini kontrol et
+    // 4. Özel özellik alanlarını kontrol et
     const specialAttributes = {
       'Materyal': ['Materyal', 'Kumaş', 'Material'],
       'Parça Sayısı': ['Parça Sayısı', 'Adet'],
@@ -86,13 +96,16 @@ async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<st
       }
     }
 
-    // 6. Diğer özellik alanlarını kontrol et
-    $('.detail-attr-item, .product-properties li').each((_, item) => {
-      const label = $(item).find('.detail-attr-label, .property-label').text().trim();
-      const value = $(item).find('.detail-attr-value, .property-value').text().trim();
-      if (label && value) {
-        attributes[label] = value;
-      }
+    // 5. Özellik gruplarını kontrol et
+    $('.featured-attributes-group').each((_, group) => {
+      const groupTitle = $(group).find('.featured-attributes-title').text().trim();
+      $(group).find('.featured-attributes-item').each((_, item) => {
+        const label = $(item).find('.featured-attributes-label').text().trim();
+        const value = $(item).find('.featured-attributes-value').text().trim();
+        if (label && value) {
+          attributes[label] = value;
+        }
+      });
     });
 
     console.log("Bulunan özellikler:", attributes);
@@ -421,6 +434,7 @@ export async function registerRoutes(app: Express) {
       'Weight unit': 'g',
       'Image Src': product.images[0] || '',
       'Image Position': '1',
+      'Image alt text': product.title,
       'Variant Image': '',
       'SEO Title': product.title,
       'SEO Description': Object.entries(product.attributes)
@@ -431,6 +445,18 @@ export async function registerRoutes(app: Express) {
     };
 
     const records = [mainRecord];
+
+    // Ana ürünün ek görselleri
+    for (let i = 1; i < product.images.length; i++) {
+      records.push({
+        'Handle': handle,
+        'Title': product.title,
+        'Image Src': product.images[i],
+        'Image Position': (i + 1).toString(),
+        'Image alt text': `${product.title} - Görsel ${i + 1}`,
+        'Status': 'active'
+      });
+    }
 
     // Varyant kayıtları
     if (product.variants.sizes.length > 0) {
@@ -495,6 +521,7 @@ export async function registerRoutes(app: Express) {
         {id: 'Weight unit', title: 'Weight unit'},
         {id: 'Image Src', title: 'Image Src'},
         {id: 'Image Position', title: 'Image Position'},
+        {id: 'Image alt text', title: 'Image alt text'},
         {id: 'Variant Image', title: 'Variant Image'},
         {id: 'SEO Title', title: 'SEO Title'},
         {id: 'SEO Description', title: 'SEO Description'}
