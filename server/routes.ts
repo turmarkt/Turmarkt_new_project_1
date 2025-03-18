@@ -168,7 +168,49 @@ async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]
 }
 
 
-// Routes düzenlemesi
+// Fiyat çekme fonksiyonunu ekleyelim
+async function scrapePrice($: cheerio.CheerioAPI): Promise<{ price: string, basePrice: string }> {
+  try {
+    // 1. Schema.org verilerinden fiyat bilgisini al
+    const schemaData = $('script[type="application/ld+json"]').first().html();
+    if (schemaData) {
+      const schema = JSON.parse(schemaData);
+      if (schema.offers?.price) {
+        return {
+          price: schema.offers.price.toString(),
+          basePrice: schema.offers.price.toString()
+        };
+      }
+    }
+
+    // 2. DOM'dan fiyat bilgisini al
+    const priceEl = $('.prc-dsc, .product-price-container .current-price');
+    if (priceEl.length > 0) {
+      const price = priceEl.first().text().trim().replace('TL', '').trim();
+      return {
+        price: price,
+        basePrice: price
+      };
+    }
+
+    // 3. Alternatif fiyat selektörleri
+    const altPriceEl = $('.product-price, .discounted-price');
+    if (altPriceEl.length > 0) {
+      const price = altPriceEl.first().text().trim().replace('TL', '').trim();
+      return {
+        price: price,
+        basePrice: price
+      };
+    }
+
+    throw new Error('Fiyat bilgisi bulunamadı');
+  } catch (error) {
+    console.error('Fiyat çekme hatası:', error);
+    throw error;
+  }
+}
+
+// Ana scrape fonksiyonunda fiyat çekme kısmını güncelleyelim
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
@@ -211,7 +253,7 @@ export async function registerRoutes(app: Express) {
       let schema;
       try {
         schema = JSON.parse(schemaScript);
-        if (!schema["@type"] || !schema.name || !schema.offers) {
+        if (!schema["@type"] || !schema.name) {
           throw new ProductDataError("Geçersiz ürün şeması", "schema");
         }
       } catch (error) {
@@ -222,36 +264,17 @@ export async function registerRoutes(app: Express) {
       // Temel ürün bilgileri
       const title = schema.name;
       const description = schema.description;
-      const price = parseFloat(schema.offers.price);
+      const { price, basePrice } = await scrapePrice($);
+
       const brand = schema.brand?.name || schema.manufacturer || title.split(' ')[0];
 
-      if (!title || !description || isNaN(price)) {
+      if (!title || !description || !price) {
         throw new ProductDataError("Temel ürün bilgileri eksik", "basicInfo");
       }
 
-      // Kategori bilgisini al
+      // Kategori ve diğer bilgileri çek
       let categories = await scrapeTrendyolCategories($);
-
-      // Schema.org'dan kategori bilgisini kontrol et
-      if (categories.length === 0 && schema.breadcrumb?.itemListElement) {
-        const schemaCategories = schema.breadcrumb.itemListElement
-          .map((item: any) => item.item?.name || item.name)
-          .filter((name: string | null) => name && name !== "Trendyol");
-
-        if (schemaCategories.length > 0) {
-          categories = schemaCategories;
-        }
-      }
-
-      // Son kontrol
-      if (categories.length === 0) {
-        console.warn("Hiçbir yöntemle kategori bulunamadı");
-        // Varsayılan kategori
-        categories = ["Giyim"];
-      }
-
-      console.log("Final kategoriler:", categories);
-
+      const attributes = await scrapeProductAttributes($);
 
       // Görseller
       let images: string[] = [];
@@ -282,94 +305,44 @@ export async function registerRoutes(app: Express) {
         throw new ProductDataError("Görseller işlenirken hata oluştu", "images");
       }
 
-      // Varyantlar
+      // Varyantları çek
       const variants = {
         sizes: [] as string[],
         colors: [] as string[]
       };
 
-
-      if (categories.some(c => c.toLowerCase().includes('ayakkabı')) || categories.some(c => c.toLowerCase().includes('sneaker'))) {
-        // Schema.org varyant bilgisi
-        if (schema.hasVariant) {
-          schema.hasVariant.forEach((variant: any) => {
-            if (variant.size && !variants.sizes.includes(variant.size)) {
-              variants.sizes.push(variant.size);
-            }
-            if (variant.color && !variants.colors.includes(variant.color)) {
-              variants.colors.push(variant.color);
-            }
-          });
-        }
-
-        // DOM'dan varyant bilgisi
-        if (variants.sizes.length === 0) {
-          variants.sizes = $(".sp-itm:not(.so)")
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(Boolean);
-        }
-
-        if (variants.colors.length === 0) {
-          variants.colors = $(".slc-txt")
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(Boolean);
-        }
-      } else if (categories.some(c => c.toLowerCase().includes('cüzdan')) || categories.some(c => c.toLowerCase().includes('çanta'))) {
-        // Schema.org varyant bilgisi
-        if (schema.hasVariant) {
-          schema.hasVariant.forEach((variant: any) => {
-            if (variant.color && !variants.colors.includes(variant.color)) {
-              variants.colors.push(variant.color);
-            }
-          });
-        }
-        if (variants.colors.length === 0) {
-          variants.colors = $(".slc-txt")
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(Boolean);
-        }
-      } else {
-        // Schema.org varyant bilgisi
-        if (schema.hasVariant) {
-          schema.hasVariant.forEach((variant: any) => {
-            if (variant.size && !variants.sizes.includes(variant.size)) {
-              variants.sizes.push(variant.size);
-            }
-            if (variant.color && !variants.colors.includes(variant.color)) {
-              variants.colors.push(variant.color);
-            }
-          });
-        }
-
-        // DOM'dan varyant bilgisi
-        if (variants.sizes.length === 0) {
-          variants.sizes = $(".sp-itm:not(.so)")
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(Boolean);
-        }
-
-        if (variants.colors.length === 0) {
-          variants.colors = $(".slc-txt")
-            .map((_, el) => $(el).text().trim())
-            .get()
-            .filter(Boolean);
-        }
+      if (schema.hasVariant) {
+        schema.hasVariant.forEach((variant: any) => {
+          if (variant.size && !variants.sizes.includes(variant.size)) {
+            variants.sizes.push(variant.size);
+          }
+          if (variant.color && !variants.colors.includes(variant.color)) {
+            variants.colors.push(variant.color);
+          }
+        });
       }
 
+      // DOM'dan varyant bilgisi
+      if (variants.sizes.length === 0) {
+        variants.sizes = $(".sp-itm:not(.so)")
+          .map((_, el) => $(el).text().trim())
+          .get()
+          .filter(Boolean);
+      }
 
-      // Ürün özelliklerini çek
-      const attributes = await scrapeProductAttributes($);
+      if (variants.colors.length === 0) {
+        variants.colors = $(".slc-txt")
+          .map((_, el) => $(el).text().trim())
+          .get()
+          .filter(Boolean);
+      }
 
       const product: InsertProduct = {
         url,
         title,
         description,
-        price: (price * 1.15).toFixed(2), // %15 kar marjı
-        basePrice: price.toString(),
+        price, // Artık kar marjı eklemiyoruz
+        basePrice,
         images,
         variants,
         attributes,
