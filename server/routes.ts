@@ -246,29 +246,33 @@ export async function registerRoutes(app: Express) {
           {id: 'vendor', title: 'Vendor'},
           {id: 'type', title: 'Type'},
           {id: 'tags', title: 'Tags'},
-          {id: 'published', title: 'Published'},
-          {id: 'option1_name', title: 'Option1 Name'},
-          {id: 'option1_value', title: 'Option1 Value'},
-          {id: 'option2_name', title: 'Option2 Name'},
-          {id: 'option2_value', title: 'Option2 Value'},
-          {id: 'variant_sku', title: 'Variant SKU'},
-          {id: 'variant_inventory_tracker', title: 'Variant Inventory Tracker'},
-          {id: 'variant_inventory_qty', title: 'Variant Inventory Qty'},
-          {id: 'variant_inventory_policy', title: 'Variant Inventory Policy'},
-          {id: 'variant_fulfillment_service', title: 'Variant Fulfillment Service'},
-          {id: 'variant_price', title: 'Variant Price'},
-          {id: 'variant_compare_at_price', title: 'Variant Compare At Price'},
-          {id: 'variant_requires_shipping', title: 'Variant Requires Shipping'},
-          {id: 'variant_taxable', title: 'Variant Taxable'},
-          {id: 'variant_barcode', title: 'Variant Barcode'},
+          {id: 'published', title: 'Published on online store'},
+          {id: 'status', title: 'Status'},
+          {id: 'sku', title: 'SKU'},
+          {id: 'barcode', title: 'Barcode'},
+          {id: 'option1_name', title: 'Option1 name'},
+          {id: 'option1_value', title: 'Option1 value'},
+          {id: 'option2_name', title: 'Option2 name'},
+          {id: 'option2_value', title: 'Option2 value'},
+          {id: 'option3_name', title: 'Option3 name'},
+          {id: 'option3_value', title: 'Option3 value'},
+          {id: 'price', title: 'Price'},
+          {id: 'compare_at_price', title: 'Compare at price'},
+          {id: 'requires_shipping', title: 'Requires shipping'},
+          {id: 'fulfillment_service', title: 'Fulfillment service'},
+          {id: 'inventory_quantity', title: 'Inventory quantity'},
+          {id: 'inventory_policy', title: 'Inventory policy'},
+          {id: 'inventory_tracker', title: 'Inventory tracker'},
+          {id: 'taxable', title: 'Taxable'},
+          {id: 'weight', title: 'Weight'},
+          {id: 'weight_unit', title: 'Weight unit'},
           {id: 'image_src', title: 'Image Src'},
           {id: 'image_position', title: 'Image Position'},
           {id: 'image_alt_text', title: 'Image Alt Text'},
-          {id: 'gift_card', title: 'Gift Card'},
+          {id: 'gift_card', title: 'Gift card'},
           {id: 'seo_title', title: 'SEO Title'},
           {id: 'seo_description', title: 'SEO Description'},
-          {id: 'google_shopping_google_product_category', title: 'Google Shopping / Google Product Category'},
-          {id: 'status', title: 'Status'}
+          {id: 'google_product_category', title: 'Google Shopping / Google Product Category'}
         ]
       });
 
@@ -303,29 +307,33 @@ export async function registerRoutes(app: Express) {
         vendor: product.title.split(' ')[0],
         type: product.categories[0] || 'Giyim',
         tags: [...product.categories, ...product.tags].join(','),
-        published: 'true',
+        published: 'TRUE',
+        status: 'active',
+        sku: `${handle}-1`,
+        barcode: '',
         option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
         option1_value: product.variants.sizes[0] || '',
         option2_name: product.variants.colors.length > 0 ? 'Color' : '',
         option2_value: product.variants.colors[0] || '',
-        variant_sku: `${handle}-1`,
-        variant_inventory_tracker: 'shopify',
-        variant_inventory_qty: '10',
-        variant_inventory_policy: 'deny',
-        variant_fulfillment_service: 'manual',
-        variant_price: product.price,
-        variant_compare_at_price: product.basePrice,
-        variant_requires_shipping: 'true',
-        variant_taxable: 'true',
-        variant_barcode: '',
+        option3_name: '',
+        option3_value: '',
+        price: product.price,
+        compare_at_price: product.basePrice,
+        requires_shipping: 'TRUE',
+        fulfillment_service: 'manual',
+        inventory_quantity: '10',
+        inventory_policy: 'deny',
+        inventory_tracker: 'shopify',
+        taxable: 'TRUE',
+        weight: '0.5',
+        weight_unit: 'kg',
         image_src: product.images[0] || '',
         image_position: '1',
         image_alt_text: product.title,
-        gift_card: 'false',
+        gift_card: 'FALSE',
         seo_title: product.title,
         seo_description: product.description.substring(0, 320),
-        google_shopping_google_product_category: product.categories.join(' > '),
-        status: 'active'
+        google_product_category: product.categories.join(' > ')
       };
 
       const records = [mainRecord];
@@ -336,16 +344,13 @@ export async function registerRoutes(app: Express) {
         const colors = product.variants.colors.filter(Boolean);
 
         if (sizes.length > 0 || colors.length > 0) {
-          (sizes.length > 0 ? sizes : ['']).forEach((size, sIndex) => {
-            (colors.length > 0 ? colors : ['']).forEach((color, cIndex) => {
-              if (sIndex === 0 && cIndex === 0) return; // Ana ürünü atla
-
+          sizes.forEach((size) => {
+            colors.forEach((color) => {
               records.push({
                 ...mainRecord,
-                option1_value: size || '',
-                option2_value: color || '',
-                variant_sku: `${handle}-${records.length + 1}`,
-                image_src: product.images[cIndex] || product.images[0] || '',
+                sku: `${handle}-${records.length + 1}`,
+                option1_value: size,
+                option2_value: color,
                 image_position: ''
               });
             });
@@ -358,14 +363,10 @@ export async function registerRoutes(app: Express) {
         records.push({
           handle,
           title: product.title,
+          published: 'TRUE',
           image_src: image,
           image_position: (index + 2).toString(),
-          variant_inventory_qty: '',
-          variant_price: '',
-          option1_name: '',
-          option1_value: '',
-          option2_name: '',
-          option2_value: ''
+          status: 'active'
         });
       });
 
