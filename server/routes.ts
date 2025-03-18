@@ -59,6 +59,7 @@ export async function registerRoutes(app: Express) {
       const title = schema.name;
       const description = schema.description;
       const price = parseFloat(schema.offers.price);
+      const brand = schema.brand?.name || schema.manufacturer || title.split(' ')[0];
 
       if (!title || !description || isNaN(price)) {
         throw new ProductDataError("Temel ürün bilgileri eksik", "basicInfo");
@@ -75,43 +76,24 @@ export async function registerRoutes(app: Express) {
             attributes[prop.name] = prop.unitText;
           }
         });
-      } else {
-        console.warn("additionalProperty bir dizi değil:", schema.additionalProperty);
       }
 
       // Kategori bilgisi
       let categories: string[] = [];
-
       try {
-        // Önce schema.org'dan dene
         if (schema.breadcrumb?.itemListElement) {
           categories = schema.breadcrumb.itemListElement
-            .map((item: any) => {
-              return item.item?.name || item.name;
-            })
+            .map((item: any) => item.item?.name || item.name)
             .filter((name: string | null) => name && name !== "Trendyol");
         }
 
-        // Schema.org'dan alınamadıysa DOM'dan dene
         if (categories.length === 0) {
-          console.warn("Kategoriler schema.org'dan alınamadı, DOM'dan çekiliyor");
-
-          // Ana kategori yolu
-          categories = $("div.product-path span")
+          categories = $(".product-path span")
             .map((_, el) => $(el).text().trim())
             .get()
             .filter(cat => cat !== ">" && cat !== "Trendyol");
-
-          // Alternatif breadcrumb
-          if (categories.length === 0) {
-            categories = $("div.breadcrumb-wrapper span")
-              .map((_, el) => $(el).text().trim())
-              .get()
-              .filter(cat => cat !== ">" && cat !== "Trendyol");
-          }
         }
 
-        // Yine bulunamadıysa son bir deneme
         if (categories.length === 0) {
           const productType = schema.pattern || schema["@type"];
           if (productType) {
@@ -122,16 +104,12 @@ export async function registerRoutes(app: Express) {
         if (categories.length === 0) {
           throw new ProductDataError("Kategori bilgisi bulunamadı", "categories");
         }
-
-        console.log("Bulunan kategoriler:", categories);
-
       } catch (error) {
         console.error("Kategori çekme hatası:", error);
         throw new ProductDataError("Kategori bilgisi işlenirken hata oluştu", "categories");
       }
 
-
-      // Tüm ürün görselleri
+      // Görseller
       let images: string[] = [];
       if (schema.image?.contentUrl) {
         images = Array.isArray(schema.image.contentUrl)
@@ -140,12 +118,9 @@ export async function registerRoutes(app: Express) {
       }
 
       if (images.length === 0) {
-        console.warn("Görseller schema'dan alınamadı, DOM'dan çekiliyor");
-        // Ana ürün görseli
         const mainImage = $("img.detail-section-img").first().attr("src");
         if (mainImage) images.push(mainImage);
 
-        // Galeri görselleri
         $("div.gallery-modal-content img").each((_, el) => {
           const src = $(el).attr("src");
           if (src && !images.includes(src)) {
@@ -158,7 +133,7 @@ export async function registerRoutes(app: Express) {
         throw new ProductDataError("Ürün görselleri bulunamadı", "images");
       }
 
-      // Beden ve renk varyantları
+      // Varyantlar
       const variants = {
         sizes: [] as string[],
         colors: [] as string[]
@@ -176,44 +151,31 @@ export async function registerRoutes(app: Express) {
       }
 
       if (variants.sizes.length === 0) {
-        console.warn("Beden bilgisi schema'dan alınamadı, DOM'dan çekiliyor");
         variants.sizes = $(".sp-itm:not(.so)")
           .map((_, el) => $(el).text().trim())
-          .get();
+          .get()
+          .filter(Boolean);
       }
 
       if (variants.colors.length === 0) {
-        console.warn("Renk bilgisi schema'dan alınamadı, DOM'dan çekiliyor");
         variants.colors = $(".slc-txt")
           .map((_, el) => $(el).text().trim())
           .get()
           .filter(Boolean);
       }
 
-      // Debug için log
-      console.log("Çekilen veriler:", {
-        title,
-        price,
-        priceWithProfit,
-        attributes: Object.keys(attributes).length,
-        attributesList: attributes,
-        categories,
-        images: images.length,
-        imageUrls: images,
-        variants
-      });
-
       const product: InsertProduct = {
         url,
         title,
         description,
-        price: priceWithProfit.toString(), // Convert to string for schema
-        basePrice: price.toString(), // Convert to string for schema
+        price: priceWithProfit.toString(),
+        basePrice: price.toString(),
         images,
         variants,
         attributes,
         categories,
-        tags: []
+        tags: [],
+        brand
       };
 
       console.log("Ürün veritabanına kaydediliyor");
@@ -242,37 +204,38 @@ export async function registerRoutes(app: Express) {
         header: [
           {id: 'handle', title: 'Handle'},
           {id: 'title', title: 'Title'},
-          {id: 'body', title: 'Body (HTML)'},
+          {id: 'body_html', title: 'Body (HTML)'},
           {id: 'vendor', title: 'Vendor'},
+          {id: 'product_category', title: 'Product Category'},
           {id: 'type', title: 'Type'},
           {id: 'tags', title: 'Tags'},
-          {id: 'published', title: 'Published on online store'},
-          {id: 'status', title: 'Status'},
+          {id: 'published', title: 'Published'},
+          {id: 'option1_name', title: 'Option1 Name'},
+          {id: 'option1_value', title: 'Option1 Value'},
+          {id: 'option2_name', title: 'Option2 Name'},
+          {id: 'option2_value', title: 'Option2 Value'},
+          {id: 'option3_name', title: 'Option3 Name'},
+          {id: 'option3_value', title: 'Option3 Value'},
           {id: 'sku', title: 'SKU'},
-          {id: 'barcode', title: 'Barcode'},
-          {id: 'option1_name', title: 'Option1 name'},
-          {id: 'option1_value', title: 'Option1 value'},
-          {id: 'option2_name', title: 'Option2 name'},
-          {id: 'option2_value', title: 'Option2 value'},
-          {id: 'option3_name', title: 'Option3 name'},
-          {id: 'option3_value', title: 'Option3 value'},
           {id: 'price', title: 'Price'},
-          {id: 'compare_at_price', title: 'Compare at price'},
-          {id: 'requires_shipping', title: 'Requires shipping'},
-          {id: 'fulfillment_service', title: 'Fulfillment service'},
-          {id: 'inventory_quantity', title: 'Inventory quantity'},
-          {id: 'inventory_policy', title: 'Inventory policy'},
-          {id: 'inventory_tracker', title: 'Inventory tracker'},
+          {id: 'compare_at_price', title: 'Compare At Price'},
+          {id: 'requires_shipping', title: 'Requires Shipping'},
           {id: 'taxable', title: 'Taxable'},
+          {id: 'barcode', title: 'Barcode'},
           {id: 'weight', title: 'Weight'},
-          {id: 'weight_unit', title: 'Weight unit'},
+          {id: 'weight_unit', title: 'Weight Unit'},
+          {id: 'inventory_tracker', title: 'Inventory Tracker'},
+          {id: 'inventory_quantity', title: 'Inventory Qty'},
+          {id: 'inventory_policy', title: 'Inventory Policy'},
+          {id: 'fulfillment_service', title: 'Fulfillment Service'},
           {id: 'image_src', title: 'Image Src'},
           {id: 'image_position', title: 'Image Position'},
           {id: 'image_alt_text', title: 'Image Alt Text'},
-          {id: 'gift_card', title: 'Gift card'},
+          {id: 'variant_image', title: 'Variant Image'},
+          {id: 'gift_card', title: 'Gift Card'},
           {id: 'seo_title', title: 'SEO Title'},
           {id: 'seo_description', title: 'SEO Description'},
-          {id: 'google_product_category', title: 'Google Shopping / Google Product Category'}
+          {id: 'status', title: 'Status'}
         ]
       });
 
@@ -283,89 +246,100 @@ export async function registerRoutes(app: Express) {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
+      // HTML Açıklaması
+      const bodyHtml = `
+<div class="product-description">
+  <div class="description">
+    <h2>Ürün Açıklaması</h2>
+    <p>${product.description}</p>
+  </div>
+
+  <div class="specifications">
+    <h2>Ürün Özellikleri</h2>
+    <table>
+      <tbody>
+        ${Object.entries(product.attributes)
+          .map(([key, value]) => `
+            <tr>
+              <th>${key}</th>
+              <td>${value}</td>
+            </tr>
+          `).join('')}
+      </tbody>
+    </table>
+  </div>
+</div>`;
+
       // Ana ürün kaydı
       const mainRecord = {
         handle,
         title: product.title,
-        body: `<div style="font-family: system-ui, sans-serif;">
-          <p style="color: #333; line-height: 1.6;">${product.description}</p>
-          <div style="margin-top: 20px;">
-            <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Ürün Özellikleri</h2>
-            <table style="width: 100%; border-collapse: collapse;">
-              <tbody>
-                ${Object.entries(product.attributes)
-                  .map(([key, value]) => `
-                    <tr style="border-bottom: 1px solid #eee;">
-                      <th style="padding: 8px; text-align: left; color: #666;">${key}</th>
-                      <td style="padding: 8px; color: #333;">${value}</td>
-                    </tr>
-                  `).join('')}
-              </tbody>
-            </table>
-          </div>
-        </div>`,
+        body_html: bodyHtml,
         vendor: product.title.split(' ')[0],
+        product_category: product.categories.join(' > '),
         type: product.categories[0] || 'Giyim',
-        tags: [...product.categories, ...product.tags].join(','),
-        published: 'TRUE',
-        status: 'active',
-        sku: `${handle}-1`,
-        barcode: '',
+        tags: product.categories.join(','),
+        published: 'true',
         option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
         option1_value: product.variants.sizes[0] || '',
         option2_name: product.variants.colors.length > 0 ? 'Color' : '',
         option2_value: product.variants.colors[0] || '',
         option3_name: '',
         option3_value: '',
+        sku: `${handle}-1`,
         price: product.price,
         compare_at_price: product.basePrice,
-        requires_shipping: 'TRUE',
-        fulfillment_service: 'manual',
+        requires_shipping: 'true',
+        taxable: 'true',
+        barcode: '',
+        weight: '500',
+        weight_unit: 'g',
+        inventory_tracker: 'shopify',
         inventory_quantity: '10',
         inventory_policy: 'deny',
-        inventory_tracker: 'shopify',
-        taxable: 'TRUE',
-        weight: '0.5',
-        weight_unit: 'kg',
+        fulfillment_service: 'manual',
         image_src: product.images[0] || '',
         image_position: '1',
         image_alt_text: product.title,
-        gift_card: 'FALSE',
+        variant_image: '',
+        gift_card: 'false',
         seo_title: product.title,
         seo_description: product.description.substring(0, 320),
-        google_product_category: product.categories.join(' > ')
+        status: 'active'
       };
 
       const records = [mainRecord];
 
-      // Varyantları ekle
+      // Varyant kayıtları
       if (product.variants.sizes.length > 0 || product.variants.colors.length > 0) {
         const sizes = product.variants.sizes.filter(Boolean);
         const colors = product.variants.colors.filter(Boolean);
 
-        if (sizes.length > 0 || colors.length > 0) {
-          sizes.forEach((size) => {
-            colors.forEach((color) => {
-              records.push({
-                ...mainRecord,
-                sku: `${handle}-${records.length + 1}`,
-                option1_value: size,
-                option2_value: color,
-                image_position: ''
-              });
+        sizes.forEach((size, sIndex) => {
+          colors.forEach((color, cIndex) => {
+            if (sIndex === 0 && cIndex === 0) return;
+
+            records.push({
+              ...mainRecord,
+              option1_value: size,
+              option2_value: color,
+              sku: `${handle}-${sIndex + 1}-${cIndex + 1}`,
+              image_src: '',
+              image_position: '',
+              variant_image: product.images[cIndex + 1] || product.images[0]
             });
           });
-        }
+        });
       }
 
-      // Ek görselleri ekle
+      // Ek görsel kayıtları
       product.images.slice(1).forEach((image, index) => {
         records.push({
           handle,
           title: product.title,
-          published: 'TRUE',
           image_src: image,
           image_position: (index + 2).toString(),
+          published: 'true',
           status: 'active'
         });
       });
