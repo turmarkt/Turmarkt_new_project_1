@@ -266,6 +266,7 @@ export async function registerRoutes(app: Express) {
       const shopifyCategory = mapToShopifyCategory(product.categories);
       const variantConfig = getVariantConfig(product.categories);
 
+      // CSV yazıcı başlıkları
       const csvWriter = createObjectCsvWriter({
         path: 'products.csv',
         header: [
@@ -285,20 +286,17 @@ export async function registerRoutes(app: Express) {
           {id: 'price', title: 'Price'},
           {id: 'requires_shipping', title: 'Requires Shipping'},
           {id: 'taxable', title: 'Taxable'},
-          {id: 'barcode', title: 'Barcode'},
-          {id: 'weight', title: 'Weight'},
-          {id: 'weight_unit', title: 'Weight Unit'},
           {id: 'inventory_tracker', title: 'Inventory Tracker'},
           {id: 'inventory_quantity', title: 'Inventory Qty'},
           {id: 'inventory_policy', title: 'Inventory Policy'},
           {id: 'fulfillment_service', title: 'Fulfillment Service'},
+          {id: 'weight', title: 'Weight'},
+          {id: 'weight_unit', title: 'Weight Unit'},
           {id: 'image_src', title: 'Image Src'},
           {id: 'image_position', title: 'Image Position'},
           {id: 'image_alt_text', title: 'Image Alt Text'},
           {id: 'variant_image', title: 'Variant Image'},
           {id: 'gift_card', title: 'Gift Card'},
-          {id: 'seo_title', title: 'SEO Title'},
-          {id: 'seo_description', title: 'SEO Description'},
           {id: 'status', title: 'Status'}
         ]
       });
@@ -309,43 +307,35 @@ export async function registerRoutes(app: Express) {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
-      const bodyHtml = `
-<div class="product-description">
-  <div class="description">
-    <p>${product.description}</p>
-  </div>
-  <div class="specifications">
-    <h2>Ürün Özellikleri</h2>
-    <table>
-      <tbody>
-        ${Object.entries(product.attributes)
-          .map(([key, value]) => `
-            <tr>
-              <th>${key}</th>
-              <td>${value}</td>
-            </tr>
-          `).join('')}
-      </tbody>
-    </table>
-  </div>
-</div>`;
-
       // Ana ürün kaydı
       const mainRecord = {
-        handle,
+        handle: product.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         title: product.title,
-        body_html: bodyHtml,
+        body_html: `<div class="product-description">
+          <p>${product.description}</p>
+          <div class="specifications">
+            <h2>Ürün Özellikleri</h2>
+            <table>
+              ${Object.entries(product.attributes)
+                .map(([key, value]) => `
+                  <tr>
+                    <th>${key}</th>
+                    <td>${value}</td>
+                  </tr>
+                `).join('')}
+            </table>
+          </div>
+        </div>`,
         vendor: product.brand,
         product_category: shopifyCategory,
         type: shopifyCategory.split(' > ').pop() || 'Clothing',
         tags: product.categories.join(','),
         published: 'TRUE',
-        status: 'active',
         option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
         option1_value: product.variants.sizes[0] || '',
         option2_name: product.variants.colors.length > 0 ? 'Color' : '',
         option2_value: product.variants.colors[0] || '',
-        sku: `${handle}-1`,
+        sku: `${product.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-1`,
         price: product.price,
         requires_shipping: 'TRUE',
         taxable: 'TRUE',
@@ -358,33 +348,34 @@ export async function registerRoutes(app: Express) {
         image_src: product.images[0],
         image_position: '1',
         image_alt_text: product.title,
-        gift_card: 'FALSE'
+        gift_card: 'FALSE',
+        status: 'active'
       };
 
       const records = [mainRecord];
 
       // Varyant kayıtları
-      if (product.variants.sizes.length > 0 || product.variants.colors.length > 0) {
-        // Size varyantları
+      if (product.variants.sizes.length > 0) {
         for (let i = 1; i < product.variants.sizes.length; i++) {
           records.push({
             ...mainRecord,
             body_html: '',
             option1_value: product.variants.sizes[i],
-            sku: `${handle}-size-${i}`,
+            sku: `${mainRecord.handle}-size-${i}`,
             inventory_quantity: '100',
             image_position: ''
           });
         }
+      }
 
-        // Renk varyantları
+      if (product.variants.colors.length > 0) {
         for (let i = 1; i < product.variants.colors.length; i++) {
           const variantImage = product.images[i] || product.images[0];
           records.push({
             ...mainRecord,
             body_html: '',
             option2_value: product.variants.colors[i],
-            sku: `${handle}-color-${i}`,
+            sku: `${mainRecord.handle}-color-${i}`,
             inventory_quantity: '100',
             image_src: variantImage,
             image_position: '',
@@ -394,21 +385,19 @@ export async function registerRoutes(app: Express) {
       }
 
       // Ek görsel kayıtları
-      product.images.slice(1).forEach((image, index) => {
-        if (image) {
-          records.push({
-            handle,
-            title: product.title,
-            product_category: shopifyCategory,
-            type: mainRecord.type,
-            published: 'TRUE',
-            status: 'active',
-            image_src: image,
-            image_position: (index + 2).toString(),
-            image_alt_text: `${product.title} - Görsel ${index + 2}`
-          });
-        }
-      });
+      for (let i = 1; i < product.images.length; i++) {
+        records.push({
+          handle: mainRecord.handle,
+          title: product.title,
+          product_category: shopifyCategory,
+          type: mainRecord.type,
+          published: 'TRUE',
+          status: 'active',
+          image_src: product.images[i],
+          image_position: (i + 1).toString(),
+          image_alt_text: `${product.title} - Görsel ${i + 1}`
+        });
+      }
 
       await csvWriter.writeRecords(records);
       console.log("CSV başarıyla oluşturuldu");
