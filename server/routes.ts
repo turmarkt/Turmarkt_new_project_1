@@ -249,6 +249,8 @@ export async function registerRoutes(app: Express) {
             </table>
           </div>
         </div>`;
+
+      // Ana ürün kaydı oluşturma
       const mainRecord = {
         handle,
         title: product.title,
@@ -258,12 +260,6 @@ export async function registerRoutes(app: Express) {
         type: shopifyCategory.split(' > ').pop() || 'Clothing',
         tags: product.categories.join(','),
         published: 'TRUE',
-        option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
-        option1_value: product.variants.sizes[0] || '',
-        option2_name: product.variants.colors.length > 0 ? 'Color' : '',
-        option2_value: product.variants.colors[0] || '',
-        option3_name: '',
-        option3_value: '',
         sku: `${handle}-1`,
         price: product.price,
         requires_shipping: 'TRUE',
@@ -278,7 +274,6 @@ export async function registerRoutes(app: Express) {
         image_src: product.images[0],
         image_position: '1',
         image_alt_text: product.title,
-        variant_image: '',
         gift_card: 'FALSE',
         seo_title: product.title,
         seo_description: product.description.substring(0, 320),
@@ -287,39 +282,46 @@ export async function registerRoutes(app: Express) {
 
       const records = [mainRecord];
 
+      // Varyant kayıtları
       if (product.variants.sizes.length > 0 || product.variants.colors.length > 0) {
         const sizes = product.variants.sizes.filter(Boolean);
         const colors = product.variants.colors.filter(Boolean);
 
         if (sizes.length > 0 || colors.length > 0) {
-          const variantOptions = sizes.length > 0 ? sizes : [''];
-          const colorOptions = colors.length > 0 ? colors : [''];
+          // Ana kayıtta option ayarları
+          mainRecord.option1_name = sizes.length > 0 ? 'Size' : '';
+          mainRecord.option1_value = sizes[0] || '';
+          mainRecord.option2_name = colors.length > 0 ? 'Color' : '';
+          mainRecord.option2_value = colors[0] || '';
 
-          variantOptions.forEach((size, sIndex) => {
-            colorOptions.forEach((color, cIndex) => {
-              if (sIndex === 0 && cIndex === 0) return;
-
-              const variantImage = product.images[cIndex + 1] || product.images[0];
-
-              records.push({
-                ...mainRecord,
-                body_html: '',
-                option1_value: size,
-                option2_value: color,
-                sku: `${handle}-${sIndex + 1}-${cIndex + 1}`,
-                inventory_tracker: 'shopify',
-                inventory_quantity: '100',
-                inventory_policy: 'continue',
-                image_src: variantImage,
-                image_position: '',
-                image_alt_text: `${product.title} - ${size} ${color}`.trim(),
-                variant_image: variantImage
-              });
+          // Varyant kayıtları
+          for (let i = 1; i < sizes.length; i++) {
+            records.push({
+              ...mainRecord,
+              body_html: '',
+              option1_value: sizes[i],
+              sku: `${handle}-size-${i}`,
+              inventory_quantity: '100',
+              image_position: ''
             });
-          });
+          }
+
+          for (let i = 1; i < colors.length; i++) {
+            records.push({
+              ...mainRecord,
+              body_html: '',
+              option2_value: colors[i],
+              sku: `${handle}-color-${i}`,
+              inventory_quantity: '100',
+              image_src: product.images[i] || product.images[0],
+              image_position: '',
+              variant_image: product.images[i] || product.images[0]
+            });
+          }
         }
       }
 
+      // Ek görsel kayıtları
       product.images.slice(1).forEach((image, index) => {
         if (image) {
           records.push({
@@ -333,14 +335,7 @@ export async function registerRoutes(app: Express) {
             image_src: image,
             image_position: (index + 2).toString(),
             image_alt_text: `${product.title} - Görsel ${index + 2}`,
-            status: 'active',
-            inventory_tracker: '',
-            inventory_quantity: '',
-            inventory_policy: '',
-            option1_name: '',
-            option1_value: '',
-            option2_name: '',
-            option2_value: ''
+            status: 'active'
           });
         }
       });
