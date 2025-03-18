@@ -147,11 +147,7 @@ export async function registerRoutes(app: Express) {
           {id: 'seo_description', title: 'SEO description'},
           {id: 'google_category', title: 'Google Shopping / Google product category'},
           {id: 'gender', title: 'Google Shopping / Gender'},
-          {id: 'age_group', title: 'Google Shopping / Age group'},
-          {id: 'mpn', title: 'Google Shopping / MPN'},
-          {id: 'adwords_grouping', title: 'Google Shopping / AdWords Grouping'},
-          {id: 'adwords_labels', title: 'Google Shopping / AdWords labels'},
-          {id: 'condition', title: 'Google Shopping / Condition'}
+          {id: 'age_group', title: 'Google Shopping / Age group'}
         ]
       });
 
@@ -220,11 +216,7 @@ export async function registerRoutes(app: Express) {
           seo_description: product.description.substring(0, 320),
           google_category: product.categories.join(' > '),
           gender: 'Unisex',
-          age_group: 'Adult',
-          mpn: '',
-          adwords_grouping: product.categories[product.categories.length - 1] || 'Giyim',
-          adwords_labels: product.tags.join(','),
-          condition: 'new'
+          age_group: 'Adult'
         });
       });
 

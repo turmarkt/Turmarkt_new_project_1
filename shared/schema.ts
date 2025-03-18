@@ -36,10 +36,11 @@ export const urlSchema = z.object({
   url: z.string().refine((url) => {
     try {
       const parsedUrl = new URL(url);
-      return parsedUrl.hostname === "www.trendyol.com" && 
-             parsedUrl.pathname.includes("/p-");
+      const isValidHost = parsedUrl.hostname === "www.trendyol.com";
+      const isProductUrl = parsedUrl.pathname.includes("/p-") || parsedUrl.pathname.includes("-p-");
+      return isValidHost && isProductUrl;
     } catch {
       return false;
     }
-  }, "Geçerli bir Trendyol ürün URL'si giriniz")
+  }, "Geçerli bir Trendyol ürün URL'si giriniz. Örnek: https://www.trendyol.com/marka/urun-adi-p-123456")
 });
