@@ -269,38 +269,41 @@ async function scrapeVariants($: cheerio.CheerioAPI, schema: any): Promise<{ siz
       '.sp-itm:not(.so)',                    // Ana beden seçici
       '.variant-list-item:not(.disabled)',   // Alternatif beden seçici
       '.size-variant-wrapper:not(.disabled)', // Boyut varyant seçici
-      '.v2-size-value',                      // v2 beden değeri seçici
-      '.variants span'                       // Genel varyant seçici
+      '.v2-size-value'                       // v2 beden değeri seçici
     ];
 
     for (const selector of sizeSelectors) {
-      let sizes = $(selector)
+      let foundSizes = $(selector)
         .map((_, el) => $(el).text().trim())
         .get()
         .filter(Boolean);
 
-      // Birleşik bedenleri ayır (örn: XSSMLXL2XL -> XS, S, M, L, XL, 2XL)
-      sizes = sizes.reduce((acc: string[], size) => {
-        const sizeParts = size.match(/(XS|XXS|[SML]|XL|2XL|3XL|4XL|5XL|6XL)/g);
-        if (sizeParts) {
-          return [...acc, ...sizeParts];
+      if (foundSizes.length > 0) {
+        // Birleşik bedenleri parse et
+        const parsedSizes = foundSizes.reduce((acc: string[], size) => {
+          // XSSMLXL2XL gibi birleşik bedenleri algıla
+          if (size.includes('XS') && size.includes('S') && size.includes('M')) {
+            // Birleşik bedeni atla
+            return acc;
+          }
+          // Tekil bedenleri ekle
+          return [...acc, size];
+        }, []);
+
+        // Tekrar eden bedenleri kaldır ve sırala
+        const uniqueSizes = [...new Set(parsedSizes)].sort((a, b) => {
+          const sizeOrder = {
+            'XXS': 1, 'XS': 2, 'S': 3, 'M': 4, 'L': 5, 'XL': 6,
+            '2XL': 7, '3XL': 8, '4XL': 9, '5XL': 10, '6XL': 11
+          };
+          return (sizeOrder[a as keyof typeof sizeOrder] || 99) - (sizeOrder[b as keyof typeof sizeOrder] || 99);
+        });
+
+        if (uniqueSizes.length > 0) {
+          console.log(`${selector} den bulunan bedenler:`, uniqueSizes);
+          variants.sizes = uniqueSizes;
+          break;
         }
-        return [...acc, size];
-      }, []);
-
-      // Tekrar eden bedenleri kaldır ve sırala
-      sizes = [...new Set(sizes)].sort((a, b) => {
-        const sizeOrder = {
-          'XXS': 1, 'XS': 2, 'S': 3, 'M': 4, 'L': 5, 'XL': 6,
-          '2XL': 7, '3XL': 8, '4XL': 9, '5XL': 10, '6XL': 11
-        };
-        return (sizeOrder[a as keyof typeof sizeOrder] || 99) - (sizeOrder[b as keyof typeof sizeOrder] || 99);
-      });
-
-      if (sizes.length > 0) {
-        console.log(`${selector} den bulunan bedenler:`, sizes);
-        variants.sizes = sizes;
-        break;
       }
     }
 
@@ -320,7 +323,7 @@ async function scrapeVariants($: cheerio.CheerioAPI, schema: any): Promise<{ siz
 
       if (colors.length > 0) {
         console.log(`${selector} den bulunan renkler:`, colors);
-        variants.colors = colors;
+        variants.colors = [...new Set(colors)]; // Tekrar eden renkleri kaldır
         break;
       }
     }
