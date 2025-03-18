@@ -228,7 +228,6 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // CSV export endpoint güncellemesi
   app.post("/api/export", async (req, res) => {
     try {
       console.log("CSV export başlatıldı");
@@ -247,42 +246,58 @@ export async function registerRoutes(app: Express) {
           {id: 'vendor', title: 'Vendor'},
           {id: 'type', title: 'Type'},
           {id: 'tags', title: 'Tags'},
-          {id: 'published', title: 'Published on online store'},
-          {id: 'status', title: 'Status'},
-          {id: 'option1_name', title: 'Option1 name'},
-          {id: 'option1_value', title: 'Option1 value'},
-          {id: 'option2_name', title: 'Option2 name'},
-          {id: 'option2_value', title: 'Option2 value'},
-          {id: 'option3_name', title: 'Option3 name'},
-          {id: 'option3_value', title: 'Option3 value'},
-          {id: 'variant_sku', title: 'SKU'},
+          {id: 'published', title: 'Published'},
+          {id: 'variant_grams', title: 'Variant Grams'},
+          {id: 'variant_inventory_tracker', title: 'Variant Inventory Tracker'},
+          {id: 'variant_inventory_qty', title: 'Variant Inventory Qty'},
           {id: 'variant_inventory_policy', title: 'Variant Inventory Policy'},
-          {id: 'variant_inventory_quantity', title: 'Variant Inventory Qty'},
-          {id: 'variant_price', title: 'Price'},
-          {id: 'variant_compare_at_price', title: 'Compare at price'},
-          {id: 'variant_requires_shipping', title: 'Requires shipping'},
-          {id: 'variant_taxable', title: 'Taxable'},
-          {id: 'variant_weight', title: 'Weight (kg)'},
+          {id: 'variant_fulfillment_service', title: 'Variant Fulfillment Service'},
+          {id: 'variant_price', title: 'Variant Price'},
+          {id: 'variant_compare_at_price', title: 'Variant Compare At Price'},
+          {id: 'variant_requires_shipping', title: 'Variant Requires Shipping'},
+          {id: 'variant_taxable', title: 'Variant Taxable'},
+          {id: 'variant_barcode', title: 'Variant Barcode'},
           {id: 'image_src', title: 'Image Src'},
           {id: 'image_position', title: 'Image Position'},
           {id: 'image_alt_text', title: 'Image Alt Text'},
           {id: 'gift_card', title: 'Gift Card'},
           {id: 'seo_title', title: 'SEO Title'},
           {id: 'seo_description', title: 'SEO Description'},
-          {id: 'google_shopping_product_category', title: 'Google Shopping / Google Product Category'}
+          {id: 'google_shopping_google_product_category', title: 'Google Shopping / Google Product Category'},
+          {id: 'google_shopping_gender', title: 'Google Shopping / Gender'},
+          {id: 'google_shopping_age_group', title: 'Google Shopping / Age Group'},
+          {id: 'google_shopping_mpn', title: 'Google Shopping / MPN'},
+          {id: 'google_shopping_adwords_grouping', title: 'Google Shopping / AdWords Grouping'},
+          {id: 'google_shopping_adwords_labels', title: 'Google Shopping / AdWords Labels'},
+          {id: 'google_shopping_condition', title: 'Google Shopping / Condition'},
+          {id: 'google_shopping_custom_product', title: 'Google Shopping / Custom Product'},
+          {id: 'variant_image', title: 'Variant Image'},
+          {id: 'variant_weight_unit', title: 'Variant Weight Unit'},
+          {id: 'variant_tax_code', title: 'Variant Tax Code'},
+          {id: 'cost_per_item', title: 'Cost per item'},
+          {id: 'status', title: 'Status'},
+          {id: 'option1_name', title: 'Option1 Name'},
+          {id: 'option1_value', title: 'Option1 Value'},
+          {id: 'option2_name', title: 'Option2 Name'},
+          {id: 'option2_value', title: 'Option2 Value'},
+          {id: 'option3_name', title: 'Option3 Name'},
+          {id: 'option3_value', title: 'Option3 Value'}
         ]
       });
 
-      // Ana ürün kaydı oluştur
+      // Ana ürün kaydı
+      const handle = product.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
       const mainRecord = {
-        handle: product.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
+        handle,
         title: product.title,
         body: `<div style="font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;">
-          <div style="margin-bottom: 20px;">
-            <p style="color: #333; line-height: 1.6;">${product.description}</p>
-          </div>
-
-          <div style="margin-bottom: 20px;">
+          <p style="color: #333; line-height: 1.6;">${product.description}</p>
+          <div style="margin-top: 20px;">
             <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Ürün Özellikleri</h2>
             <table style="width: 100%; border-collapse: collapse;">
               <tbody>
@@ -298,31 +313,44 @@ export async function registerRoutes(app: Express) {
           </div>
         </div>`,
         vendor: product.title.split(' ')[0],
-        type: product.categories[product.categories.length - 1] || '',
+        type: product.categories[0] || 'Giyim',
         tags: [...product.categories, ...product.tags].join(','),
-        published: 'TRUE',
+        published: 'true',
+        variant_grams: '500',
+        variant_inventory_tracker: 'shopify',
+        variant_inventory_qty: '10',
+        variant_inventory_policy: 'deny',
+        variant_fulfillment_service: 'manual',
+        variant_price: product.price,
+        variant_compare_at_price: product.basePrice,
+        variant_requires_shipping: 'true',
+        variant_taxable: 'true',
+        variant_barcode: '',
+        image_src: product.images[0] || '',
+        image_position: '1',
+        image_alt_text: product.title,
+        gift_card: 'false',
+        seo_title: product.title,
+        seo_description: product.description.substring(0, 320),
+        google_shopping_google_product_category: product.categories.join(' > '),
+        google_shopping_gender: 'unisex',
+        google_shopping_age_group: 'adult',
+        google_shopping_mpn: handle,
+        google_shopping_adwords_grouping: product.categories[0] || '',
+        google_shopping_adwords_labels: product.categories.join(','),
+        google_shopping_condition: 'new',
+        google_shopping_custom_product: 'false',
+        variant_image: product.images[0] || '',
+        variant_weight_unit: 'g',
+        variant_tax_code: '',
+        cost_per_item: '',
         status: 'active',
         option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
         option1_value: product.variants.sizes[0] || '',
         option2_name: product.variants.colors.length > 0 ? 'Color' : '',
         option2_value: product.variants.colors[0] || '',
         option3_name: '',
-        option3_value: '',
-        variant_sku: `SKU-${Date.now()}-1`,
-        variant_inventory_policy: 'deny',
-        variant_inventory_quantity: '10',
-        variant_price: product.price,
-        variant_compare_at_price: product.basePrice,
-        variant_requires_shipping: 'TRUE',
-        variant_taxable: 'TRUE',
-        variant_weight: '0.5',
-        image_src: product.images[0] || '',
-        image_position: '1',
-        image_alt_text: product.title,
-        gift_card: 'FALSE',
-        seo_title: product.title,
-        seo_description: product.description.substring(0, 320),
-        google_shopping_product_category: product.categories.join(' > ')
+        option3_value: ''
       };
 
       const records = [mainRecord];
@@ -338,10 +366,11 @@ export async function registerRoutes(app: Express) {
 
             records.push({
               ...mainRecord,
+              title: mainRecord.title,
               option1_value: size,
               option2_value: color,
-              variant_sku: `SKU-${Date.now()}-${records.length + 1}`,
-              image_src: product.images[cIndex] || product.images[0] || ''
+              variant_image: product.images[cIndex] || product.images[0] || '',
+              image_position: ''
             });
           });
         });
@@ -351,9 +380,13 @@ export async function registerRoutes(app: Express) {
       product.images.slice(1).forEach((image, index) => {
         records.push({
           ...mainRecord,
-          variant_sku: '',
+          variant_inventory_qty: '',
+          variant_price: '',
+          variant_image: '',
           image_src: image,
-          image_position: (index + 2).toString()
+          image_position: (index + 2).toString(),
+          option1_value: '',
+          option2_value: ''
         });
       });
 
