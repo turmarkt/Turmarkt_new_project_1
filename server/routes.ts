@@ -121,38 +121,87 @@ async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]
   let categories: string[] = [];
 
   try {
-    // 1. Ana breadcrumb yolundan kategorileri al
-    categories = $(".breadcrumb-wrapper span, .product-path span")
-      .map((_, el) => $(el).text().trim())
-      .get()
-      .filter(cat => cat !== ">" && cat !== "Trendyol" && cat.length > 0);
+    // 1. Schema.org verilerinden breadcrumb bilgisini al
+    $('script[type="application/ld+json"]').each((_, script) => {
+      try {
+        const schema = JSON.parse($(script).html() || '{}');
+        if (schema.breadcrumb?.itemListElement) {
+          const breadcrumbs = schema.breadcrumb.itemListElement
+            .map((item: any) => item.name || item.item?.name)
+            .filter((name: string | undefined) => name && name !== "Trendyol");
 
-    // 2. Detay sayfasından kategorileri al
+          if (breadcrumbs.length > 0) {
+            categories = breadcrumbs;
+          }
+        }
+      } catch (e) {
+        console.error('Schema parse error:', e);
+      }
+    });
+
+    // 2. Ana breadcrumb yolundan kategorileri al
     if (categories.length === 0) {
-      categories = $(".product-detail-category, .detail-category")
-        .first()
-        .text()
-        .trim()
-        .split("/")
-        .map(c => c.trim())
-        .filter(Boolean);
+      categories = $(".breadcrumb-wrapper span, .product-path span, .breadcrumb li")
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter(cat => cat !== ">" && cat !== "/" && cat !== "Trendyol" && cat.length > 0);
     }
 
-    // 3. Marka ve ürün tipinden kategori oluştur
+    // 3. Product detail sayfasındaki kategori bilgisini al
     if (categories.length === 0) {
-      const brand = $(".product-brand-name, .brand-name").first().text().trim();
-      const type = $(".product-type, .type-name").first().text().trim();
+      const detailCategories = [];
 
-      if (brand && type) {
-        categories = [brand, type];
+      // Marka bilgisi
+      const brand = $(".pr-new-br span, .product-brand-name, .brand-name").first().text().trim();
+      if (brand) detailCategories.push(brand);
+
+      // Ana kategori
+      const mainCategory = $(".product-category-container span").first().text().trim();
+      if (mainCategory) detailCategories.push(mainCategory);
+
+      // Alt kategori ve ürün tipi
+      $(".detail-category-wrapper span, .product-type-wrapper span").each((_, el) => {
+        const category = $(el).text().trim();
+        if (category && !detailCategories.includes(category)) {
+          detailCategories.push(category);
+        }
+      });
+
+      if (detailCategories.length > 0) {
+        categories = detailCategories;
       }
     }
 
-    // 4. En az bir kategori olduğundan emin ol
+    // 4. Giyim/tekstil/spor kategorileri için özel kontrol
     if (categories.length === 0) {
-      const brandName = $(".pr-new-br span").first().text().trim();
-      if (brandName) {
-        categories = [brandName];
+      const productTitle = $(".pr-new-br").text().trim();
+      const type = $(".product-type, .type-name").first().text().trim();
+      const gender = productTitle.match(/(erkek|kadın|unisex|çocuk)/i)?.[0];
+
+      if (gender || type) {
+        const categoryParts = [];
+        if (gender) categoryParts.push(gender.charAt(0).toUpperCase() + gender.slice(1));
+        if (type) categoryParts.push(type);
+
+        // Ürün tipini belirle
+        const productTypes = ['Giyim', 'Spor', 'Ayakkabı', 'Aksesuar'];
+        for (const pType of productTypes) {
+          if (productTitle.toLowerCase().includes(pType.toLowerCase())) {
+            if (!categoryParts.includes(pType)) categoryParts.push(pType);
+          }
+        }
+
+        if (categoryParts.length > 0) {
+          categories = categoryParts;
+        }
+      }
+    }
+
+    // 5. Son kontrol - hala kategori bulunamadıysa
+    if (categories.length === 0) {
+      const title = $("h1.pr-new-br").text().trim();
+      if (title) {
+        categories = [title];
       } else {
         categories = ["Giyim"]; // Varsayılan kategori
       }
@@ -336,7 +385,7 @@ export async function registerRoutes(app: Express) {
         url,
         title,
         description,
-        price, 
+        price,
         basePrice,
         images,
         variants,
