@@ -132,15 +132,22 @@ export async function registerRoutes(app: Express) {
           {id: 'tags', title: 'Tags'},
           {id: 'published', title: 'Published on online store'},
           {id: 'status', title: 'Status'},
-          {id: 'option1_name', title: 'Option1 Name'},
-          {id: 'option1_value', title: 'Option1 Value'},
-          {id: 'option2_name', title: 'Option2 Name'},
-          {id: 'option2_value', title: 'Option2 Value'},
+          {id: 'sku', title: 'SKU'},
+          {id: 'option1_name', title: 'Option1 name'},
+          {id: 'option1_value', title: 'Option1 value'},
+          {id: 'option2_name', title: 'Option2 name'},
+          {id: 'option2_value', title: 'Option2 value'},
           {id: 'price', title: 'Price'},
           {id: 'compare_at_price', title: 'Compare-at price'},
+          {id: 'weight', title: 'Weight value (grams)'},
+          {id: 'weight_unit', title: 'Weight unit for display'},
           {id: 'requires_shipping', title: 'Requires shipping'},
+          {id: 'fulfillment_service', title: 'Fulfillment service'},
           {id: 'image_src', title: 'Product image URL'},
-          {id: 'image_position', title: 'Image position'}
+          {id: 'image_position', title: 'Image position'},
+          {id: 'variant_image', title: 'Variant image URL'},
+          {id: 'seo_title', title: 'SEO title'},
+          {id: 'seo_description', title: 'SEO description'}
         ]
       });
 
@@ -149,15 +156,29 @@ export async function registerRoutes(app: Express) {
       const hasColors = product.variants.colors && product.variants.colors.length > 0;
 
       // HTML formatında ürün detayları oluştur
-      let htmlDescription = `<p>${product.description}</p>`;
+      let htmlDescription = `<div class="product-description">
+        <h2>Ürün Açıklaması</h2>
+        <p>${product.description}</p>`;
 
       // Ürün özelliklerini ekle
       if (Object.keys(product.attributes).length > 0) {
-        htmlDescription += '<h3>Ürün Özellikleri</h3><ul>';
+        htmlDescription += `
+        <h2>Ürün Özellikleri</h2>
+        <table class="product-specs">
+          <tbody>`;
+
         for (const [key, value] of Object.entries(product.attributes)) {
-          htmlDescription += `<li><strong>${key}:</strong> ${value}</li>`;
+          htmlDescription += `
+            <tr>
+              <th>${key}</th>
+              <td>${value}</td>
+            </tr>`;
         }
-        htmlDescription += '</ul>';
+
+        htmlDescription += `
+          </tbody>
+        </table>
+        </div>`;
       }
 
       const records = [];
@@ -174,15 +195,22 @@ export async function registerRoutes(app: Express) {
           tags: product.tags.join(', '),
           published: 'TRUE',
           status: 'active',
+          sku: '',
           option1_name: hasSizes ? 'Size' : '',
           option1_value: hasSizes ? product.variants.sizes[0] : '',
           option2_name: hasColors ? 'Color' : '',
           option2_value: hasColors ? product.variants.colors[0] : '',
           price: product.price,
           compare_at_price: product.basePrice,
+          weight: '500',
+          weight_unit: 'g',
           requires_shipping: 'TRUE',
+          fulfillment_service: 'manual',
           image_src: image,
-          image_position: index + 1
+          image_position: index + 1,
+          variant_image: '',
+          seo_title: product.title,
+          seo_description: product.description.substring(0, 320)
         });
       });
 
@@ -203,15 +231,22 @@ export async function registerRoutes(app: Express) {
               tags: product.tags.join(', '),
               published: 'TRUE',
               status: 'active',
+              sku: '',
               option1_name: 'Size',
               option1_value: size,
               option2_name: 'Color',
               option2_value: color,
               price: product.price,
               compare_at_price: product.basePrice,
+              weight: '500',
+              weight_unit: 'g',
               requires_shipping: 'TRUE',
+              fulfillment_service: 'manual',
               image_src: product.images[0] || '',
-              image_position: 1
+              image_position: 1,
+              variant_image: '',
+              seo_title: product.title,
+              seo_description: product.description.substring(0, 320)
             });
           }
         }

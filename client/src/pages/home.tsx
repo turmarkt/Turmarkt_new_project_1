@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Tag, Package, ArrowRight } from "lucide-react";
+import { Loader2, Tag, Package, ArrowRight, ImageIcon } from "lucide-react";
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
@@ -140,20 +140,22 @@ export default function Home() {
                   {/* Ürün Görselleri */}
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Ürün Görselleri</h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                      {product.images.map((img: string, i: number) => (
-                        <motion.div
-                          key={i}
-                          whileHover={{ scale: 1.05 }}
-                          className="aspect-square rounded-lg overflow-hidden bg-gray-800"
-                        >
-                          <img 
-                            src={img}
-                            alt={`Ürün ${i + 1}`}
-                            className="w-full h-full object-cover"
-                          />
-                        </motion.div>
-                      ))}
+                    <div className="flex gap-4">
+                      <div className="relative w-64 h-64 rounded-lg overflow-hidden bg-gray-800">
+                        <img 
+                          src={product.images[0]}
+                          alt={`${product.title} - Ana Görsel`}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      {product.images.length > 1 && (
+                        <div className="flex items-center justify-center w-20 h-64 bg-gray-800 rounded-lg">
+                          <div className="text-center">
+                            <ImageIcon className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                            <span className="text-sm text-gray-400">+{product.images.length - 1} görsel</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
