@@ -267,13 +267,14 @@ export async function registerRoutes(app: Express) {
         sku: `${handle}-1`,
         price: product.price,
         requires_shipping: 'TRUE',
-        fulfillment_service: 'manual',
-        inventory_quantity: '100',
-        inventory_policy: 'continue',
-        inventory_tracker: 'shopify',
         taxable: 'TRUE',
+        barcode: '',
         weight: '500',
         weight_unit: 'g',
+        inventory_tracker: 'shopify',
+        inventory_quantity: '100',
+        inventory_policy: 'continue',
+        fulfillment_service: 'manual',
         image_src: product.images[0],
         image_position: '1',
         image_alt_text: product.title,
@@ -283,24 +284,32 @@ export async function registerRoutes(app: Express) {
         seo_description: product.description.substring(0, 320),
         status: 'active'
       };
+
       const records = [mainRecord];
+
       if (product.variants.sizes.length > 0 || product.variants.colors.length > 0) {
         const sizes = product.variants.sizes.filter(Boolean);
         const colors = product.variants.colors.filter(Boolean);
+
         if (sizes.length > 0 || colors.length > 0) {
           const variantOptions = sizes.length > 0 ? sizes : [''];
           const colorOptions = colors.length > 0 ? colors : [''];
+
           variantOptions.forEach((size, sIndex) => {
             colorOptions.forEach((color, cIndex) => {
               if (sIndex === 0 && cIndex === 0) return;
+
               const variantImage = product.images[cIndex + 1] || product.images[0];
+
               records.push({
                 ...mainRecord,
                 body_html: '',
                 option1_value: size,
                 option2_value: color,
                 sku: `${handle}-${sIndex + 1}-${cIndex + 1}`,
+                inventory_tracker: 'shopify',
                 inventory_quantity: '100',
+                inventory_policy: 'continue',
                 image_src: variantImage,
                 image_position: '',
                 image_alt_text: `${product.title} - ${size} ${color}`.trim(),
@@ -310,11 +319,12 @@ export async function registerRoutes(app: Express) {
           });
         }
       }
+
       product.images.slice(1).forEach((image, index) => {
         if (image) {
           records.push({
-            handle: mainRecord.handle,
-            title: mainRecord.title,
+            handle,
+            title: product.title,
             body_html: '',
             vendor: mainRecord.vendor,
             product_category: mainRecord.product_category,
@@ -323,10 +333,18 @@ export async function registerRoutes(app: Express) {
             image_src: image,
             image_position: (index + 2).toString(),
             image_alt_text: `${product.title} - Görsel ${index + 2}`,
-            status: 'active'
+            status: 'active',
+            inventory_tracker: '',
+            inventory_quantity: '',
+            inventory_policy: '',
+            option1_name: '',
+            option1_value: '',
+            option2_name: '',
+            option2_value: ''
           });
         }
       });
+
       await csvWriter.writeRecords(records);
       console.log("CSV başarıyla oluşturuldu");
       res.download('products.csv');
