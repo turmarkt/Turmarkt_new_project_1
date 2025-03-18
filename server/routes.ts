@@ -135,6 +135,7 @@ async function exportToShopify(product: Product) {
     'Tax code': '',
     'Inventory tracker': 'shopify',
     'Inventory quantity': '100',
+    'Inventory policy': 'deny',
     'Continue selling when out of stock': 'deny',
     'Weight value (grams)': '500',
     'Weight unit for display': 'g',
@@ -161,16 +162,17 @@ async function exportToShopify(product: Product) {
 
   const records = [mainRecord];
 
-  // Varyant kayıtları
+  // Size varyantları
   if (product.variants.sizes.length > 0) {
     for (let i = 1; i < product.variants.sizes.length; i++) {
       records.push({
         'URL handle': handle,
-        'Option1 Name': 'Size', // Ana üründeki ile aynı olmalı
-        'Option1 Value': product.variants.sizes[i],
+        'Title': '',
         'SKU': `${handle}-size-${i}`,
+        'Option1 Value': product.variants.sizes[i],
         'Price': product.price,
         'Inventory quantity': '100',
+        'Inventory policy': 'deny',
         'Charge tax': 'TRUE',
         'Requires shipping': 'TRUE',
         'Inventory tracker': 'shopify',
@@ -179,16 +181,18 @@ async function exportToShopify(product: Product) {
     }
   }
 
+  // Renk varyantları
   if (product.variants.colors.length > 0) {
     for (let i = 1; i < product.variants.colors.length; i++) {
       const variantImage = product.images[i] || product.images[0];
       records.push({
         'URL handle': handle,
-        'Option2 Name': 'Color', // Ana üründeki ile aynı olmalı
-        'Option2 Value': product.variants.colors[i],
+        'Title': '',
         'SKU': `${handle}-color-${i}`,
+        'Option2 Value': product.variants.colors[i],
         'Price': product.price,
         'Inventory quantity': '100',
+        'Inventory policy': 'deny',
         'Charge tax': 'TRUE',
         'Requires shipping': 'TRUE',
         'Inventory tracker': 'shopify',
@@ -199,7 +203,7 @@ async function exportToShopify(product: Product) {
     }
   }
 
-  // Ek görsel kayıtları için sadece gerekli alanlar
+  // Ek görsel kayıtları
   for (let i = 1; i < product.images.length; i++) {
     records.push({
       'URL handle': handle,
@@ -209,7 +213,7 @@ async function exportToShopify(product: Product) {
     });
   }
 
-  // CSV başlıkları - Shopify'ın beklediği sırada
+  // CSV başlıkları
   const csvWriter = createObjectCsvWriter({
     path: 'products.csv',
     header: [
@@ -235,6 +239,7 @@ async function exportToShopify(product: Product) {
       {id: 'Tax code', title: 'Tax code'},
       {id: 'Inventory tracker', title: 'Inventory tracker'},
       {id: 'Inventory quantity', title: 'Inventory quantity'},
+      {id: 'Inventory policy', title: 'Inventory policy'},
       {id: 'Continue selling when out of stock', title: 'Continue selling when out of stock'},
       {id: 'Weight value (grams)', title: 'Weight value (grams)'},
       {id: 'Weight unit for display', title: 'Weight unit for display'},
