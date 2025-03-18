@@ -334,14 +334,44 @@ export async function registerRoutes(app: Express) {
 
       // Ek görsel kayıtları
       product.images.slice(1).forEach((image, index) => {
-        records.push({
-          handle,
-          title: product.title,
-          image_src: image,
-          image_position: (index + 2).toString(),
-          published: 'true',
-          status: 'active'
-        });
+        if (image) {  // Boş görsel URL'lerini filtrele
+          records.push({
+            handle,
+            title: product.title,
+            body_html: mainRecord.body_html,
+            vendor: mainRecord.vendor,
+            product_category: mainRecord.product_category,
+            type: mainRecord.type,
+            tags: mainRecord.tags,
+            published: 'true',
+            option1_name: mainRecord.option1_name,
+            option1_value: mainRecord.option1_value,
+            option2_name: mainRecord.option2_name,
+            option2_value: mainRecord.option2_value,
+            option3_name: '',
+            option3_value: '',
+            sku: '',
+            price: '',
+            compare_at_price: '',
+            requires_shipping: mainRecord.requires_shipping,
+            taxable: mainRecord.taxable,
+            barcode: '',
+            weight: mainRecord.weight,
+            weight_unit: mainRecord.weight_unit,
+            inventory_tracker: '',
+            inventory_quantity: '',
+            inventory_policy: mainRecord.inventory_policy,
+            fulfillment_service: mainRecord.fulfillment_service,
+            image_src: image,
+            image_position: (index + 2).toString(),
+            image_alt_text: `${product.title} - Görsel ${index + 2}`,
+            variant_image: '',
+            gift_card: 'false',
+            seo_title: mainRecord.seo_title,
+            seo_description: mainRecord.seo_description,
+            status: 'active'
+          });
+        }
       });
 
       await csvWriter.writeRecords(records);
