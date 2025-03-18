@@ -245,45 +245,43 @@ export async function registerRoutes(app: Express) {
           {id: 'title', title: 'Title'},
           {id: 'body', title: 'Body (HTML)'},
           {id: 'vendor', title: 'Vendor'},
-          {id: 'product_category', title: 'Product Category'},
           {id: 'type', title: 'Type'},
           {id: 'tags', title: 'Tags'},
-          {id: 'published', title: 'Published'},
-          {id: 'option1_name', title: 'Option1 Name'},
-          {id: 'option1_value', title: 'Option1 Value'},
-          {id: 'option2_name', title: 'Option2 Name'},
-          {id: 'option2_value', title: 'Option2 Value'},
-          {id: 'option3_name', title: 'Option3 Name'},
-          {id: 'option3_value', title: 'Option3 Value'},
-          {id: 'variant_sku', title: 'Variant SKU'},
+          {id: 'published', title: 'Published on online store'},
+          {id: 'status', title: 'Status'},
+          {id: 'option1_name', title: 'Option1 name'},
+          {id: 'option1_value', title: 'Option1 value'},
+          {id: 'option2_name', title: 'Option2 name'},
+          {id: 'option2_value', title: 'Option2 value'},
+          {id: 'option3_name', title: 'Option3 name'},
+          {id: 'option3_value', title: 'Option3 value'},
+          {id: 'variant_sku', title: 'SKU'},
           {id: 'variant_inventory_policy', title: 'Variant Inventory Policy'},
           {id: 'variant_inventory_quantity', title: 'Variant Inventory Qty'},
-          {id: 'variant_price', title: 'Variant Price'},
-          {id: 'variant_compare_at_price', title: 'Variant Compare At Price'},
-          {id: 'variant_requires_shipping', title: 'Variant Requires Shipping'},
-          {id: 'variant_taxable', title: 'Variant Taxable'},
-          {id: 'variant_weight_unit', title: 'Variant Weight Unit'},
-          {id: 'variant_weight', title: 'Variant Weight'},
+          {id: 'variant_price', title: 'Price'},
+          {id: 'variant_compare_at_price', title: 'Compare at price'},
+          {id: 'variant_requires_shipping', title: 'Requires shipping'},
+          {id: 'variant_taxable', title: 'Taxable'},
+          {id: 'variant_weight', title: 'Weight (kg)'},
           {id: 'image_src', title: 'Image Src'},
           {id: 'image_position', title: 'Image Position'},
           {id: 'image_alt_text', title: 'Image Alt Text'},
           {id: 'gift_card', title: 'Gift Card'},
           {id: 'seo_title', title: 'SEO Title'},
           {id: 'seo_description', title: 'SEO Description'},
-          {id: 'google_shopping_product_category', title: 'Google Shopping / Product Category'},
-          {id: 'status', title: 'Status'}
+          {id: 'google_shopping_product_category', title: 'Google Shopping / Google Product Category'}
         ]
       });
 
-      // Ana ürün kaydı
-      const mainProductRecord = {
+      // Ana ürün kaydı oluştur
+      const mainRecord = {
         handle: product.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
         title: product.title,
-        body: `<div style="font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;">
+        body: `<div style="font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;">
           <div style="margin-bottom: 20px;">
-            <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Ürün Açıklaması</h2>
-            <p style="color: #666; line-height: 1.6;">${product.description}</p>
+            <p style="color: #333; line-height: 1.6;">${product.description}</p>
           </div>
+
           <div style="margin-bottom: 20px;">
             <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Ürün Özellikleri</h2>
             <table style="width: 100%; border-collapse: collapse;">
@@ -291,7 +289,7 @@ export async function registerRoutes(app: Express) {
                 ${Object.entries(product.attributes)
                   .map(([key, value]) => `
                     <tr style="border-bottom: 1px solid #eee;">
-                      <th style="padding: 8px; text-align: left; width: 40%; color: #666;">${key}</th>
+                      <th style="padding: 8px; text-align: left; color: #666;">${key}</th>
                       <td style="padding: 8px; color: #333;">${value}</td>
                     </tr>
                   `).join('')}
@@ -299,25 +297,24 @@ export async function registerRoutes(app: Express) {
             </table>
           </div>
         </div>`,
-        vendor: product.title.split(' ')[0], // İlk kelimeyi marka olarak al
-        product_category: product.categories.join(' > '),
-        type: product.categories[product.categories.length - 1] || 'Giyim',
-        tags: product.tags.join(','),
+        vendor: product.title.split(' ')[0],
+        type: product.categories[product.categories.length - 1] || '',
+        tags: [...product.categories, ...product.tags].join(','),
         published: 'TRUE',
+        status: 'active',
         option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
         option1_value: product.variants.sizes[0] || '',
         option2_name: product.variants.colors.length > 0 ? 'Color' : '',
         option2_value: product.variants.colors[0] || '',
         option3_name: '',
         option3_value: '',
-        variant_sku: `${product.id}-1`,
+        variant_sku: `SKU-${Date.now()}-1`,
         variant_inventory_policy: 'deny',
         variant_inventory_quantity: '10',
         variant_price: product.price,
         variant_compare_at_price: product.basePrice,
         variant_requires_shipping: 'TRUE',
         variant_taxable: 'TRUE',
-        variant_weight_unit: 'kg',
         variant_weight: '0.5',
         image_src: product.images[0] || '',
         image_position: '1',
@@ -325,36 +322,35 @@ export async function registerRoutes(app: Express) {
         gift_card: 'FALSE',
         seo_title: product.title,
         seo_description: product.description.substring(0, 320),
-        google_shopping_product_category: product.categories.join(' > '),
-        status: 'active'
+        google_shopping_product_category: product.categories.join(' > ')
       };
 
-      const records = [mainProductRecord];
+      const records = [mainRecord];
 
-      // Varyant kayıtları
+      // Varyantları ekle
       if (product.variants.sizes.length > 0 || product.variants.colors.length > 0) {
         const sizes = product.variants.sizes.length > 0 ? product.variants.sizes : [''];
         const colors = product.variants.colors.length > 0 ? product.variants.colors : [''];
 
         sizes.forEach((size, sIndex) => {
           colors.forEach((color, cIndex) => {
-            if (sIndex === 0 && cIndex === 0) return; // Ana ürün kaydını atla
+            if (sIndex === 0 && cIndex === 0) return; // Ana ürünü atla
 
             records.push({
-              ...mainProductRecord,
+              ...mainRecord,
               option1_value: size,
               option2_value: color,
-              variant_sku: `${product.id}-${records.length + 1}`,
+              variant_sku: `SKU-${Date.now()}-${records.length + 1}`,
               image_src: product.images[cIndex] || product.images[0] || ''
             });
           });
         });
       }
 
-      // Ek görsel kayıtları
+      // Ek görselleri ekle
       product.images.slice(1).forEach((image, index) => {
         records.push({
-          ...mainProductRecord,
+          ...mainRecord,
           variant_sku: '',
           image_src: image,
           image_position: (index + 2).toString()
