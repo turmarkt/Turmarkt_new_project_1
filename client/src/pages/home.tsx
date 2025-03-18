@@ -10,7 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Package, ArrowRight, FileText } from "lucide-react";
+import { Loader2, Package, ArrowRight, FileText, ChevronDown } from "lucide-react";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
@@ -152,22 +158,28 @@ export default function Home() {
                   </div>
 
                   {/* Ürün Özellikleri */}
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-gray-400" />
-                      <h3 className="text-xs font-semibold text-gray-400">Ürün Özellikleri</h3>
-                    </div>
-                    <div className="bg-gray-800/50 rounded p-3">
-                      <div className="grid grid-cols-1 gap-2">
-                        {Object.entries(product.attributes).map(([key, value]) => (
-                          <div key={key} className="flex items-center py-2 border-b border-gray-700/50 last:border-0">
-                            <span className="text-xs text-gray-400 w-1/3 font-medium">{key}</span>
-                            <span className="text-xs text-gray-300 w-2/3">{value as string}</span>
+                  <Accordion type="single" collapsible className="w-full">
+                    <AccordionItem value="features">
+                      <AccordionTrigger className="text-sm hover:no-underline">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-gray-400" />
+                          <span className="font-semibold text-gray-400">Ürün Özellikleri</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="bg-gray-800/50 rounded p-3">
+                          <div className="grid grid-cols-1 gap-2">
+                            {Object.entries(product.attributes).map(([key, value]) => (
+                              <div key={key} className="flex items-center py-2 border-b border-gray-700/50 last:border-0">
+                                <span className="text-xs text-gray-400 w-1/3 font-medium">{key}</span>
+                                <span className="text-xs text-gray-300 w-2/3">{value as string}</span>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
+                  </Accordion>
 
                   {/* Ürün Görselleri */}
                   <div className="space-y-2">
