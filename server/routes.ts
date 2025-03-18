@@ -10,81 +10,75 @@ import { TrendyolScrapingError, URLValidationError, ProductDataError, handleErro
 import { getCategoryConfig } from "./category-mapping";
 
 async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]> {
-  const categories: string[] = [];
+  let categories: string[] = [];
 
-  // Ana kategori yolunu al
-  const breadcrumb = $(".product-path span")
-    .map((_, el) => $(el).text().trim())
-    .get()
-    .filter(cat => cat !== ">" && cat !== "Trendyol");
-
-  if (breadcrumb.length > 0) {
-    categories.push(...breadcrumb);
-  }
-
-  // Alternatif kategori elementlerini kontrol et
-  if (categories.length === 0) {
-    const altBreadcrumb = $(".breadcrumb-wrapper span")
+  try {
+    // 1. Ana breadcrumb yolu
+    const breadcrumb = $(".product-path span, .breadcrumb-wrapper span")
       .map((_, el) => $(el).text().trim())
       .get()
-      .filter(cat => cat !== ">" && cat !== "Trendyol");
+      .filter(cat => cat !== ">" && cat !== "Trendyol" && cat.length > 0);
 
-    if (altBreadcrumb.length > 0) {
-      categories.push(...altBreadcrumb);
+    if (breadcrumb.length > 0) {
+      categories = breadcrumb;
     }
-  }
 
-  // Ürün detay sayfasındaki kategori bilgisini kontrol et
-  if (categories.length === 0) {
-    const detailCategory = $(".product-detail-category")
-      .first()
-      .text()
-      .trim();
+    // 2. Ürün detay kategorisi
+    if (categories.length === 0) {
+      const detailCategories = $(".product-detail-category, .detail-category")
+        .first()
+        .text()
+        .trim()
+        .split("/")
+        .map(c => c.trim())
+        .filter(Boolean);
 
-    if (detailCategory) {
-      categories.push(detailCategory);
+      if (detailCategories.length > 0) {
+        categories = detailCategories;
+      }
     }
+
+    // 3. Marka kategorisi
+    if (categories.length === 0) {
+      const brand = $(".product-brand-name, .brand-name")
+        .first()
+        .text()
+        .trim();
+
+      const productType = $(".product-type, .type-name")
+        .first()
+        .text()
+        .trim();
+
+      if (brand && productType) {
+        categories = [brand, productType];
+      }
+    }
+
+    // 4. URL'den kategori çıkarımı
+    if (categories.length === 0) {
+      const urlPath = window.location.pathname;
+      const urlCategories = urlPath
+        .split('/')
+        .filter(part => part && !part.includes('p-'))
+        .map(c => c.replace(/-/g, ' ').trim());
+
+      if (urlCategories.length > 0) {
+        categories = urlCategories;
+      }
+    }
+
+    // Log kategorileri
+    console.log("Bulunan kategoriler:", categories);
+
+    return categories;
+  } catch (error) {
+    console.error("Kategori çekme hatası:", error);
+    throw new ProductDataError("Kategori bilgisi işlenirken hata oluştu", "categories");
   }
-
-  return categories;
 }
 
-function mapToShopifyCategory(categories: string[]): string {
-  const normalizedCategories = categories.map(c => c.toLowerCase().trim());
-  const config = getCategoryConfig(normalizedCategories);
-  return config.shopifyCategory;
-}
-
-function getVariantConfig(categories: string[]): {
-  sizeLabel: string;
-  colorLabel: string;
-  defaultStock: number;
-} {
-  const categoryType = categories.map(c => c.toLowerCase()).join(' ');
-
-  // Kategori bazlı varyant yapılandırması
-  if (categoryType.includes('ayakkabı') || categoryType.includes('sneaker')) {
-    return {
-      sizeLabel: 'Numara',
-      colorLabel: 'Renk',
-      defaultStock: 50
-    };
-  } else if (categoryType.includes('cüzdan') || categoryType.includes('çanta')) {
-    return {
-      sizeLabel: '',
-      colorLabel: 'Renk',
-      defaultStock: 100
-    };
-  } else {
-    // Giyim için varsayılan
-    return {
-      sizeLabel: 'Beden',
-      colorLabel: 'Renk',
-      defaultStock: 75
-    };
-  }
-}
-
+// Routes kısmındaki kategori çekme bölümünü güncelle
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
@@ -150,16 +144,23 @@ export async function registerRoutes(app: Express) {
 
       // Schema.org'dan kategori bilgisini kontrol et
       if (categories.length === 0 && schema.breadcrumb?.itemListElement) {
-        categories = schema.breadcrumb.itemListElement
+        const schemaCategories = schema.breadcrumb.itemListElement
           .map((item: any) => item.item?.name || item.name)
           .filter((name: string | null) => name && name !== "Trendyol");
+
+        if (schemaCategories.length > 0) {
+          categories = schemaCategories;
+        }
       }
 
+      // Son kontrol
       if (categories.length === 0) {
-        throw new ProductDataError("Kategori bilgisi bulunamadı", "categories");
+        console.warn("Hiçbir yöntemle kategori bulunamadı");
+        // Varsayılan kategori
+        categories = ["Giyim"];
       }
 
-      console.log("Bulunan kategoriler:", categories);
+      console.log("Final kategoriler:", categories);
 
 
       // Görseller
@@ -453,4 +454,44 @@ export async function registerRoutes(app: Express) {
   });
 
   return httpServer;
+}
+
+function mapToShopifyCategory(categories: string[]): string {
+  const normalizedCategories = categories.map(c => c.toLowerCase().trim());
+  const config = getCategoryConfig(normalizedCategories);
+  return config.shopifyCategory;
+}
+
+function getVariantConfig(categories: string[]): {
+  sizeLabel: string;
+  colorLabel: string;
+  defaultStock: number;
+  hasVariants: boolean;
+} {
+  const categoryType = categories.map(c => c.toLowerCase()).join(' ');
+
+  // Kategori bazlı varyant yapılandırması
+  if (categoryType.includes('ayakkabı') || categoryType.includes('sneaker')) {
+    return {
+      sizeLabel: 'Numara',
+      colorLabel: 'Renk',
+      defaultStock: 50,
+      hasVariants: true
+    };
+  } else if (categoryType.includes('cüzdan') || categoryType.includes('çanta')) {
+    return {
+      sizeLabel: '',
+      colorLabel: 'Renk',
+      defaultStock: 100,
+      hasVariants: true
+    };
+  } else {
+    // Giyim için varsayılan
+    return {
+      sizeLabel: 'Beden',
+      colorLabel: 'Renk',
+      defaultStock: 75,
+      hasVariants: true
+    };
+  }
 }
