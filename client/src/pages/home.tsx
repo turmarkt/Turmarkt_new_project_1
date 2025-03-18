@@ -28,7 +28,7 @@ export default function Home() {
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
       if (type === "change" && name === "url") {
-        setError(null); // URL değiştiğinde hata mesajını temizle
+        setError(null);
       }
     });
     return () => subscription.unsubscribe();
@@ -103,17 +103,18 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <div className="max-w-5xl mx-auto space-y-8">
+    <div className="min-h-screen bg-black text-white p-4">
+      <div className="max-w-2xl mx-auto space-y-6">
+        {/* Form Section */}
         <motion.div
           initial={false}
           animate={product ? { y: -20, scale: 0.95, opacity: 0.8 } : { y: 0, scale: 1, opacity: 1 }}
           className="transition-all duration-500"
         >
-          <div className="text-center mb-8">
-            <Package className="w-12 h-12 mx-auto mb-4 text-primary" />
-            <h1 className="text-3xl font-bold mb-2">Trendyol Ürün Aktarıcı</h1>
-            <p className="text-gray-400">Ürün verilerini Shopify'a uyumlu formata dönüştürün</p>
+          <div className="text-center mb-6">
+            <Package className="w-10 h-10 mx-auto mb-3 text-primary" />
+            <h1 className="text-2xl font-bold mb-2">Trendyol Ürün Aktarıcı</h1>
+            <p className="text-sm text-gray-400">Ürün verilerini Shopify'a uyumlu formata dönüştürün</p>
           </div>
 
           <form onSubmit={onSubmit} className="space-y-4">
@@ -121,7 +122,7 @@ export default function Home() {
               <Input
                 placeholder="Trendyol ürün URL'sini girin..."
                 {...form.register("url")}
-                className="text-lg p-6 bg-gray-900 border-gray-800 rounded-xl"
+                className="text-sm p-4 bg-gray-900 border-gray-800 rounded-lg"
               />
               <Button
                 type="submit"
@@ -138,142 +139,115 @@ export default function Home() {
           </form>
         </motion.div>
 
+        {/* Product Details */}
         <AnimatePresence>
           {product && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-6"
             >
               <Card className="bg-gray-900 border-gray-800">
-                <CardContent className="p-8 space-y-8">
-                  {/* Başlık ve Kategori/Etiketler */}
-                  <div className="space-y-4">
-                    <h2 className="text-2xl font-bold">{product.title}</h2>
-                    <div className="flex flex-wrap gap-2">
-                      {product.categories.map((category: string, i: number) => (
-                        <Badge key={i} variant="outline" className="bg-gray-800 text-gray-200">
-                          {category}
-                        </Badge>
-                      ))}
-                      {product.tags.map((tag: string, i: number) => (
-                        <Badge key={i} variant="secondary" className="bg-gray-800">
-                          <Tag className="w-3 h-3 mr-1" />
-                          {tag}
-                        </Badge>
-                      ))}
+                <CardContent className="p-4 space-y-4">
+                  {/* Başlık ve Fiyat */}
+                  <div className="space-y-3 border-b border-gray-800 pb-4">
+                    <h2 className="text-lg font-semibold">{product.title}</h2>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-base font-bold">{product.price} TL</span>
+                      <span className="text-xs text-gray-400 line-through">{product.basePrice} TL</span>
                     </div>
                   </div>
 
                   {/* Ürün Görselleri */}
-                  <div className="space-y-4">
-                    <h3 className="text-lg font-semibold">Ürün Görselleri</h3>
-                    <div className="flex gap-4">
-                      <div className="relative w-64 h-64 rounded-lg overflow-hidden bg-gray-800">
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-400">Ürün Görselleri</h3>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {product.images.map((image: string, index: number) => (
                         <img
-                          src={product.images[0]}
-                          alt={`${product.title} - Ana Görsel`}
-                          className="w-full h-full object-cover"
+                          key={index}
+                          src={image}
+                          alt={`${product.title} - Görsel ${index + 1}`}
+                          className="w-20 h-20 object-cover rounded-md flex-shrink-0"
                         />
-                      </div>
-                      {product.images.length > 1 && (
-                        <div className="flex items-center justify-center w-20 h-64 bg-gray-800 rounded-lg">
-                          <div className="text-center">
-                            <ImageIcon className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                            <span className="text-sm text-gray-400">+{product.images.length - 1} görsel</span>
-                          </div>
-                        </div>
-                      )}
+                      ))}
                     </div>
                   </div>
 
-                  {/* Ürün Detayları Grid */}
-                  <div className="grid md:grid-cols-2 gap-8">
-                    {/* Sol Kolon: Açıklama ve Özellikler */}
-                    <div className="space-y-6">
-                      <div>
-                        <h3 className="text-base font-semibold mb-2">Ürün Açıklaması</h3>
-                        <p className="text-sm text-gray-400 leading-relaxed max-h-32 overflow-y-auto pr-2">
-                          {product.description}
-                        </p>
-                      </div>
-
-                      <div className="space-y-4">
-                        <h3 className="text-base font-semibold mb-2">Ürün Özellikleri</h3>
-                        <div className="bg-gray-800 rounded-lg p-4 max-h-64 overflow-y-auto">
-                          <div className="space-y-2">
-                            {Object.entries(product.attributes).map(([key, value]) => (
-                              <div key={key} className="flex justify-between text-sm">
-                                <span className="text-gray-400 w-1/2 truncate">{key}</span>
-                                <span className="text-gray-200 w-1/2 text-right truncate">{value}</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Sağ Kolon: Fiyat ve Varyantlar */}
-                    <div className="space-y-6">
-                      <div className="bg-gray-800 rounded-lg p-4">
-                        <div className="flex items-baseline justify-between mb-2">
-                          <p className="text-xl font-bold">{product.price} TL</p>
-                          <p className="text-sm text-gray-400 line-through">{product.basePrice} TL</p>
-                        </div>
-                        <p className="text-xs text-gray-400">Kar marjı dahil fiyat</p>
-                      </div>
-
-                      <div className="space-y-4">
-                        <div className="space-y-4">
-                          <h3 className="text-base font-semibold mb-2">Kategoriler</h3>
-                          <div className="flex flex-wrap gap-2">
-                            {product.categories.map((category: string, i: number) => (
-                              <Badge key={i} variant="outline" className="text-xs bg-gray-800">
-                                {category}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                        {product.variants.sizes.length > 0 && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 mb-2">Mevcut Bedenler</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {product.variants.sizes.map((size: string, i: number) => (
-                                <Badge key={i} variant="outline" className="text-xs bg-gray-800">
-                                  {size}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {product.variants.colors.length > 0 && (
-                          <div>
-                            <h4 className="text-xs text-gray-400 mb-2">Mevcut Renkler</h4>
-                            <div className="flex flex-wrap gap-2">
-                              {product.variants.colors.map((color: string, i: number) => (
-                                <Badge key={i} variant="outline" className="text-xs bg-gray-800">
-                                  {color}
-                                </Badge>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-
-                      <Button
-                        onClick={() => exportMutation.mutate()}
-                        disabled={exportMutation.isPending}
-                        className="w-full py-6 text-lg"
-                      >
-                        {exportMutation.isPending ? (
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                        ) : null}
-                        Shopify CSV'sine Aktar
-                      </Button>
+                  {/* Kategoriler */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-400">Kategoriler</h3>
+                    <div className="flex flex-wrap gap-1">
+                      {product.categories.map((category: string, i: number) => (
+                        <Badge key={i} variant="outline" className="text-xs bg-gray-800">
+                          {category}
+                        </Badge>
+                      ))}
                     </div>
                   </div>
+
+                  {/* Varyantlar */}
+                  <div className="space-y-3">
+                    {product.variants.sizes.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-semibold text-gray-400">Bedenler</h3>
+                        <div className="flex flex-wrap gap-1">
+                          {product.variants.sizes.map((size: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-gray-800">
+                              {size}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {product.variants.colors.length > 0 && (
+                      <div className="space-y-2">
+                        <h3 className="text-xs font-semibold text-gray-400">Renkler</h3>
+                        <div className="flex flex-wrap gap-1">
+                          {product.variants.colors.map((color: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-xs bg-gray-800">
+                              {color}
+                            </Badge>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Ürün Açıklaması */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-400">Ürün Açıklaması</h3>
+                    <p className="text-xs text-gray-300 leading-relaxed max-h-24 overflow-y-auto">
+                      {product.description}
+                    </p>
+                  </div>
+
+                  {/* Ürün Özellikleri */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-400">Ürün Özellikleri</h3>
+                    <div className="bg-gray-800/50 rounded p-3 max-h-48 overflow-y-auto">
+                      <div className="space-y-2">
+                        {Object.entries(product.attributes).map(([key, value]) => (
+                          <div key={key} className="flex text-xs">
+                            <span className="text-gray-400 w-1/2">{key}</span>
+                            <span className="text-gray-300 w-1/2">{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Export Button */}
+                  <Button
+                    onClick={() => exportMutation.mutate()}
+                    disabled={exportMutation.isPending}
+                    className="w-full py-2 text-sm mt-4"
+                  >
+                    {exportMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Shopify CSV'sine Aktar
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
