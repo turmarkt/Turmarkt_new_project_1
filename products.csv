@@ -1,10 +1,7 @@
-Handle,Title,Body (HTML),Vendor,Type,Tags,Published on online store,Status,Option1 name,Option1 value,Option2 name,Option2 value,Option3 name,Option3 value,SKU,Variant Inventory Policy,Variant Inventory Qty,Price,Compare at price,Requires shipping,Taxable,Weight (kg),Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category
+Handle,Title,Body (HTML),Vendor,Type,Tags,Published,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / AdWords Grouping,Google Shopping / AdWords Labels,Google Shopping / Condition,Google Shopping / Custom Product,Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item,Status,Option1 Name,Option1 Value,Option2 Name,Option2 Value,Option3 Name,Option3 Value
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -117,13 +114,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,SKU-1742296501686-1,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -236,13 +230,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,yesil-80692,,,SKU-1742296501687-2,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/b52a5ed9-fda6-30a3-b534-b03a04ce017b/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/b52a5ed9-fda6-30a3-b534-b03a04ce017b/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,yesil-80692,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -355,13 +346,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,pembe-71187,,,SKU-1742296501687-3,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c736e3e0-8b2d-3bcd-8468-a245b8bb606a/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c736e3e0-8b2d-3bcd-8468-a245b8bb606a/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,pembe-71187,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -474,13 +462,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,SKU-1742296501687-4,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -593,13 +578,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,yesil-80692,,,SKU-1742296501687-5,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/b52a5ed9-fda6-30a3-b534-b03a04ce017b/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/b52a5ed9-fda6-30a3-b534-b03a04ce017b/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,yesil-80692,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -712,13 +694,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,pembe-71187,,,SKU-1742296501687-6,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c736e3e0-8b2d-3bcd-8468-a245b8bb606a/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c736e3e0-8b2d-3bcd-8468-a245b8bb606a/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,pembe-71187,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -831,13 +810,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,SKU-1742296501687-7,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -950,13 +926,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,yesil-80692,,,SKU-1742296501687-8,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/b52a5ed9-fda6-30a3-b534-b03a04ce017b/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/b52a5ed9-fda6-30a3-b534-b03a04ce017b/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,yesil-80692,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -1069,13 +1042,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,pembe-71187,,,SKU-1742296501687-9,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c736e3e0-8b2d-3bcd-8468-a245b8bb606a/1_org_zoom.jpg,1,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,10,deny,manual,425.49,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg,,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c736e3e0-8b2d-3bcd-8468-a245b8bb606a/1_org_zoom.jpg,g,,,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,pembe-71187,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -1188,13 +1158,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/b52a5ed9-fda6-30a3-b534-b03a04ce017b/1_org_zoom.jpg,2,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,,deny,manual,,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/b52a5ed9-fda6-30a3-b534-b03a04ce017b/1_org_zoom.jpg,2,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,,g,,,active,Size,,Color,,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -1307,13 +1274,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c736e3e0-8b2d-3bcd-8468-a245b8bb606a/1_org_zoom.jpg,3,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,,deny,manual,,369.99,true,true,,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c736e3e0-8b2d-3bcd-8468-a245b8bb606a/1_org_zoom.jpg,3,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,,g,,,active,Size,,Color,,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -1426,13 +1390,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/3c709e75-997c-3b0f-b470-e0a52772afad/1_org_zoom.jpg,4,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,,deny,manual,,369.99,true,true,,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/3c709e75-997c-3b0f-b470-e0a52772afad/1_org_zoom.jpg,4,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,,g,,,active,Size,,Color,,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -1545,13 +1506,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/ca3051e3-8507-3c2d-9fa6-f61c15aff810/1_org_zoom.jpg,5,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,,deny,manual,,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/ca3051e3-8507-3c2d-9fa6-f61c15aff810/1_org_zoom.jpg,5,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,,g,,,active,Size,,Color,,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -1664,13 +1622,10 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/a0537170-6260-375a-aa96-30fbd0678482/1_org_zoom.jpg,6,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,,deny,manual,,369.99,true,true,,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/a0537170-6260-375a-aa96-30fbd0678482/1_org_zoom.jpg,6,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,,g,,,active,Size,,Color,,,
 mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"<div style=""font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;"">
-          <div style=""margin-bottom: 20px;"">
-            <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
-          </div>
-
-          <div style=""margin-bottom: 20px;"">
+          <p style=""color: #333; line-height: 1.6;"">Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+          <div style=""margin-top: 20px;"">
             <h2 style=""color: #333; font-size: 18px; margin-bottom: 10px;"">Ürün Özellikleri</h2>
             <table style=""width: 100%; border-collapse: collapse;"">
               <tbody>
@@ -1783,4 +1738,4 @@ mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,Mavi Logo Bask
               </tbody>
             </table>
           </div>
-        </div>",Mavi,T-Shirt,T-Shirt,TRUE,active,Size,"XS,S,M,L,XL,2XL,3XL",Color,gri-70144,,,,deny,10,425.49,369.99,TRUE,TRUE,0.5,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/fcae04d3-6d7b-30ef-a8f2-5699980ec14d/1_org_zoom.jpg,7,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,FALSE,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt
+        </div>",Mavi,T-Shirt,T-Shirt,true,500,shopify,,deny,manual,,369.99,true,true,,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/fcae04d3-6d7b-30ef-a8f2-5699980ec14d/1_org_zoom.jpg,7,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,false,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,"Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",T-Shirt,unisex,adult,mavi-logo-bask-l-gri-ti-rt-regular-fit-normal-kesim-0610943-82577,T-Shirt,T-Shirt,new,false,,g,,,active,Size,,Color,,,

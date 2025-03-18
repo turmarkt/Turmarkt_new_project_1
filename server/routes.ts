@@ -247,7 +247,11 @@ export async function registerRoutes(app: Express) {
           {id: 'type', title: 'Type'},
           {id: 'tags', title: 'Tags'},
           {id: 'published', title: 'Published'},
-          {id: 'variant_grams', title: 'Variant Grams'},
+          {id: 'option1_name', title: 'Option1 Name'},
+          {id: 'option1_value', title: 'Option1 Value'},
+          {id: 'option2_name', title: 'Option2 Name'},
+          {id: 'option2_value', title: 'Option2 Value'},
+          {id: 'variant_sku', title: 'Variant SKU'},
           {id: 'variant_inventory_tracker', title: 'Variant Inventory Tracker'},
           {id: 'variant_inventory_qty', title: 'Variant Inventory Qty'},
           {id: 'variant_inventory_policy', title: 'Variant Inventory Policy'},
@@ -264,38 +268,22 @@ export async function registerRoutes(app: Express) {
           {id: 'seo_title', title: 'SEO Title'},
           {id: 'seo_description', title: 'SEO Description'},
           {id: 'google_shopping_google_product_category', title: 'Google Shopping / Google Product Category'},
-          {id: 'google_shopping_gender', title: 'Google Shopping / Gender'},
-          {id: 'google_shopping_age_group', title: 'Google Shopping / Age Group'},
-          {id: 'google_shopping_mpn', title: 'Google Shopping / MPN'},
-          {id: 'google_shopping_adwords_grouping', title: 'Google Shopping / AdWords Grouping'},
-          {id: 'google_shopping_adwords_labels', title: 'Google Shopping / AdWords Labels'},
-          {id: 'google_shopping_condition', title: 'Google Shopping / Condition'},
-          {id: 'google_shopping_custom_product', title: 'Google Shopping / Custom Product'},
-          {id: 'variant_image', title: 'Variant Image'},
-          {id: 'variant_weight_unit', title: 'Variant Weight Unit'},
-          {id: 'variant_tax_code', title: 'Variant Tax Code'},
-          {id: 'cost_per_item', title: 'Cost per item'},
-          {id: 'status', title: 'Status'},
-          {id: 'option1_name', title: 'Option1 Name'},
-          {id: 'option1_value', title: 'Option1 Value'},
-          {id: 'option2_name', title: 'Option2 Name'},
-          {id: 'option2_value', title: 'Option2 Value'},
-          {id: 'option3_name', title: 'Option3 Name'},
-          {id: 'option3_value', title: 'Option3 Value'}
+          {id: 'status', title: 'Status'}
         ]
       });
 
-      // Ana ürün kaydı
+      // Handle oluştur
       const handle = product.title
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, '-')
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
+      // Ana ürün kaydı
       const mainRecord = {
         handle,
         title: product.title,
-        body: `<div style="font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto;">
+        body: `<div style="font-family: system-ui, sans-serif;">
           <p style="color: #333; line-height: 1.6;">${product.description}</p>
           <div style="margin-top: 20px;">
             <h2 style="color: #333; font-size: 18px; margin-bottom: 10px;">Ürün Özellikleri</h2>
@@ -316,7 +304,11 @@ export async function registerRoutes(app: Express) {
         type: product.categories[0] || 'Giyim',
         tags: [...product.categories, ...product.tags].join(','),
         published: 'true',
-        variant_grams: '500',
+        option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
+        option1_value: product.variants.sizes[0] || '',
+        option2_name: product.variants.colors.length > 0 ? 'Color' : '',
+        option2_value: product.variants.colors[0] || '',
+        variant_sku: `${handle}-1`,
         variant_inventory_tracker: 'shopify',
         variant_inventory_qty: '10',
         variant_inventory_policy: 'deny',
@@ -333,59 +325,46 @@ export async function registerRoutes(app: Express) {
         seo_title: product.title,
         seo_description: product.description.substring(0, 320),
         google_shopping_google_product_category: product.categories.join(' > '),
-        google_shopping_gender: 'unisex',
-        google_shopping_age_group: 'adult',
-        google_shopping_mpn: handle,
-        google_shopping_adwords_grouping: product.categories[0] || '',
-        google_shopping_adwords_labels: product.categories.join(','),
-        google_shopping_condition: 'new',
-        google_shopping_custom_product: 'false',
-        variant_image: product.images[0] || '',
-        variant_weight_unit: 'g',
-        variant_tax_code: '',
-        cost_per_item: '',
-        status: 'active',
-        option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
-        option1_value: product.variants.sizes[0] || '',
-        option2_name: product.variants.colors.length > 0 ? 'Color' : '',
-        option2_value: product.variants.colors[0] || '',
-        option3_name: '',
-        option3_value: ''
+        status: 'active'
       };
 
       const records = [mainRecord];
 
       // Varyantları ekle
       if (product.variants.sizes.length > 0 || product.variants.colors.length > 0) {
-        const sizes = product.variants.sizes.length > 0 ? product.variants.sizes : [''];
-        const colors = product.variants.colors.length > 0 ? product.variants.colors : [''];
+        const sizes = product.variants.sizes.filter(Boolean);
+        const colors = product.variants.colors.filter(Boolean);
 
-        sizes.forEach((size, sIndex) => {
-          colors.forEach((color, cIndex) => {
-            if (sIndex === 0 && cIndex === 0) return; // Ana ürünü atla
+        if (sizes.length > 0 || colors.length > 0) {
+          (sizes.length > 0 ? sizes : ['']).forEach((size, sIndex) => {
+            (colors.length > 0 ? colors : ['']).forEach((color, cIndex) => {
+              if (sIndex === 0 && cIndex === 0) return; // Ana ürünü atla
 
-            records.push({
-              ...mainRecord,
-              title: mainRecord.title,
-              option1_value: size,
-              option2_value: color,
-              variant_image: product.images[cIndex] || product.images[0] || '',
-              image_position: ''
+              records.push({
+                ...mainRecord,
+                option1_value: size || '',
+                option2_value: color || '',
+                variant_sku: `${handle}-${records.length + 1}`,
+                image_src: product.images[cIndex] || product.images[0] || '',
+                image_position: ''
+              });
             });
           });
-        });
+        }
       }
 
       // Ek görselleri ekle
       product.images.slice(1).forEach((image, index) => {
         records.push({
-          ...mainRecord,
-          variant_inventory_qty: '',
-          variant_price: '',
-          variant_image: '',
+          handle,
+          title: product.title,
           image_src: image,
           image_position: (index + 2).toString(),
+          variant_inventory_qty: '',
+          variant_price: '',
+          option1_name: '',
           option1_value: '',
+          option2_name: '',
           option2_value: ''
         });
       });
