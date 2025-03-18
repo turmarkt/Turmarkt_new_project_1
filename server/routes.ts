@@ -81,25 +81,36 @@ async function exportToShopify(product: Product) {
     productType = "Shoes";
   }
 
+  // Ürün özellikleri HTML'ini oluştur
+  const specificationsHtml = Object.entries(product.attributes)
+    .map(([key, value]) => `
+      <tr>
+        <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${key}</td>
+        <td style="padding: 8px; border-bottom: 1px solid #eee;">${value}</td>
+      </tr>
+    `).join('');
+
   // Ana ürün kaydı
   const mainRecord = {
     handle,
     title: product.title,
-    body_html: `<div class="product-description">
-      <p>${product.description}</p>
-      <div class="specifications">
-        <h2>Ürün Özellikleri</h2>
-        <table>
-          ${Object.entries(product.attributes)
-            .map(([key, value]) => `
-              <tr>
-                <th>${key}</th>
-                <td>${value}</td>
-              </tr>
-            `).join('')}
-        </table>
+    body_html: `
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+        <div style="margin-bottom: 20px;">
+          <h3 style="font-size: 18px; color: #333; margin-bottom: 10px;">Ürün Açıklaması</h3>
+          <p style="color: #666; line-height: 1.6;">${product.description}</p>
+        </div>
+
+        <div style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
+          <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Ürün Özellikleri</h3>
+          <table style="width: 100%; border-collapse: collapse; background: white;">
+            <tbody>
+              ${specificationsHtml}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </div>`,
+    `,
     vendor: product.brand,
     product_category: shopifyCategory,
     type: productType,
@@ -361,20 +372,20 @@ export async function registerRoutes(app: Express) {
             .filter(Boolean);
         }
       } else if (categories.some(c => c.toLowerCase().includes('cüzdan')) || categories.some(c => c.toLowerCase().includes('çanta'))) {
-          // Schema.org varyant bilgisi
-          if (schema.hasVariant) {
-            schema.hasVariant.forEach((variant: any) => {
-              if (variant.color && !variants.colors.includes(variant.color)) {
-                variants.colors.push(variant.color);
-              }
-            });
-          }
-          if (variants.colors.length === 0 ) {
-            variants.colors = $(".slc-txt")
-              .map((_, el) => $(el).text().trim())
-              .get()
-              .filter(Boolean);
-          }
+        // Schema.org varyant bilgisi
+        if (schema.hasVariant) {
+          schema.hasVariant.forEach((variant: any) => {
+            if (variant.color && !variants.colors.includes(variant.color)) {
+              variants.colors.push(variant.color);
+            }
+          });
+        }
+        if (variants.colors.length === 0 ) {
+          variants.colors = $(".slc-txt")
+            .map((_, el) => $(el).text().trim())
+            .get()
+            .filter(Boolean);
+        }
       } else {
         // Schema.org varyant bilgisi
         if (schema.hasVariant) {
