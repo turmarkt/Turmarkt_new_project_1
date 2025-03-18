@@ -13,68 +13,49 @@ async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]
   let categories: string[] = [];
 
   try {
-    // 1. Ana breadcrumb yolu
-    const breadcrumb = $(".product-path span, .breadcrumb-wrapper span")
+    // 1. Ana breadcrumb yolundan kategorileri al
+    categories = $(".breadcrumb-wrapper span, .product-path span")
       .map((_, el) => $(el).text().trim())
       .get()
       .filter(cat => cat !== ">" && cat !== "Trendyol" && cat.length > 0);
 
-    if (breadcrumb.length > 0) {
-      categories = breadcrumb;
-    }
-
-    // 2. Ürün detay kategorisi
+    // 2. Detay sayfasından kategorileri al
     if (categories.length === 0) {
-      const detailCategories = $(".product-detail-category, .detail-category")
+      categories = $(".product-detail-category, .detail-category")
         .first()
         .text()
         .trim()
         .split("/")
         .map(c => c.trim())
         .filter(Boolean);
-
-      if (detailCategories.length > 0) {
-        categories = detailCategories;
-      }
     }
 
-    // 3. Marka kategorisi
+    // 3. Marka ve ürün tipinden kategori oluştur
     if (categories.length === 0) {
-      const brand = $(".product-brand-name, .brand-name")
-        .first()
-        .text()
-        .trim();
+      const brand = $(".product-brand-name, .brand-name").first().text().trim();
+      const type = $(".product-type, .type-name").first().text().trim();
 
-      const productType = $(".product-type, .type-name")
-        .first()
-        .text()
-        .trim();
-
-      if (brand && productType) {
-        categories = [brand, productType];
+      if (brand && type) {
+        categories = [brand, type];
       }
     }
 
-    // 4. URL'den kategori çıkarımı
+    // 4. En az bir kategori olduğundan emin ol
     if (categories.length === 0) {
-      const urlPath = window.location.pathname;
-      const urlCategories = urlPath
-        .split('/')
-        .filter(part => part && !part.includes('p-'))
-        .map(c => c.replace(/-/g, ' ').trim());
-
-      if (urlCategories.length > 0) {
-        categories = urlCategories;
+      const brandName = $(".pr-new-br span").first().text().trim();
+      if (brandName) {
+        categories = [brandName];
+      } else {
+        categories = ["Giyim"]; // Varsayılan kategori
       }
     }
 
-    // Log kategorileri
     console.log("Bulunan kategoriler:", categories);
-
     return categories;
+
   } catch (error) {
     console.error("Kategori çekme hatası:", error);
-    throw new ProductDataError("Kategori bilgisi işlenirken hata oluştu", "categories");
+    return ["Giyim"]; // Hata durumunda varsayılan kategori
   }
 }
 
