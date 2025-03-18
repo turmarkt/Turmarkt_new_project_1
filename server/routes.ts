@@ -133,10 +133,13 @@ export async function registerRoutes(app: Express) {
           {id: 'published', title: 'Published on online store'},
           {id: 'status', title: 'Status'},
           {id: 'sku', title: 'SKU'},
+          {id: 'barcode', title: 'Barcode'},
           {id: 'option1_name', title: 'Option1 name'},
           {id: 'option1_value', title: 'Option1 value'},
           {id: 'option2_name', title: 'Option2 name'},
           {id: 'option2_value', title: 'Option2 value'},
+          {id: 'option3_name', title: 'Option3 name'},
+          {id: 'option3_value', title: 'Option3 value'},
           {id: 'price', title: 'Price'},
           {id: 'compare_at_price', title: 'Compare-at price'},
           {id: 'weight', title: 'Weight value (grams)'},
@@ -145,9 +148,14 @@ export async function registerRoutes(app: Express) {
           {id: 'fulfillment_service', title: 'Fulfillment service'},
           {id: 'image_src', title: 'Product image URL'},
           {id: 'image_position', title: 'Image position'},
+          {id: 'image_alt_text', title: 'Image alt text'},
           {id: 'variant_image', title: 'Variant image URL'},
+          {id: 'gift_card', title: 'Gift card'},
           {id: 'seo_title', title: 'SEO title'},
-          {id: 'seo_description', title: 'SEO description'}
+          {id: 'seo_description', title: 'SEO description'},
+          {id: 'google_category', title: 'Google Shopping / Google product category'},
+          {id: 'gender', title: 'Google Shopping / Gender'},
+          {id: 'age_group', title: 'Google Shopping / Age group'}
         ]
       });
 
@@ -196,10 +204,13 @@ export async function registerRoutes(app: Express) {
           published: 'TRUE',
           status: 'active',
           sku: '',
+          barcode: '',
           option1_name: hasSizes ? 'Size' : '',
           option1_value: hasSizes ? product.variants.sizes[0] : '',
           option2_name: hasColors ? 'Color' : '',
           option2_value: hasColors ? product.variants.colors[0] : '',
+          option3_name: '',
+          option3_value: '',
           price: product.price,
           compare_at_price: product.basePrice,
           weight: '500',
@@ -208,9 +219,14 @@ export async function registerRoutes(app: Express) {
           fulfillment_service: 'manual',
           image_src: image,
           image_position: index + 1,
+          image_alt_text: `${product.title} - Görsel ${index + 1}`,
           variant_image: '',
+          gift_card: 'FALSE',
           seo_title: product.title,
-          seo_description: product.description.substring(0, 320)
+          seo_description: product.description.substring(0, 320),
+          google_category: product.categories.join(' > '),
+          gender: 'Unisex',
+          age_group: 'Adult'
         });
       });
 
@@ -232,10 +248,13 @@ export async function registerRoutes(app: Express) {
               published: 'TRUE',
               status: 'active',
               sku: '',
+              barcode: '',
               option1_name: 'Size',
               option1_value: size,
               option2_name: 'Color',
               option2_value: color,
+              option3_name: '',
+              option3_value: '',
               price: product.price,
               compare_at_price: product.basePrice,
               weight: '500',
@@ -244,9 +263,14 @@ export async function registerRoutes(app: Express) {
               fulfillment_service: 'manual',
               image_src: product.images[0] || '',
               image_position: 1,
+              image_alt_text: `${product.title} - ${size} - ${color}`,
               variant_image: '',
+              gift_card: 'FALSE',
               seo_title: product.title,
-              seo_description: product.description.substring(0, 320)
+              seo_description: product.description.substring(0, 320),
+              google_category: product.categories.join(' > '),
+              gender: 'Unisex',
+              age_group: 'Adult'
             });
           }
         }

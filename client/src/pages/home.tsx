@@ -171,8 +171,8 @@ export default function Home() {
                       <div>
                         <h3 className="text-lg font-semibold mb-4">Ürün Özellikleri</h3>
                         <div className="bg-gray-800 rounded-lg p-4 space-y-2">
-                          {Object.entries(product.attributes).map(([key, value]: [string, string], i: number) => (
-                            <div key={i} className="flex justify-between text-sm">
+                          {Object.entries(product.attributes).map(([key, value]) => (
+                            <div key={key} className="flex justify-between text-sm">
                               <span className="text-gray-400">{key}</span>
                               <span className="text-gray-200">{value}</span>
                             </div>
