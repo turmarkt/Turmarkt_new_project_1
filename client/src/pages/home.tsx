@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -14,6 +14,7 @@ import { Loader2, Tag, Package, ArrowRight, ImageIcon } from "lucide-react";
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
+  const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
   const form = useForm({
@@ -23,19 +24,38 @@ export default function Home() {
     }
   });
 
+  // Form hata durumlarını izle
+  useEffect(() => {
+    const subscription = form.watch((value, { name, type }) => {
+      if (type === "change" && name === "url") {
+        setError(null); // URL değiştiğinde hata mesajını temizle
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [form.watch]);
+
   const scrapeMutation = useMutation({
     mutationFn: async (url: string) => {
-      const res = await apiRequest("POST", "/api/scrape", { url });
-      return res.json();
+      try {
+        const res = await apiRequest("POST", "/api/scrape", { url });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message);
+        return data;
+      } catch (error: any) {
+        throw new Error(error.message || "Veri çekme işlemi başarısız oldu");
+      }
     },
     onSuccess: (data) => {
       setProduct(data);
+      setError(null);
       toast({
         title: "Başarılı",
-        description: "Ürün verileri başarıyla çekildi"
+        description: "Ürün verileri başarıyla çekildi",
+        variant: "default"
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
+      setError(error.message);
       toast({
         title: "Hata",
         description: error.message,
@@ -46,8 +66,16 @@ export default function Home() {
 
   const exportMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/export", { product });
-      return res.blob();
+      try {
+        const res = await apiRequest("POST", "/api/export", { product });
+        if (!res.ok) {
+          const data = await res.json();
+          throw new Error(data.message);
+        }
+        return res.blob();
+      } catch (error: any) {
+        throw new Error(error.message || "CSV dışa aktarma işlemi başarısız oldu");
+      }
     },
     onSuccess: (blob) => {
       const url = window.URL.createObjectURL(blob);
@@ -60,16 +88,17 @@ export default function Home() {
         description: "CSV dosyası başarıyla indirildi"
       });
     },
-    onError: (error) => {
+    onError: (error: Error) => {
       toast({
         title: "Hata",
-        description: "CSV dosyası oluşturulamadı",
+        description: error.message,
         variant: "destructive"
       });
     }
   });
 
   const onSubmit = form.handleSubmit((data) => {
+    setError(null);
     scrapeMutation.mutate(data.url);
   });
 
@@ -94,7 +123,7 @@ export default function Home() {
                 {...form.register("url")}
                 className="text-lg p-6 bg-gray-900 border-gray-800 rounded-xl"
               />
-              <Button 
+              <Button
                 type="submit"
                 className="absolute right-2 top-1/2 transform -translate-y-1/2"
                 disabled={scrapeMutation.isPending}
@@ -142,7 +171,7 @@ export default function Home() {
                     <h3 className="text-lg font-semibold">Ürün Görselleri</h3>
                     <div className="flex gap-4">
                       <div className="relative w-64 h-64 rounded-lg overflow-hidden bg-gray-800">
-                        <img 
+                        <img
                           src={product.images[0]}
                           alt={`${product.title} - Ana Görsel`}
                           className="w-full h-full object-cover"

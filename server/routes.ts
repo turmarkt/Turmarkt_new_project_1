@@ -6,23 +6,31 @@ import { urlSchema, type InsertProduct } from "@shared/schema";
 import { ZodError } from "zod";
 import { createObjectCsvWriter } from "csv-writer";
 import fetch from "node-fetch";
+import { TrendyolScrapingError, URLValidationError, ProductDataError, handleError } from "./errors";
 
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
   app.post("/api/scrape", async (req, res) => {
     try {
+      console.log("Scraping başlatıldı:", req.body);
+
       const { url } = urlSchema.parse(req.body);
 
       // First check if we already have this product
       const existing = await storage.getProduct(url);
       if (existing) {
+        console.log("Ürün cache'den alındı:", existing.id);
         return res.json(existing);
       }
 
+      console.log("Trendyol'dan veri çekiliyor:", url);
       const response = await fetch(url);
       if (!response.ok) {
-        throw new Error("Failed to fetch product page");
+        throw new TrendyolScrapingError("Ürün sayfası yüklenemedi", {
+          status: response.status,
+          statusText: response.statusText
+        });
       }
 
       const html = await response.text();
@@ -31,10 +39,15 @@ export async function registerRoutes(app: Express) {
       // Schema.org verisini parse et
       const schemaScript = $('script[type="application/ld+json"]').first().html();
       if (!schemaScript) {
-        throw new Error("Product schema not found");
+        throw new ProductDataError("Ürün şeması bulunamadı", "schema");
       }
 
-      const schema = JSON.parse(schemaScript);
+      let schema;
+      try {
+        schema = JSON.parse(schemaScript);
+      } catch (error) {
+        throw new ProductDataError("Ürün şeması geçersiz", "schema");
+      }
 
       // Temel ürün bilgileri
       const title = schema.name;
@@ -42,6 +55,10 @@ export async function registerRoutes(app: Express) {
       const price = parseFloat(schema.offers.price);
       // %15 kar ekle
       const priceWithProfit = parseFloat((price * 1.15).toFixed(2));
+
+      if (!title || !description || isNaN(price)) {
+        throw new ProductDataError("Temel ürün bilgileri eksik", "basicInfo");
+      }
 
       // Ürün özellikleri
       const attributes: Record<string, string> = {};
@@ -54,8 +71,15 @@ export async function registerRoutes(app: Express) {
         .map((item: any) => item.item.name)
         .filter((name: string) => name !== "Trendyol");
 
+      if (categories.length === 0) {
+        throw new ProductDataError("Kategori bilgisi bulunamadı", "categories");
+      }
+
       // Tüm ürün görselleri
       const images = schema.image.contentUrl;
+      if (!images || images.length === 0) {
+        throw new ProductDataError("Ürün görselleri bulunamadı", "images");
+      }
 
       // Beden ve renk varyantları
       const variants = {
@@ -94,21 +118,27 @@ export async function registerRoutes(app: Express) {
         tags: []
       };
 
+      console.log("Ürün veritabanına kaydediliyor");
       const saved = await storage.saveProduct(product);
+      console.log("Ürün başarıyla kaydedildi:", saved.id);
       res.json(saved);
 
     } catch (error) {
-      if (error instanceof ZodError) {
-        res.status(400).json({ message: "Geçersiz URL formatı" });
-      } else {
-        res.status(500).json({ message: error instanceof Error ? error.message : "Bilinmeyen bir hata oluştu" });
-      }
+      console.error("Hata oluştu:", error);
+      const { status, message, details } = handleError(error);
+      res.status(status).json({ message, details });
     }
   });
 
+  // CSV export endpoint güncellemesi
   app.post("/api/export", async (req, res) => {
     try {
+      console.log("CSV export başlatıldı");
       const { product } = req.body;
+
+      if (!product) {
+        throw new ProductDataError("Ürün verisi bulunamadı", "product");
+      }
 
       const csvWriter = createObjectCsvWriter({
         path: 'products.csv',
@@ -221,14 +251,13 @@ export async function registerRoutes(app: Express) {
       });
 
       await csvWriter.writeRecords(records);
+      console.log("CSV başarıyla oluşturuldu");
       res.download('products.csv');
 
     } catch (error) {
-      if (error instanceof Error) {
-        res.status(500).json({ message: error.message });
-      } else {
-        res.status(500).json({ message: 'Bilinmeyen bir hata oluştu' });
-      }
+      console.error("CSV export hatası:", error);
+      const { status, message, details } = handleError(error);
+      res.status(status).json({ message, details });
     }
   });
 
