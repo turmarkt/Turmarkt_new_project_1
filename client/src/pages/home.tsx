@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Tag, Package, ArrowRight, ImageIcon } from "lucide-react";
+import { Loader2, Tag, Package, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
@@ -24,7 +24,6 @@ export default function Home() {
     }
   });
 
-  // Form hata durumlarını izle
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
       if (type === "change" && name === "url") {
@@ -36,22 +35,17 @@ export default function Home() {
 
   const scrapeMutation = useMutation({
     mutationFn: async (url: string) => {
-      try {
-        const res = await apiRequest("POST", "/api/scrape", { url });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.message);
-        return data;
-      } catch (error: any) {
-        throw new Error(error.message || "Veri çekme işlemi başarısız oldu");
-      }
+      const res = await apiRequest("POST", "/api/scrape", { url });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      return data;
     },
     onSuccess: (data) => {
       setProduct(data);
       setError(null);
       toast({
         title: "Başarılı",
-        description: "Ürün verileri başarıyla çekildi",
-        variant: "default"
+        description: "Ürün verileri başarıyla çekildi"
       });
     },
     onError: (error: Error) => {
@@ -66,16 +60,12 @@ export default function Home() {
 
   const exportMutation = useMutation({
     mutationFn: async () => {
-      try {
-        const res = await apiRequest("POST", "/api/export", { product });
-        if (!res.ok) {
-          const data = await res.json();
-          throw new Error(data.message);
-        }
-        return res.blob();
-      } catch (error: any) {
-        throw new Error(error.message || "CSV dışa aktarma işlemi başarısız oldu");
+      const res = await apiRequest("POST", "/api/export", { product });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.message);
       }
+      return res.blob();
     },
     onSuccess: (blob) => {
       const url = window.URL.createObjectURL(blob);
@@ -105,7 +95,6 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-black text-white p-4">
       <div className="max-w-2xl mx-auto space-y-6">
-        {/* Form Section */}
         <motion.div
           initial={false}
           animate={product ? { y: -20, scale: 0.95, opacity: 0.8 } : { y: 0, scale: 1, opacity: 1 }}
@@ -139,7 +128,6 @@ export default function Home() {
           </form>
         </motion.div>
 
-        {/* Product Details */}
         <AnimatePresence>
           {product && (
             <motion.div
@@ -158,6 +146,21 @@ export default function Home() {
                     </div>
                   </div>
 
+                  {/* Ürün Özellikleri */}
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-400">Ürün Özellikleri</h3>
+                    <div className="bg-gray-800/50 rounded p-3">
+                      <div className="space-y-2">
+                        {Object.entries(product.attributes).map(([key, value]) => (
+                          <div key={key} className="flex text-xs">
+                            <span className="text-gray-400 w-1/2">{key}</span>
+                            <span className="text-gray-300 w-1/2">{value as string}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
                   {/* Ürün Görselleri */}
                   <div className="space-y-2">
                     <h3 className="text-xs font-semibold text-gray-400">Ürün Görselleri</h3>
@@ -169,18 +172,6 @@ export default function Home() {
                           alt={`${product.title} - Görsel ${index + 1}`}
                           className="w-20 h-20 object-cover rounded-md flex-shrink-0"
                         />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Kategoriler */}
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-semibold text-gray-400">Kategoriler</h3>
-                    <div className="flex flex-wrap gap-1">
-                      {product.categories.map((category: string, i: number) => (
-                        <Badge key={i} variant="outline" className="text-xs bg-gray-800">
-                          {category}
-                        </Badge>
                       ))}
                     </div>
                   </div>
@@ -212,29 +203,6 @@ export default function Home() {
                         </div>
                       </div>
                     )}
-                  </div>
-
-                  {/* Ürün Açıklaması */}
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-semibold text-gray-400">Ürün Açıklaması</h3>
-                    <p className="text-xs text-gray-300 leading-relaxed max-h-24 overflow-y-auto">
-                      {product.description}
-                    </p>
-                  </div>
-
-                  {/* Ürün Özellikleri */}
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-semibold text-gray-400">Ürün Özellikleri</h3>
-                    <div className="bg-gray-800/50 rounded p-3 max-h-48 overflow-y-auto">
-                      <div className="space-y-2">
-                        {Object.entries(product.attributes).map(([key, value]) => (
-                          <div key={key} className="flex text-xs">
-                            <span className="text-gray-400 w-1/2">{key}</span>
-                            <span className="text-gray-300 w-1/2">{value}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
                   </div>
 
                   {/* Export Button */}

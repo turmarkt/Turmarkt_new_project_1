@@ -113,7 +113,9 @@ async function exportToShopify(product: Product) {
   const mainRecord = {
     'Title': product.title,
     'URL handle': handle,
-    'Description': product.description,
+    'Description': Object.entries(product.attributes)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('\n'),
     'Vendor': product.brand || '',
     'Product category': 'Apparel & Accessories > Clothing',
     'Type': 'Clothing',
@@ -122,11 +124,8 @@ async function exportToShopify(product: Product) {
     'Status': 'active',
     'SKU': `${handle}-1`,
     'Barcode': '',
-    'Option1 Name': product.variants.sizes.length > 0 ? 'Size' : '',
     'Option1 Value': product.variants.sizes[0] || '',
-    'Option2 Name': product.variants.colors.length > 0 ? 'Color' : '',
     'Option2 Value': product.variants.colors[0] || '',
-    'Option3 Name': '',
     'Option3 Value': '',
     'Price': product.price,
     'Charge tax': 'TRUE',
@@ -144,7 +143,9 @@ async function exportToShopify(product: Product) {
     'Variant image URL': '',
     'Gift card': 'FALSE',
     'SEO title': product.title,
-    'SEO description': product.description.substring(0, 320),
+    'SEO description': Object.entries(product.attributes)
+      .map(([key, value]) => `${key}: ${value}`)
+      .join('. '),
     'Google Shopping / Google product category': 'Apparel & Accessories > Clothing',
     'Google Shopping / Gender': 'Unisex',
     'Google Shopping / Age group': 'Adult',
@@ -152,25 +153,7 @@ async function exportToShopify(product: Product) {
     'Google Shopping / AdWords Grouping': '',
     'Google Shopping / AdWords labels': '',
     'Google Shopping / Condition': 'new',
-    'Google Shopping / Custom product': 'FALSE',
-    'Body (HTML)': `
-      <div style="font-family: system-ui, -apple-system, sans-serif;">
-        <div style="background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 8px; padding: 20px; margin: 20px 0;">
-          <h3 style="font-size: 18px; color: #212529; margin: 0 0 15px 0;">Ürün Özellikleri</h3>
-          <table style="width: 100%; border-collapse: collapse;">
-            <tbody>
-              ${Object.entries(product.attributes)
-                .map(([key, value]) => `
-                  <tr style="border-bottom: 1px solid #e9ecef;">
-                    <td style="padding: 12px 8px; color: #495057; font-weight: 500; width: 40%;">${key}</td>
-                    <td style="padding: 12px 8px; color: #212529;">${value}</td>
-                  </tr>
-                `).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-    `
+    'Google Shopping / Custom product': 'FALSE'
   };
 
   const records = [mainRecord];
@@ -179,19 +162,14 @@ async function exportToShopify(product: Product) {
   if (product.variants.sizes.length > 0) {
     for (let i = 1; i < product.variants.sizes.length; i++) {
       records.push({
-        'Title': '',
         'URL handle': handle,
-        'Option1 Name': 'Size',
         'Option1 Value': product.variants.sizes[i],
         'SKU': `${handle}-size-${i}`,
         'Price': product.price,
-        'Charge tax': 'TRUE',
-        'Inventory tracker': 'shopify',
         'Inventory quantity': '100',
-        'Continue selling when out of stock': 'deny',
-        'Weight value (grams)': '500',
-        'Weight unit for display': 'g',
+        'Charge tax': 'TRUE',
         'Requires shipping': 'TRUE',
+        'Inventory tracker': 'shopify',
         'Fulfillment service': 'manual'
       });
     }
@@ -201,19 +179,14 @@ async function exportToShopify(product: Product) {
     for (let i = 1; i < product.variants.colors.length; i++) {
       const variantImage = product.images[i] || product.images[0];
       records.push({
-        'Title': '',
         'URL handle': handle,
-        'Option2 Name': 'Color',
         'Option2 Value': product.variants.colors[i],
         'SKU': `${handle}-color-${i}`,
         'Price': product.price,
-        'Charge tax': 'TRUE',
-        'Inventory tracker': 'shopify',
         'Inventory quantity': '100',
-        'Continue selling when out of stock': 'deny',
-        'Weight value (grams)': '500',
-        'Weight unit for display': 'g',
+        'Charge tax': 'TRUE',
         'Requires shipping': 'TRUE',
+        'Inventory tracker': 'shopify',
         'Fulfillment service': 'manual',
         'Product image URL': variantImage,
         'Variant image URL': variantImage
@@ -224,7 +197,6 @@ async function exportToShopify(product: Product) {
   // Ek görsel kayıtları
   for (let i = 1; i < product.images.length; i++) {
     records.push({
-      'Title': '',
       'URL handle': handle,
       'Product image URL': product.images[i],
       'Image position': (i + 1).toString(),
@@ -232,7 +204,7 @@ async function exportToShopify(product: Product) {
     });
   }
 
-  // CSV yazıcı
+  // CSV başlıkları
   const csvWriter = createObjectCsvWriter({
     path: 'products.csv',
     header: [
@@ -247,11 +219,8 @@ async function exportToShopify(product: Product) {
       {id: 'Status', title: 'Status'},
       {id: 'SKU', title: 'SKU'},
       {id: 'Barcode', title: 'Barcode'},
-      {id: 'Option1 Name', title: 'Option1 Name'},
       {id: 'Option1 Value', title: 'Option1 Value'},
-      {id: 'Option2 Name', title: 'Option2 Name'},
       {id: 'Option2 Value', title: 'Option2 Value'},
-      {id: 'Option3 Name', title: 'Option3 Name'},
       {id: 'Option3 Value', title: 'Option3 Value'},
       {id: 'Price', title: 'Price'},
       {id: 'Charge tax', title: 'Charge tax'},
@@ -277,8 +246,7 @@ async function exportToShopify(product: Product) {
       {id: 'Google Shopping / AdWords Grouping', title: 'Google Shopping / AdWords Grouping'},
       {id: 'Google Shopping / AdWords labels', title: 'Google Shopping / AdWords labels'},
       {id: 'Google Shopping / Condition', title: 'Google Shopping / Condition'},
-      {id: 'Google Shopping / Custom product', title: 'Google Shopping / Custom product'},
-      {id: 'Body (HTML)', title: 'Body (HTML)'}
+      {id: 'Google Shopping / Custom product', title: 'Google Shopping / Custom product'}
     ]
   });
 
