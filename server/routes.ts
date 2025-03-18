@@ -275,7 +275,7 @@ export async function registerRoutes(app: Express) {
         handle,
         title: product.title,
         body_html: bodyHtml,
-        vendor: product.title.split(' ')[0],
+        vendor: product.brand || product.title.split(' ')[0],
         product_category: product.categories.join(' > '),
         type: product.categories[0] || 'Giyim',
         tags: product.categories.join(','),
@@ -298,7 +298,7 @@ export async function registerRoutes(app: Express) {
         inventory_quantity: '10',
         inventory_policy: 'deny',
         fulfillment_service: 'manual',
-        image_src: product.images[0] || '',
+        image_src: product.images[0],
         image_position: '1',
         image_alt_text: product.title,
         variant_image: '',
@@ -315,60 +315,69 @@ export async function registerRoutes(app: Express) {
         const sizes = product.variants.sizes.filter(Boolean);
         const colors = product.variants.colors.filter(Boolean);
 
-        sizes.forEach((size, sIndex) => {
-          colors.forEach((color, cIndex) => {
-            if (sIndex === 0 && cIndex === 0) return;
+        if (sizes.length > 0 || colors.length > 0) {
+          const variantOptions = sizes.length > 0 ? sizes : [''];
+          const colorOptions = colors.length > 0 ? colors : [''];
 
-            records.push({
-              ...mainRecord,
-              option1_value: size,
-              option2_value: color,
-              sku: `${handle}-${sIndex + 1}-${cIndex + 1}`,
-              image_src: '',
-              image_position: '',
-              variant_image: product.images[cIndex + 1] || product.images[0]
+          variantOptions.forEach((size, sIndex) => {
+            colorOptions.forEach((color, cIndex) => {
+              if (sIndex === 0 && cIndex === 0) return; // Ana ürünü atla
+
+              const variantImage = product.images[cIndex + 1] || product.images[0];
+
+              records.push({
+                handle,
+                title: product.title,
+                body_html: '',
+                vendor: mainRecord.vendor,
+                product_category: mainRecord.product_category,
+                type: mainRecord.type,
+                tags: mainRecord.tags,
+                published: 'true',
+                option1_name: mainRecord.option1_name,
+                option1_value: size,
+                option2_name: mainRecord.option2_name,
+                option2_value: color,
+                option3_name: '',
+                option3_value: '',
+                sku: `${handle}-${sIndex + 1}-${cIndex + 1}`,
+                price: mainRecord.price,
+                compare_at_price: mainRecord.compare_at_price,
+                requires_shipping: 'true',
+                taxable: 'true',
+                barcode: '',
+                weight: mainRecord.weight,
+                weight_unit: mainRecord.weight_unit,
+                inventory_tracker: 'shopify',
+                inventory_quantity: '10',
+                inventory_policy: 'deny',
+                fulfillment_service: 'manual',
+                image_src: variantImage,
+                image_position: '',
+                image_alt_text: `${product.title} - ${size} ${color}`.trim(),
+                variant_image: variantImage,
+                gift_card: 'false',
+                status: 'active'
+              });
             });
           });
-        });
+        }
       }
 
-      // Ek görsel kayıtları
+      // Ek görseller sadece ana üründe
       product.images.slice(1).forEach((image, index) => {
-        if (image) {  // Boş görsel URL'lerini filtrele
+        if (image) {
           records.push({
             handle,
             title: product.title,
-            body_html: mainRecord.body_html,
+            body_html: '',
             vendor: mainRecord.vendor,
             product_category: mainRecord.product_category,
             type: mainRecord.type,
-            tags: mainRecord.tags,
             published: 'true',
-            option1_name: mainRecord.option1_name,
-            option1_value: mainRecord.option1_value,
-            option2_name: mainRecord.option2_name,
-            option2_value: mainRecord.option2_value,
-            option3_name: '',
-            option3_value: '',
-            sku: '',
-            price: '',
-            compare_at_price: '',
-            requires_shipping: mainRecord.requires_shipping,
-            taxable: mainRecord.taxable,
-            barcode: '',
-            weight: mainRecord.weight,
-            weight_unit: mainRecord.weight_unit,
-            inventory_tracker: '',
-            inventory_quantity: '',
-            inventory_policy: mainRecord.inventory_policy,
-            fulfillment_service: mainRecord.fulfillment_service,
             image_src: image,
             image_position: (index + 2).toString(),
             image_alt_text: `${product.title} - Görsel ${index + 2}`,
-            variant_image: '',
-            gift_card: 'false',
-            seo_title: mainRecord.seo_title,
-            seo_description: mainRecord.seo_description,
             status: 'active'
           });
         }
