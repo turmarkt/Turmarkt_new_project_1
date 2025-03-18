@@ -10,39 +10,9 @@ import { TrendyolScrapingError, URLValidationError, ProductDataError, handleErro
 import { getCategoryConfig } from "./category-mapping";
 
 function mapToShopifyCategory(categories: string[]): string {
-  // Shopify resmi kategori taksonomisi
-  const categoryMap: { [key: string]: string } = {
-    // Çanta & Cüzdan kategorileri
-    'Cüzdan': 'Accessories > Wallets & Money Clips',
-    'Çanta': 'Bags & Purses',
-    'Kartlık': 'Accessories > Wallets & Money Clips',
-
-    // Giyim kategorileri
-    'Tişört': 'Clothing > Shirts & Tops',
-    'T-shirt': 'Clothing > Shirts & Tops',
-    'Elbise': 'Clothing > Dresses',
-    'Pantolon': 'Clothing > Pants',
-    'Gömlek': 'Clothing > Shirts & Tops',
-
-    // Ayakkabı kategorileri
-    'Ayakkabı': 'Shoes',
-    'Sneaker': 'Shoes > Athletic Shoes',
-    'Spor Ayakkabı': 'Shoes > Athletic Shoes',
-    'Günlük Ayakkabı': 'Shoes > Casual Shoes'
-  };
-
-  // Kategorileri normalize et ve eşleştir
-  for (const category of categories) {
-    const normalizedCategory = category.trim().toLowerCase();
-    for (const [key, value] of Object.entries(categoryMap)) {
-      if (normalizedCategory.includes(key.toLowerCase())) {
-        return `Apparel & Accessories > ${value}`;
-      }
-    }
-  }
-
-  // Varsayılan kategori
-  return 'Apparel & Accessories > Clothing';
+  const normalizedCategories = categories.map(c => c.toLowerCase().trim());
+  const config = getCategoryConfig(normalizedCategories);
+  return config.shopifyCategory;
 }
 
 function getVariantConfig(categories: string[]): {

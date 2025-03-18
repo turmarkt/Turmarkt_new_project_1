@@ -15,8 +15,20 @@ export const CategoryConfig = z.object({
 
 type CategoryMapping = Record<string, z.infer<typeof CategoryConfig>>;
 
+// Shopify standart kategori yapısı kullanılıyor
 export const categoryMapping: CategoryMapping = {
   // Giyim Kategorileri
+  "giyim": {
+    shopifyCategory: "Apparel & Accessories > Clothing",
+    variantConfig: {
+      sizeLabel: "Beden",
+      colorLabel: "Renk",
+      defaultStock: 50,
+      hasVariants: true
+    },
+    attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
+    inventoryTracking: true
+  },
   "tişört": {
     shopifyCategory: "Apparel & Accessories > Clothing > Shirts & Tops",
     variantConfig: {
@@ -39,9 +51,20 @@ export const categoryMapping: CategoryMapping = {
     attributes: ["Kumaş", "Kalıp", "Bel", "Paça"],
     inventoryTracking: true
   },
-  
+
   // Ayakkabı Kategorileri
-  "spor ayakkabı": {
+  "ayakkabı": {
+    shopifyCategory: "Apparel & Accessories > Shoes",
+    variantConfig: {
+      sizeLabel: "Numara",
+      colorLabel: "Renk",
+      defaultStock: 30,
+      hasVariants: true
+    },
+    attributes: ["Taban", "Materyal", "Bağcık", "Kullanım Alanı"],
+    inventoryTracking: true
+  },
+  "sneaker": {
     shopifyCategory: "Apparel & Accessories > Shoes > Athletic Shoes",
     variantConfig: {
       sizeLabel: "Numara",
@@ -54,71 +77,54 @@ export const categoryMapping: CategoryMapping = {
   },
 
   // Çanta & Cüzdan Kategorileri
-  "cüzdan": {
-    shopifyCategory: "Apparel & Accessories > Wallets & Money Clips",
+  "çanta": {
+    shopifyCategory: "Apparel & Accessories > Handbags & Wallets > Handbags",
     variantConfig: {
       colorLabel: "Renk",
       materialLabel: "Materyal",
-      defaultStock: 100,
+      defaultStock: 30,
       hasVariants: true
     },
-    attributes: ["Bölme Sayısı", "Materyal", "Boyut"],
+    attributes: ["Malzeme", "Boyut", "Bölme Sayısı", "Kullanım Alanı"],
     inventoryTracking: true
   },
-
-  // Elektronik Kategorileri
-  "telefon": {
-    shopifyCategory: "Electronics > Phones & Accessories > Mobile Phones",
+  "cüzdan": {
+    shopifyCategory: "Apparel & Accessories > Handbags & Wallets > Wallets & Money Clips",
     variantConfig: {
       colorLabel: "Renk",
-      defaultStock: 20,
+      materialLabel: "Materyal",
+      defaultStock: 50,
       hasVariants: true
     },
-    attributes: ["Hafıza", "RAM", "İşlemci", "Ekran Boyutu"],
+    attributes: ["Malzeme", "Boyut", "Bölme Sayısı", "Kart Bölmesi"],
     inventoryTracking: true
   },
-
-  // Ev & Yaşam Kategorileri
-  "nevresim takımı": {
-    shopifyCategory: "Home & Garden > Linens > Bedding",
-    variantConfig: {
-      sizeLabel: "Boyut",
-      colorLabel: "Renk",
-      defaultStock: 40,
-      hasVariants: true
-    },
-    attributes: ["Parça Sayısı", "Kumaş", "Yıkama Talimatı"],
-    inventoryTracking: true
-  },
-
-  // Kozmetik Kategorileri
-  "parfüm": {
-    shopifyCategory: "Health & Beauty > Personal Care > Cosmetics > Fragrances",
-    variantConfig: {
-      sizeLabel: "Miktar",
-      defaultStock: 60,
-      hasVariants: true
-    },
-    attributes: ["Hacim", "Koku Ailesi", "Kalıcılık"],
-    inventoryTracking: true
-  },
-
-  // Spor & Outdoor
-  "yoga matı": {
-    shopifyCategory: "Sporting Goods > Exercise & Fitness > Yoga & Pilates",
+  "kartlık": {
+    shopifyCategory: "Apparel & Accessories > Handbags & Wallets > Wallets & Money Clips",
     variantConfig: {
       colorLabel: "Renk",
-      defaultStock: 45,
+      materialLabel: "Materyal",
+      defaultStock: 50,
       hasVariants: true
     },
-    attributes: ["Kalınlık", "Materyal", "Boyut"],
+    attributes: ["Malzeme", "Boyut", "Kart Bölmesi"],
     inventoryTracking: true
   }
 };
 
 export function getCategoryConfig(categories: string[]): z.infer<typeof CategoryConfig> {
   const normalizedCategories = categories.map(c => c.toLowerCase().trim());
-  
+
+  // Her kategoriyi kontrol et
+  for (const category of normalizedCategories) {
+    for (const [key, config] of Object.entries(categoryMapping)) {
+      if (category.includes(key)) {
+        return config;
+      }
+    }
+  }
+
+  // Genel kategori kontrolü
   for (const [key, config] of Object.entries(categoryMapping)) {
     if (normalizedCategories.some(c => c.includes(key))) {
       return config;
