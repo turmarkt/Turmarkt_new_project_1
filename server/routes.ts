@@ -124,8 +124,11 @@ async function exportToShopify(product: Product) {
     'Status': 'active',
     'SKU': `${handle}-1`,
     'Barcode': '',
+    'Option1 Name': product.variants.sizes.length > 0 ? 'Size' : '',
     'Option1 Value': product.variants.sizes[0] || '',
+    'Option2 Name': product.variants.colors.length > 0 ? 'Color' : '',
     'Option2 Value': product.variants.colors[0] || '',
+    'Option3 Name': '',
     'Option3 Value': '',
     'Price': product.price,
     'Charge tax': 'TRUE',
@@ -163,6 +166,7 @@ async function exportToShopify(product: Product) {
     for (let i = 1; i < product.variants.sizes.length; i++) {
       records.push({
         'URL handle': handle,
+        'Option1 Name': 'Size', // Ana üründeki ile aynı olmalı
         'Option1 Value': product.variants.sizes[i],
         'SKU': `${handle}-size-${i}`,
         'Price': product.price,
@@ -180,6 +184,7 @@ async function exportToShopify(product: Product) {
       const variantImage = product.images[i] || product.images[0];
       records.push({
         'URL handle': handle,
+        'Option2 Name': 'Color', // Ana üründeki ile aynı olmalı
         'Option2 Value': product.variants.colors[i],
         'SKU': `${handle}-color-${i}`,
         'Price': product.price,
@@ -194,7 +199,7 @@ async function exportToShopify(product: Product) {
     }
   }
 
-  // Ek görsel kayıtları
+  // Ek görsel kayıtları için sadece gerekli alanlar
   for (let i = 1; i < product.images.length; i++) {
     records.push({
       'URL handle': handle,
@@ -204,7 +209,7 @@ async function exportToShopify(product: Product) {
     });
   }
 
-  // CSV başlıkları
+  // CSV başlıkları - Shopify'ın beklediği sırada
   const csvWriter = createObjectCsvWriter({
     path: 'products.csv',
     header: [
@@ -219,8 +224,11 @@ async function exportToShopify(product: Product) {
       {id: 'Status', title: 'Status'},
       {id: 'SKU', title: 'SKU'},
       {id: 'Barcode', title: 'Barcode'},
+      {id: 'Option1 Name', title: 'Option1 Name'},
       {id: 'Option1 Value', title: 'Option1 Value'},
+      {id: 'Option2 Name', title: 'Option2 Name'},
       {id: 'Option2 Value', title: 'Option2 Value'},
+      {id: 'Option3 Name', title: 'Option3 Name'},
       {id: 'Option3 Value', title: 'Option3 Value'},
       {id: 'Price', title: 'Price'},
       {id: 'Charge tax', title: 'Charge tax'},
