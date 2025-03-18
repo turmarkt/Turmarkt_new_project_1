@@ -63,71 +63,54 @@ async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<st
   const attributes: Record<string, string> = {};
 
   try {
-    // 1. Tüm olası özellik selektörleri
-    const selectors = [
-      '.detail-attr-container tr',
-      '.product-feature-table tr',
-      '.product-feature-list li',
-      '.detail-attr-item',
-      '[data-drroot="properties"] .detail-attr-item',
-      '.product-properties li',
-      '.detail-border-bottom tr',
-      '.product-details tr'
-    ];
+    // 1. Öne Çıkan Özellikler bölümünü bul
+    $('.featured-attributes-title, .product-feature-title').each((_, titleEl) => {
+      const title = $(titleEl).text().trim();
+      if (title.includes('Öne Çıkan Özellikler')) {
+        const container = $(titleEl).next();
+        container.find('li, .featured-attributes-item, .product-feature-item').each((_, item) => {
+          const label = $(item).find('.featured-attributes-label, .product-feature-label').text().trim();
+          const value = $(item).find('.featured-attributes-value, .product-feature-value').text().trim();
+          if (label && value) {
+            attributes[label] = value;
+          }
+        });
+      }
+    });
 
-    // 2. Her bir selektörü dene
-    for (const selector of selectors) {
-      $(selector).each((_, element) => {
-        let label, value;
-
-        // 2.1 Tablo yapısı için
-        if ($(element).find('th, td').length > 0) {
-          label = $(element).find('th, td:first-child').text().trim();
-          value = $(element).find('td:last-child').text().trim();
-        }
-        // 2.2 Liste yapısı için
-        else {
-          const text = $(element).text().trim();
-          [label, value] = text.split(':').map(s => s.trim());
-        }
-
-        // 2.3 Özel etiket yapıları için
-        if (!value && $(element).find('.detail-attr-label, .property-label').length > 0) {
-          label = $(element).find('.detail-attr-label, .property-label').text().trim();
-          value = $(element).find('.detail-attr-value, .property-value').text().trim();
-        }
-
-        // 2.4 Geçerli değerleri ekle
-        if (label && value && !attributes[label]) {
+    // 2. Eğer öne çıkan özellikler bulunamazsa, tüm özellik tablosunu tara
+    if (Object.keys(attributes).length === 0) {
+      $('.detail-attr-container tr, .product-feature-table tr').each((_, row) => {
+        const label = $(row).find('th, td:first-child').text().trim();
+        const value = $(row).find('td:last-child').text().trim();
+        if (label && value) {
           attributes[label] = value;
         }
       });
-
-      // Eğer özellik bulduysa döngüyü bitir
-      if (Object.keys(attributes).length > 0) {
-        break;
-      }
     }
 
-    // 3. Ek özellik alanlarını kontrol et
-    if (Object.keys(attributes).length === 0) {
-      const additionalProps = $('script[type="application/ld+json"]').map((_, el) => {
-        try {
-          const schema = JSON.parse($(el).html() || '{}');
-          if (schema.additionalProperty) {
-            return schema.additionalProperty;
-          }
-        } catch (e) {
-          console.error('JSON parse error:', e);
-        }
-        return null;
-      }).get().filter(Boolean);
+    // 3. Özel özellik listelerini kontrol et
+    const specialAttributes = {
+      'Materyal': ['Materyal', 'Kumaş', 'Material'],
+      'Parça Sayısı': ['Parça Sayısı', 'Adet'],
+      'Renk': ['Renk', 'Color'],
+      'Desen': ['Desen', 'Pattern'],
+      'Yıkama Talimatı': ['Yıkama Talimatı', 'Yıkama'],
+      'Menşei': ['Menşei', 'Üretim Yeri', 'Origin']
+    };
 
-      additionalProps.forEach((prop: any) => {
-        if (prop.name && prop.value) {
-          attributes[prop.name] = prop.value;
+    for (const [key, alternatives] of Object.entries(specialAttributes)) {
+      if (!attributes[key]) {
+        for (const alt of alternatives) {
+          const selector = `[data-attribute="${alt}"], [data-property="${alt}"], .detail-attr-item:contains("${alt}")`;
+          $(selector).each((_, el) => {
+            const value = $(el).find('.detail-attr-value, .property-value').text().trim();
+            if (value) {
+              attributes[key] = value;
+            }
+          });
         }
-      });
+      }
     }
 
     console.log("Bulunan özellikler:", attributes);
@@ -368,16 +351,23 @@ export async function registerRoutes(app: Express) {
       .replace(/-+/g, '-')
       .replace(/^-|-$/g, '');
 
+    // Ürün özelliklerini düzenli formatla
+    const attributesHtml = Object.entries(product.attributes)
+      .map(([key, value]) => `<strong>${key}:</strong> ${value}`)
+      .join('<br>');
+
     // Ana ürün kaydı
     const mainRecord = {
       'Title': product.title,
-      'URL handle': handle,
-      'Description': Object.entries(product.attributes)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join('\n')
-        .replace(/"/g, '""'), // Çift tırnak karakterlerini escape et
+      'Handle': handle,
+      'Body (HTML)': `<div class="product-features">
+        <h3>Ürün Özellikleri</h3>
+        <div class="features-list">
+          ${attributesHtml}
+        </div>
+      </div>`.replace(/"/g, '""'),
       'Vendor': product.brand || '',
-      'Product category': 'Apparel & Accessories > Clothing',
+      'Product Category': 'Apparel & Accessories > Clothing',
       'Type': 'Clothing',
       'Tags': product.categories.join(','),
       'Published': 'TRUE',
@@ -396,15 +386,15 @@ export async function registerRoutes(app: Express) {
       'Requires shipping': 'TRUE',
       'Weight': '500',
       'Weight unit': 'g',
-      'Variant image': '',
-      'Image position': '1',
       'Image Src': product.images[0] || '',
+      'Image Position': '1',
+      'Variant Image': '',
       'SEO Title': product.title,
       'SEO Description': Object.entries(product.attributes)
         .map(([key, value]) => `${key}: ${value}`)
         .join('. ')
         .substring(0, 320)
-        .replace(/"/g, '""') // Çift tırnak karakterlerini escape et
+        .replace(/"/g, '""')
     };
 
     const records = [mainRecord];
@@ -413,7 +403,7 @@ export async function registerRoutes(app: Express) {
     if (product.variants.sizes.length > 0) {
       for (let i = 1; i < product.variants.sizes.length; i++) {
         records.push({
-          'URL handle': handle,
+          'Handle': handle,
           'Option1 Name': 'Size',
           'Option1 Value': product.variants.sizes[i],
           'SKU': `${handle}-size-${i}`,
@@ -429,7 +419,7 @@ export async function registerRoutes(app: Express) {
       for (let i = 1; i < product.variants.colors.length; i++) {
         const variantImage = product.images[i] || product.images[0];
         records.push({
-          'URL handle': handle,
+          'Handle': handle,
           'Option2 Name': 'Color',
           'Option2 Value': product.variants.colors[i],
           'SKU': `${handle}-color-${i}`,
@@ -438,7 +428,7 @@ export async function registerRoutes(app: Express) {
           'Inventory quantity': '100',
           'Requires shipping': 'TRUE',
           'Image Src': variantImage,
-          'Variant image': variantImage
+          'Variant Image': variantImage
         });
       }
     }
@@ -448,10 +438,10 @@ export async function registerRoutes(app: Express) {
       path: 'products.csv',
       header: [
         {id: 'Title', title: 'Title'},
-        {id: 'URL handle', title: 'Handle'},
-        {id: 'Description', title: 'Body (HTML)'},
+        {id: 'Handle', title: 'Handle'},
+        {id: 'Body (HTML)', title: 'Body (HTML)'},
         {id: 'Vendor', title: 'Vendor'},
-        {id: 'Product category', title: 'Product Category'},
+        {id: 'Product Category', title: 'Product Category'},
         {id: 'Type', title: 'Type'},
         {id: 'Tags', title: 'Tags'},
         {id: 'Published', title: 'Published'},
@@ -471,8 +461,8 @@ export async function registerRoutes(app: Express) {
         {id: 'Weight', title: 'Weight'},
         {id: 'Weight unit', title: 'Weight unit'},
         {id: 'Image Src', title: 'Image Src'},
-        {id: 'Image position', title: 'Image Position'},
-        {id: 'Variant image', title: 'Variant Image'},
+        {id: 'Image Position', title: 'Image Position'},
+        {id: 'Variant Image', title: 'Variant Image'},
         {id: 'SEO Title', title: 'SEO Title'},
         {id: 'SEO Description', title: 'SEO Description'}
       ]
