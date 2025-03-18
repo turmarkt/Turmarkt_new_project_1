@@ -45,7 +45,13 @@ export async function registerRoutes(app: Express) {
       let schema;
       try {
         schema = JSON.parse(schemaScript);
+        console.log("Schema.org verisi:", schema);
+
+        if (!schema["@type"] || !schema.name || !schema.offers) {
+          throw new ProductDataError("Geçersiz ürün şeması", "schema");
+        }
       } catch (error) {
+        console.error("Schema parse hatası:", error);
         throw new ProductDataError("Ürün şeması geçersiz", "schema");
       }
 
@@ -53,43 +59,104 @@ export async function registerRoutes(app: Express) {
       const title = schema.name;
       const description = schema.description;
       const price = parseFloat(schema.offers.price);
-      // %15 kar ekle
-      const priceWithProfit = parseFloat((price * 1.15).toFixed(2));
 
       if (!title || !description || isNaN(price)) {
         throw new ProductDataError("Temel ürün bilgileri eksik", "basicInfo");
       }
 
+      // %15 kar ekle
+      const priceWithProfit = parseFloat((price * 1.15).toFixed(2));
+
       // Ürün özellikleri
       const attributes: Record<string, string> = {};
-      schema.additionalProperty.forEach((prop: any) => {
-        attributes[prop.name] = prop.unitText;
-      });
+      if (Array.isArray(schema.additionalProperty)) {
+        schema.additionalProperty.forEach((prop: any) => {
+          if (prop.name && prop.unitText) {
+            attributes[prop.name] = prop.unitText;
+          }
+        });
+      } else {
+        console.warn("additionalProperty bir dizi değil:", schema.additionalProperty);
+      }
 
       // Kategori bilgisi
-      const categories = schema.breadcrumb.itemListElement
-        .map((item: any) => item.item.name)
-        .filter((name: string) => name !== "Trendyol");
+      let categories: string[] = [];
+      if (schema.breadcrumb?.itemListElement) {
+        categories = schema.breadcrumb.itemListElement
+          .map((item: any) => item.item?.name)
+          .filter((name: string | null) => name && name !== "Trendyol");
+      }
+
+      if (categories.length === 0) {
+        console.warn("Kategoriler bulunamadı, DOM'dan çekiliyor");
+        categories = $(".product-path span")
+          .map((_, el) => $(el).text().trim())
+          .get()
+          .filter(cat => cat !== ">");
+      }
 
       if (categories.length === 0) {
         throw new ProductDataError("Kategori bilgisi bulunamadı", "categories");
       }
 
       // Tüm ürün görselleri
-      const images = schema.image.contentUrl;
-      if (!images || images.length === 0) {
+      let images: string[] = [];
+      if (schema.image?.contentUrl) {
+        images = Array.isArray(schema.image.contentUrl) 
+          ? schema.image.contentUrl 
+          : [schema.image.contentUrl];
+      }
+
+      if (images.length === 0) {
+        console.warn("Görseller schema'dan alınamadı, DOM'dan çekiliyor");
+        // Ana ürün görseli
+        const mainImage = $("img.detail-section-img").first().attr("src");
+        if (mainImage) images.push(mainImage);
+
+        // Galeri görselleri
+        $("div.gallery-modal-content img").each((_, el) => {
+          const src = $(el).attr("src");
+          if (src && !images.includes(src)) {
+            images.push(src);
+          }
+        });
+      }
+
+      if (images.length === 0) {
         throw new ProductDataError("Ürün görselleri bulunamadı", "images");
       }
 
       // Beden ve renk varyantları
       const variants = {
-        sizes: schema.hasVariant
-          ? schema.hasVariant.map((variant: any) => variant.size).flat().filter(Boolean)
-          : [],
-        colors: schema.hasVariant
-          ? schema.hasVariant.map((variant: any) => variant.color).filter(Boolean)
-          : []
+        sizes: [] as string[],
+        colors: [] as string[]
       };
+
+      if (schema.hasVariant) {
+        schema.hasVariant.forEach((variant: any) => {
+          if (variant.size && !variants.sizes.includes(variant.size)) {
+            variants.sizes.push(variant.size);
+          }
+          if (variant.color && !variants.colors.includes(variant.color)) {
+            variants.colors.push(variant.color);
+          }
+        });
+      }
+
+      if (variants.sizes.length === 0) {
+        console.warn("Beden bilgisi schema'dan alınamadı, DOM'dan çekiliyor");
+        variants.sizes = $(".sp-itm:not(.so)")
+          .map((_, el) => $(el).text().trim())
+          .get();
+      }
+
+      if (variants.colors.length === 0) {
+        console.warn("Renk bilgisi schema'dan alınamadı, DOM'dan çekiliyor");
+        variants.colors = $(".slc-txt")
+          .map((_, el) => $(el).text().trim())
+          .get()
+          .filter(Boolean);
+      }
 
       // Debug için log
       console.log("Çekilen veriler:", {
@@ -99,7 +166,6 @@ export async function registerRoutes(app: Express) {
         attributes: Object.keys(attributes).length,
         attributesList: attributes,
         categories,
-        tags: [],
         images: images.length,
         imageUrls: images,
         variants
