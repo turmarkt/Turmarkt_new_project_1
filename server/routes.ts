@@ -340,71 +340,56 @@ export async function registerRoutes(app: Express) {
         type: shopifyCategory.split(' > ').pop() || 'Clothing',
         tags: product.categories.join(','),
         published: 'TRUE',
+        status: 'active',
+        option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
+        option1_value: product.variants.sizes[0] || '',
+        option2_name: product.variants.colors.length > 0 ? 'Color' : '',
+        option2_value: product.variants.colors[0] || '',
         sku: `${handle}-1`,
         price: product.price,
         requires_shipping: 'TRUE',
         taxable: 'TRUE',
-        barcode: '',
-        weight: '500',
-        weight_unit: 'g',
         inventory_tracker: 'shopify',
-        inventory_quantity: variantConfig.defaultStock.toString(),
+        inventory_quantity: '100',
         inventory_policy: 'continue',
         fulfillment_service: 'manual',
+        weight: '500',
+        weight_unit: 'g',
         image_src: product.images[0],
         image_position: '1',
         image_alt_text: product.title,
-        gift_card: 'FALSE',
-        seo_title: product.title,
-        seo_description: product.description.substring(0, 320),
-        status: 'active'
+        gift_card: 'FALSE'
       };
 
       const records = [mainRecord];
 
       // Varyant kayıtları
       if (product.variants.sizes.length > 0 || product.variants.colors.length > 0) {
-        const sizes = product.variants.sizes.filter(Boolean);
-        const colors = product.variants.colors.filter(Boolean);
+        // Size varyantları
+        for (let i = 1; i < product.variants.sizes.length; i++) {
+          records.push({
+            ...mainRecord,
+            body_html: '',
+            option1_value: product.variants.sizes[i],
+            sku: `${handle}-size-${i}`,
+            inventory_quantity: '100',
+            image_position: ''
+          });
+        }
 
-        if (sizes.length > 0 || colors.length > 0) {
-          // Ana kayıtta option ayarları
-          if (sizes.length > 0 && variantConfig.sizeLabel) {
-            mainRecord.option1_name = variantConfig.sizeLabel;
-            mainRecord.option1_value = sizes[0];
-          }
-
-          if (colors.length > 0 && variantConfig.colorLabel) {
-            mainRecord.option2_name = variantConfig.colorLabel;
-            mainRecord.option2_value = colors[0];
-          }
-
-          // Size varyantları
-          for (let i = 1; i < sizes.length; i++) {
-            records.push({
-              ...mainRecord,
-              body_html: '',
-              option1_value: sizes[i],
-              sku: `${handle}-size-${i}`,
-              inventory_quantity: variantConfig.defaultStock.toString(),
-              image_position: ''
-            });
-          }
-
-          // Renk varyantları
-          for (let i = 1; i < colors.length; i++) {
-            const variantImage = product.images[i] || product.images[0];
-            records.push({
-              ...mainRecord,
-              body_html: '',
-              option2_value: colors[i],
-              sku: `${handle}-color-${i}`,
-              inventory_quantity: variantConfig.defaultStock.toString(),
-              image_src: variantImage,
-              image_position: '',
-              variant_image: variantImage
-            });
-          }
+        // Renk varyantları
+        for (let i = 1; i < product.variants.colors.length; i++) {
+          const variantImage = product.images[i] || product.images[0];
+          records.push({
+            ...mainRecord,
+            body_html: '',
+            option2_value: product.variants.colors[i],
+            sku: `${handle}-color-${i}`,
+            inventory_quantity: '100',
+            image_src: variantImage,
+            image_position: '',
+            variant_image: variantImage
+          });
         }
       }
 
@@ -414,11 +399,13 @@ export async function registerRoutes(app: Express) {
           records.push({
             handle,
             title: product.title,
+            product_category: shopifyCategory,
+            type: mainRecord.type,
+            published: 'TRUE',
+            status: 'active',
             image_src: image,
             image_position: (index + 2).toString(),
-            image_alt_text: `${product.title} - Görsel ${index + 2}`,
-            published: 'TRUE',
-            status: 'active'
+            image_alt_text: `${product.title} - Görsel ${index + 2}`
           });
         }
       });
