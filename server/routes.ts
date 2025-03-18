@@ -28,70 +28,43 @@ export async function registerRoutes(app: Express) {
       const html = await response.text();
       const $ = cheerio.load(html);
 
+      // Schema.org verisini parse et
+      const schemaScript = $('script[type="application/ld+json"]').first().html();
+      if (!schemaScript) {
+        throw new Error("Product schema not found");
+      }
+
+      const schema = JSON.parse(schemaScript);
+
       // Temel ürün bilgileri
-      const title = $("h1.pr-new-br").text().trim();
-      const description = $("div.detail-border-container").text().trim();
-      const price = parseFloat($("span.prc-dsc").text().replace("TL", "").trim());
+      const title = schema.name;
+      const description = schema.description;
+      const price = parseFloat(schema.offers.price);
       // %15 kar ekle
       const priceWithProfit = parseFloat((price * 1.15).toFixed(2));
 
       // Ürün özellikleri
       const attributes: Record<string, string> = {};
-      $("div.detail-attr-container div.detail-attr-item").each((_, el) => {
-        const key = $(el).find(".detail-attr-key").text().trim();
-        const value = $(el).find(".detail-attr-value").text().trim();
-        if (key && value) {
-          attributes[key] = value;
-        }
+      schema.additionalProperty.forEach((prop: any) => {
+        attributes[prop.name] = prop.unitText;
       });
 
       // Kategori bilgisi
-      const categories = $("div.product-path span")
-        .map((_, el) => $(el).text().trim())
-        .get()
-        .filter(cat => cat !== ">");
-
-      // Ürün etiketleri
-      const tags = $(".product-tag")
-        .map((_, el) => $(el).text().trim())
-        .get();
+      const categories = schema.breadcrumb.itemListElement
+        .map((item: any) => item.item.name)
+        .filter((name: string) => name !== "Trendyol");
 
       // Tüm ürün görselleri
-      const images: string[] = [];
-
-      // Ana ürün görseli
-      const mainImage = $("img.detail-section-img").first().attr("src");
-      if (mainImage) images.push(mainImage);
-
-      // Galeri görselleri
-      $("div.gallery-modal-content img").each((_, el) => {
-        const src = $(el).attr("src");
-        if (src && !images.includes(src)) {
-          images.push(src);
-        }
-      });
-
-      // Küçük resimler
-      $("div.thumb-gallery img").each((_, el) => {
-        const src = $(el).attr("src");
-        if (src) {
-          // Küçük resimleri büyük boyutlu versiyonlarıyla değiştir
-          const fullSizeSrc = src.replace("/mnresize/128/192", "");
-          if (!images.includes(fullSizeSrc)) {
-            images.push(fullSizeSrc);
-          }
-        }
-      });
+      const images = schema.image.contentUrl;
 
       // Beden ve renk varyantları
       const variants = {
-        sizes: $(".sp-itm:not(.so)")
-          .map((_, el) => $(el).text().trim())
-          .get(),
-        colors: $(".slc-txt")
-          .map((_, el) => $(el).text().trim())
-          .get()
-          .filter(Boolean)
+        sizes: schema.hasVariant
+          ? schema.hasVariant.map((variant: any) => variant.size).flat().filter(Boolean)
+          : [],
+        colors: schema.hasVariant
+          ? schema.hasVariant.map((variant: any) => variant.color).filter(Boolean)
+          : []
       };
 
       // Debug için log
@@ -102,7 +75,7 @@ export async function registerRoutes(app: Express) {
         attributes: Object.keys(attributes).length,
         attributesList: attributes,
         categories,
-        tags,
+        tags: [],
         images: images.length,
         imageUrls: images,
         variants
@@ -118,7 +91,7 @@ export async function registerRoutes(app: Express) {
         variants,
         attributes,
         categories,
-        tags
+        tags: []
       };
 
       const saved = await storage.saveProduct(product);
