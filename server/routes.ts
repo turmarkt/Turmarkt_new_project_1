@@ -67,17 +67,17 @@ async function exportToShopify(product: Product) {
     .replace(/^-|-$/g, '');
 
   // Shopify kategori eşleştirmesi
-  let shopifyCategory = "Apparel & Accessories > Clothing";
+  let productCategory = "Apparel & Accessories > Clothing";
   let productType = "Clothing";
 
   if (product.categories.some(c => c.toLowerCase().includes('cüzdan'))) {
-    shopifyCategory = "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips";
+    productCategory = "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips";
     productType = "Wallets";
   } else if (product.categories.some(c => c.toLowerCase().includes('tişört'))) {
-    shopifyCategory = "Apparel & Accessories > Clothing > Shirts & Tops";
-    productType = "Shirts";
+    productCategory = "Apparel & Accessories > Clothing > Shirts & Tops";
+    productType = "T-Shirts";
   } else if (product.categories.some(c => c.toLowerCase().includes('ayakkabı'))) {
-    shopifyCategory = "Apparel & Accessories > Shoes > Athletic Shoes";
+    productCategory = "Apparel & Accessories > Shoes > Athletic Shoes";
     productType = "Shoes";
   }
 
@@ -92,15 +92,39 @@ async function exportToShopify(product: Product) {
 
   // Ana ürün kaydı
   const mainRecord = {
-    handle,
-    title: product.title,
-    body_html: `
+    'Title': product.title,
+    'URL handle': handle,
+    'Description': product.description,
+    'Vendor': product.brand,
+    'Product category': productCategory,
+    'Type': productType,
+    'Tags': product.categories.join(','),
+    'Published on online store': 'TRUE',
+    'Status': 'active',
+    'SKU': `${handle}-1`,
+    'Option1 name': product.variants.sizes.length > 0 ? 'Size' : '',
+    'Option1 value': product.variants.sizes[0] || '',
+    'Option2 name': product.variants.colors.length > 0 ? 'Color' : '',
+    'Option2 value': product.variants.colors[0] || '',
+    'Price': product.price,
+    'Charge tax': 'TRUE',
+    'Inventory tracker': 'shopify',
+    'Inventory quantity': '100',
+    'Continue selling when out of stock': 'deny',
+    'Weight value (grams)': '500',
+    'Weight unit for display': 'g',
+    'Requires shipping': 'TRUE',
+    'Fulfillment service': 'manual',
+    'Product image URL': product.images[0],
+    'Image position': '1',
+    'Image alt text': product.title,
+    'Gift card': 'FALSE',
+    'Body (HTML)': `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         <div style="margin-bottom: 20px;">
           <h3 style="font-size: 18px; color: #333; margin-bottom: 10px;">Ürün Açıklaması</h3>
           <p style="color: #666; line-height: 1.6;">${product.description}</p>
         </div>
-
         <div style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
           <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Ürün Özellikleri</h3>
           <table style="width: 100%; border-collapse: collapse; background: white;">
@@ -110,31 +134,7 @@ async function exportToShopify(product: Product) {
           </table>
         </div>
       </div>
-    `,
-    vendor: product.brand,
-    product_category: shopifyCategory,
-    type: productType,
-    tags: product.categories.join(','),
-    published: 'TRUE',
-    option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
-    option1_value: product.variants.sizes[0] || '',
-    option2_name: product.variants.colors.length > 0 ? 'Color' : '',
-    option2_value: product.variants.colors[0] || '',
-    sku: `${handle}-1`,
-    price: product.price,
-    requires_shipping: 'TRUE',
-    taxable: 'TRUE',
-    inventory_tracker: 'shopify',
-    inventory_quantity: '100',
-    inventory_policy: 'continue',
-    fulfillment_service: 'manual',
-    weight: '500',
-    weight_unit: 'g',
-    image_src: product.images[0],
-    image_position: '1',
-    image_alt_text: product.title,
-    gift_card: 'FALSE',
-    status: 'active'
+    `
   };
 
   const records = [mainRecord];
@@ -143,12 +143,20 @@ async function exportToShopify(product: Product) {
   if (product.variants.sizes.length > 0) {
     for (let i = 1; i < product.variants.sizes.length; i++) {
       records.push({
-        ...mainRecord,
-        body_html: '',
-        option1_value: product.variants.sizes[i],
-        sku: `${handle}-size-${i}`,
-        inventory_quantity: '100',
-        image_position: ''
+        'Title': '',
+        'URL handle': handle,
+        'SKU': `${handle}-size-${i}`,
+        'Option1 name': 'Size',
+        'Option1 value': product.variants.sizes[i],
+        'Price': product.price,
+        'Charge tax': 'TRUE',
+        'Inventory tracker': 'shopify',
+        'Inventory quantity': '100',
+        'Continue selling when out of stock': 'deny',
+        'Weight value (grams)': '500',
+        'Weight unit for display': 'g',
+        'Requires shipping': 'TRUE',
+        'Fulfillment service': 'manual'
       });
     }
   }
@@ -157,14 +165,22 @@ async function exportToShopify(product: Product) {
     for (let i = 1; i < product.variants.colors.length; i++) {
       const variantImage = product.images[i] || product.images[0];
       records.push({
-        ...mainRecord,
-        body_html: '',
-        option2_value: product.variants.colors[i],
-        sku: `${handle}-color-${i}`,
-        inventory_quantity: '100',
-        image_src: variantImage,
-        image_position: '',
-        variant_image: variantImage
+        'Title': '',
+        'URL handle': handle,
+        'SKU': `${handle}-color-${i}`,
+        'Option2 name': 'Color',
+        'Option2 value': product.variants.colors[i],
+        'Price': product.price,
+        'Charge tax': 'TRUE',
+        'Inventory tracker': 'shopify',
+        'Inventory quantity': '100',
+        'Continue selling when out of stock': 'deny',
+        'Weight value (grams)': '500',
+        'Weight unit for display': 'g',
+        'Requires shipping': 'TRUE',
+        'Fulfillment service': 'manual',
+        'Product image URL': variantImage,
+        'Variant image URL': variantImage
       });
     }
   }
@@ -172,15 +188,11 @@ async function exportToShopify(product: Product) {
   // Ek görsel kayıtları
   for (let i = 1; i < product.images.length; i++) {
     records.push({
-      handle,
-      title: product.title,
-      product_category: shopifyCategory,
-      type: productType,
-      published: 'TRUE',
-      image_src: product.images[i],
-      image_position: (i + 1).toString(),
-      image_alt_text: `${product.title} - Görsel ${i + 1}`,
-      status: 'active'
+      'Title': '',
+      'URL handle': handle,
+      'Product image URL': product.images[i],
+      'Image position': (i + 1).toString(),
+      'Image alt text': `${product.title} - Görsel ${i + 1}`
     });
   }
 
@@ -188,34 +200,35 @@ async function exportToShopify(product: Product) {
   const csvWriter = createObjectCsvWriter({
     path: 'products.csv',
     header: [
-      {id: 'handle', title: 'Handle'},
-      {id: 'title', title: 'Title'},
-      {id: 'body_html', title: 'Body (HTML)'},
-      {id: 'vendor', title: 'Vendor'},
-      {id: 'product_category', title: 'Product Category'},
-      {id: 'type', title: 'Type'},
-      {id: 'tags', title: 'Tags'},
-      {id: 'published', title: 'Published'},
-      {id: 'option1_name', title: 'Option1 Name'},
-      {id: 'option1_value', title: 'Option1 Value'},
-      {id: 'option2_name', title: 'Option2 Name'},
-      {id: 'option2_value', title: 'Option2 Value'},
-      {id: 'sku', title: 'SKU'},
-      {id: 'price', title: 'Price'},
-      {id: 'requires_shipping', title: 'Requires Shipping'},
-      {id: 'taxable', title: 'Taxable'},
-      {id: 'inventory_tracker', title: 'Inventory Tracker'},
-      {id: 'inventory_quantity', title: 'Inventory Qty'},
-      {id: 'inventory_policy', title: 'Inventory Policy'},
-      {id: 'fulfillment_service', title: 'Fulfillment Service'},
-      {id: 'weight', title: 'Weight'},
-      {id: 'weight_unit', title: 'Weight Unit'},
-      {id: 'image_src', title: 'Image Src'},
-      {id: 'image_position', title: 'Image Position'},
-      {id: 'image_alt_text', title: 'Image Alt Text'},
-      {id: 'variant_image', title: 'Variant Image'},
-      {id: 'gift_card', title: 'Gift Card'},
-      {id: 'status', title: 'Status'}
+      {id: 'Title', title: 'Title'},
+      {id: 'URL handle', title: 'URL handle'},
+      {id: 'Description', title: 'Description'},
+      {id: 'Vendor', title: 'Vendor'},
+      {id: 'Product category', title: 'Product category'},
+      {id: 'Type', title: 'Type'},
+      {id: 'Tags', title: 'Tags'},
+      {id: 'Published on online store', title: 'Published on online store'},
+      {id: 'Status', title: 'Status'},
+      {id: 'SKU', title: 'SKU'},
+      {id: 'Option1 name', title: 'Option1 name'},
+      {id: 'Option1 value', title: 'Option1 value'},
+      {id: 'Option2 name', title: 'Option2 name'},
+      {id: 'Option2 value', title: 'Option2 value'},
+      {id: 'Price', title: 'Price'},
+      {id: 'Charge tax', title: 'Charge tax'},
+      {id: 'Inventory tracker', title: 'Inventory tracker'},
+      {id: 'Inventory quantity', title: 'Inventory quantity'},
+      {id: 'Continue selling when out of stock', title: 'Continue selling when out of stock'},
+      {id: 'Weight value (grams)', title: 'Weight value (grams)'},
+      {id: 'Weight unit for display', title: 'Weight unit for display'},
+      {id: 'Requires shipping', title: 'Requires shipping'},
+      {id: 'Fulfillment service', title: 'Fulfillment service'},
+      {id: 'Product image URL', title: 'Product image URL'},
+      {id: 'Image position', title: 'Image position'},
+      {id: 'Image alt text', title: 'Image alt text'},
+      {id: 'Variant image URL', title: 'Variant image URL'},
+      {id: 'Gift card', title: 'Gift card'},
+      {id: 'Body (HTML)', title: 'Body (HTML)'}
     ]
   });
 
@@ -358,14 +371,14 @@ export async function registerRoutes(app: Express) {
         }
 
         // DOM'dan varyant bilgisi
-        if (variants.sizes.length === 0 ) {
+        if (variants.sizes.length === 0) {
           variants.sizes = $(".sp-itm:not(.so)")
             .map((_, el) => $(el).text().trim())
             .get()
             .filter(Boolean);
         }
 
-        if (variants.colors.length === 0 ) {
+        if (variants.colors.length === 0) {
           variants.colors = $(".slc-txt")
             .map((_, el) => $(el).text().trim())
             .get()
@@ -380,7 +393,7 @@ export async function registerRoutes(app: Express) {
             }
           });
         }
-        if (variants.colors.length === 0 ) {
+        if (variants.colors.length === 0) {
           variants.colors = $(".slc-txt")
             .map((_, el) => $(el).text().trim())
             .get()
@@ -400,14 +413,14 @@ export async function registerRoutes(app: Express) {
         }
 
         // DOM'dan varyant bilgisi
-        if (variants.sizes.length === 0 ) {
+        if (variants.sizes.length === 0) {
           variants.sizes = $(".sp-itm:not(.so)")
             .map((_, el) => $(el).text().trim())
             .get()
             .filter(Boolean);
         }
 
-        if (variants.colors.length === 0 ) {
+        if (variants.colors.length === 0) {
           variants.colors = $(".slc-txt")
             .map((_, el) => $(el).text().trim())
             .get()
