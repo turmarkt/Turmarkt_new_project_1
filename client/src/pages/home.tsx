@@ -193,40 +193,54 @@ export default function Home() {
                     {/* Sol Kolon: Açıklama ve Özellikler */}
                     <div className="space-y-6">
                       <div>
-                        <h3 className="text-lg font-semibold mb-2">Ürün Açıklaması</h3>
-                        <p className="text-gray-400 leading-relaxed">{product.description}</p>
+                        <h3 className="text-base font-semibold mb-2">Ürün Açıklaması</h3>
+                        <p className="text-sm text-gray-400 leading-relaxed max-h-32 overflow-y-auto pr-2">
+                          {product.description}
+                        </p>
                       </div>
 
-                      <div>
-                        <h3 className="text-lg font-semibold mb-4">Ürün Özellikleri</h3>
-                        <div className="bg-gray-800 rounded-lg p-4 space-y-2">
-                          {Object.entries(product.attributes).map(([key, value]) => (
-                            <div key={key} className="flex justify-between text-sm">
-                              <span className="text-gray-400">{key}</span>
-                              <span className="text-gray-200">{value}</span>
-                            </div>
-                          ))}
+                      <div className="space-y-4">
+                        <h3 className="text-base font-semibold mb-2">Ürün Özellikleri</h3>
+                        <div className="bg-gray-800 rounded-lg p-4 max-h-64 overflow-y-auto">
+                          <div className="space-y-2">
+                            {Object.entries(product.attributes).map(([key, value]) => (
+                              <div key={key} className="flex justify-between text-sm">
+                                <span className="text-gray-400 w-1/2 truncate">{key}</span>
+                                <span className="text-gray-200 w-1/2 text-right truncate">{value}</span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
 
                     {/* Sağ Kolon: Fiyat ve Varyantlar */}
                     <div className="space-y-6">
-                      <div className="bg-gray-800 rounded-lg p-6">
+                      <div className="bg-gray-800 rounded-lg p-4">
                         <div className="flex items-baseline justify-between mb-2">
-                          <p className="text-3xl font-bold">{product.price} TL</p>
-                          <p className="text-lg text-gray-400 line-through">{product.basePrice} TL</p>
+                          <p className="text-xl font-bold">{product.price} TL</p>
+                          <p className="text-sm text-gray-400 line-through">{product.basePrice} TL</p>
                         </div>
-                        <p className="text-sm text-gray-400">Kar marjı dahil fiyat</p>
+                        <p className="text-xs text-gray-400">Kar marjı dahil fiyat</p>
                       </div>
 
                       <div className="space-y-4">
+                        <div className="space-y-4">
+                          <h3 className="text-base font-semibold mb-2">Kategoriler</h3>
+                          <div className="flex flex-wrap gap-2">
+                            {product.categories.map((category: string, i: number) => (
+                              <Badge key={i} variant="outline" className="text-xs bg-gray-800">
+                                {category}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
                         {product.variants.sizes.length > 0 && (
                           <div>
-                            <h4 className="text-sm text-gray-400 mb-2">Mevcut Bedenler</h4>
+                            <h4 className="text-xs text-gray-400 mb-2">Mevcut Bedenler</h4>
                             <div className="flex flex-wrap gap-2">
                               {product.variants.sizes.map((size: string, i: number) => (
-                                <Badge key={i} variant="outline" className="bg-gray-800">
+                                <Badge key={i} variant="outline" className="text-xs bg-gray-800">
                                   {size}
                                 </Badge>
                               ))}
@@ -236,10 +250,10 @@ export default function Home() {
 
                         {product.variants.colors.length > 0 && (
                           <div>
-                            <h4 className="text-sm text-gray-400 mb-2">Mevcut Renkler</h4>
+                            <h4 className="text-xs text-gray-400 mb-2">Mevcut Renkler</h4>
                             <div className="flex flex-wrap gap-2">
                               {product.variants.colors.map((color: string, i: number) => (
-                                <Badge key={i} variant="outline" className="bg-gray-800">
+                                <Badge key={i} variant="outline" className="text-xs bg-gray-800">
                                   {color}
                                 </Badge>
                               ))}

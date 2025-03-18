@@ -1,2 +1,809 @@
-Handle,Title,Body (HTML),Vendor,Type,Tags,Published,Price,Option1 Name,Option1 Value,Option2 Name,Option2 Value,Image Src
-mavi-logo-baskılı-gri-tişört-regular-fit-/-normal-kesim-0610943-82577,Mavi Logo Baskılı Gri Tişört Regular Fit / Normal Kesim 0610943-82577,<p></p>,Trendyol,Giyim,,TRUE,424.35,Size,XS,,,https://cdn.dsmcdn.com/mnresize/170/247/ty1649/prod/QC/20250312/06/6f04bad1-df98-3517-9dbe-a1ed23889d01/1_org_zoom.jpg
+Handle,Title,Body (HTML),Vendor,Product category,Type,Tags,Published on online store,Status,SKU,Barcode,Option1 name,Option1 value,Option2 name,Option2 value,Option3 name,Option3 value,Price,Price / International,Compare-at price,Compare-at price / International,Weight value (grams),Weight unit for display,Requires shipping,Fulfillment service,Product image URL,Image position,Image alt text,Variant image URL,Gift card,SEO title,SEO description,Google Shopping / Google product category,Google Shopping / Gender,Google Shopping / Age group
+mavi-malibu-kolej-açık-gri-jean-pantolon-1010152-89199,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"<div class=""product-description"">
+        <h2>Ürün Açıklaması</h2>
+        <p>Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+        <h2>Ürün Özellikleri</h2>
+        <table class=""product-specs"">
+          <tbody>
+            <tr>
+              <th>Paça Tipi</th>
+              <td>Regular</td>
+            </tr>
+            <tr>
+              <th>Bel</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Renk</th>
+              <td>Gri</td>
+            </tr>
+            <tr>
+              <th>Materyal</th>
+              <td>Pamuklu</td>
+            </tr>
+            <tr>
+              <th>Cep</th>
+              <td>Cepsiz</td>
+            </tr>
+            <tr>
+              <th>Ürün Tipi</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Koleksiyon</th>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <th>Boy</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Kumaş Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Siluet</th>
+              <td>Straight</td>
+            </tr>
+            <tr>
+              <th>Ortam</th>
+              <td>Casual/Günlük</td>
+            </tr>
+            <tr>
+              <th>Kalıp</th>
+              <td>Wide Leg</td>
+            </tr>
+            <tr>
+              <th>Desen</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Ek Özellik</th>
+              <td>Ek Özellik Mevcut Değil</td>
+            </tr>
+            <tr>
+              <th>Kapama Şekli</th>
+              <td>Düğme + Fermuar</td>
+            </tr>
+            <tr>
+              <th>Kemer/Kuşak Durumu</th>
+              <td>Kemersiz</td>
+            </tr>
+            <tr>
+              <th>Dokuma Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Sürdürülebilirlik Detayı</th>
+              <td>Hayır</td>
+            </tr>
+            <tr>
+              <th>Persona</th>
+              <td>Cool & Comfort</td>
+            </tr>
+            <tr>
+              <th>Materyal Bileşeni</th>
+              <td>94% Pamuk, 5% Polyester, 1% Elastan</td>
+            </tr>
+            <tr>
+              <th>Yıkama Talimatı</th>
+              <td>Type 1</td>
+            </tr>
+            <tr>
+              <th>Paket İçeriği</th>
+              <td>Tekli</td>
+            </tr>
+            <tr>
+              <th>Menşei</th>
+              <td>TR</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>",Trendyol,Jean,Jean,,TRUE,active,,,Size,"24/32,25/32,26/30,26/32,28/30,28/32,30/30,31/30,33/30,23/32,24/28,24/30,25/28,25/30,26/28,28/28,29/28,30/28,31/28,22/30,31/32,23/28,27/28,27/32,27/30,29/30,29/32,30/32",Color,gri-84023,,,1724.99,,1499.99,,500,g,TRUE,manual,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/60917e10-622d-369a-8065-7ba64ee103e9/1_org_zoom.jpg,1,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 - Görsel 1,,FALSE,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",Jean,Unisex,Adult
+mavi-malibu-kolej-açık-gri-jean-pantolon-1010152-89199,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"<div class=""product-description"">
+        <h2>Ürün Açıklaması</h2>
+        <p>Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+        <h2>Ürün Özellikleri</h2>
+        <table class=""product-specs"">
+          <tbody>
+            <tr>
+              <th>Paça Tipi</th>
+              <td>Regular</td>
+            </tr>
+            <tr>
+              <th>Bel</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Renk</th>
+              <td>Gri</td>
+            </tr>
+            <tr>
+              <th>Materyal</th>
+              <td>Pamuklu</td>
+            </tr>
+            <tr>
+              <th>Cep</th>
+              <td>Cepsiz</td>
+            </tr>
+            <tr>
+              <th>Ürün Tipi</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Koleksiyon</th>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <th>Boy</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Kumaş Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Siluet</th>
+              <td>Straight</td>
+            </tr>
+            <tr>
+              <th>Ortam</th>
+              <td>Casual/Günlük</td>
+            </tr>
+            <tr>
+              <th>Kalıp</th>
+              <td>Wide Leg</td>
+            </tr>
+            <tr>
+              <th>Desen</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Ek Özellik</th>
+              <td>Ek Özellik Mevcut Değil</td>
+            </tr>
+            <tr>
+              <th>Kapama Şekli</th>
+              <td>Düğme + Fermuar</td>
+            </tr>
+            <tr>
+              <th>Kemer/Kuşak Durumu</th>
+              <td>Kemersiz</td>
+            </tr>
+            <tr>
+              <th>Dokuma Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Sürdürülebilirlik Detayı</th>
+              <td>Hayır</td>
+            </tr>
+            <tr>
+              <th>Persona</th>
+              <td>Cool & Comfort</td>
+            </tr>
+            <tr>
+              <th>Materyal Bileşeni</th>
+              <td>94% Pamuk, 5% Polyester, 1% Elastan</td>
+            </tr>
+            <tr>
+              <th>Yıkama Talimatı</th>
+              <td>Type 1</td>
+            </tr>
+            <tr>
+              <th>Paket İçeriği</th>
+              <td>Tekli</td>
+            </tr>
+            <tr>
+              <th>Menşei</th>
+              <td>TR</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>",Trendyol,Jean,Jean,,TRUE,active,,,Size,"24/32,25/32,26/30,26/32,28/30,28/32,30/30,31/30,33/30,23/32,24/28,24/30,25/28,25/30,26/28,28/28,29/28,30/28,31/28,22/30,31/32,23/28,27/28,27/32,27/30,29/30,29/32,30/32",Color,gri-84023,,,1724.99,,1499.99,,500,g,TRUE,manual,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/6fbc0a10-c3af-3a16-9cd1-1a06435eb8d4/1_org_zoom.jpg,2,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 - Görsel 2,,FALSE,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",Jean,Unisex,Adult
+mavi-malibu-kolej-açık-gri-jean-pantolon-1010152-89199,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"<div class=""product-description"">
+        <h2>Ürün Açıklaması</h2>
+        <p>Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+        <h2>Ürün Özellikleri</h2>
+        <table class=""product-specs"">
+          <tbody>
+            <tr>
+              <th>Paça Tipi</th>
+              <td>Regular</td>
+            </tr>
+            <tr>
+              <th>Bel</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Renk</th>
+              <td>Gri</td>
+            </tr>
+            <tr>
+              <th>Materyal</th>
+              <td>Pamuklu</td>
+            </tr>
+            <tr>
+              <th>Cep</th>
+              <td>Cepsiz</td>
+            </tr>
+            <tr>
+              <th>Ürün Tipi</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Koleksiyon</th>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <th>Boy</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Kumaş Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Siluet</th>
+              <td>Straight</td>
+            </tr>
+            <tr>
+              <th>Ortam</th>
+              <td>Casual/Günlük</td>
+            </tr>
+            <tr>
+              <th>Kalıp</th>
+              <td>Wide Leg</td>
+            </tr>
+            <tr>
+              <th>Desen</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Ek Özellik</th>
+              <td>Ek Özellik Mevcut Değil</td>
+            </tr>
+            <tr>
+              <th>Kapama Şekli</th>
+              <td>Düğme + Fermuar</td>
+            </tr>
+            <tr>
+              <th>Kemer/Kuşak Durumu</th>
+              <td>Kemersiz</td>
+            </tr>
+            <tr>
+              <th>Dokuma Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Sürdürülebilirlik Detayı</th>
+              <td>Hayır</td>
+            </tr>
+            <tr>
+              <th>Persona</th>
+              <td>Cool & Comfort</td>
+            </tr>
+            <tr>
+              <th>Materyal Bileşeni</th>
+              <td>94% Pamuk, 5% Polyester, 1% Elastan</td>
+            </tr>
+            <tr>
+              <th>Yıkama Talimatı</th>
+              <td>Type 1</td>
+            </tr>
+            <tr>
+              <th>Paket İçeriği</th>
+              <td>Tekli</td>
+            </tr>
+            <tr>
+              <th>Menşei</th>
+              <td>TR</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>",Trendyol,Jean,Jean,,TRUE,active,,,Size,"24/32,25/32,26/30,26/32,28/30,28/32,30/30,31/30,33/30,23/32,24/28,24/30,25/28,25/30,26/28,28/28,29/28,30/28,31/28,22/30,31/32,23/28,27/28,27/32,27/30,29/30,29/32,30/32",Color,gri-84023,,,1724.99,,1499.99,,500,g,TRUE,manual,https://cdn.dsmcdn.com/ty1648/prod/QC/20250312/06/ba970cca-be5e-3ceb-84f3-8e115f974c46/1_org_zoom.jpg,3,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 - Görsel 3,,FALSE,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",Jean,Unisex,Adult
+mavi-malibu-kolej-açık-gri-jean-pantolon-1010152-89199,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"<div class=""product-description"">
+        <h2>Ürün Açıklaması</h2>
+        <p>Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+        <h2>Ürün Özellikleri</h2>
+        <table class=""product-specs"">
+          <tbody>
+            <tr>
+              <th>Paça Tipi</th>
+              <td>Regular</td>
+            </tr>
+            <tr>
+              <th>Bel</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Renk</th>
+              <td>Gri</td>
+            </tr>
+            <tr>
+              <th>Materyal</th>
+              <td>Pamuklu</td>
+            </tr>
+            <tr>
+              <th>Cep</th>
+              <td>Cepsiz</td>
+            </tr>
+            <tr>
+              <th>Ürün Tipi</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Koleksiyon</th>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <th>Boy</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Kumaş Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Siluet</th>
+              <td>Straight</td>
+            </tr>
+            <tr>
+              <th>Ortam</th>
+              <td>Casual/Günlük</td>
+            </tr>
+            <tr>
+              <th>Kalıp</th>
+              <td>Wide Leg</td>
+            </tr>
+            <tr>
+              <th>Desen</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Ek Özellik</th>
+              <td>Ek Özellik Mevcut Değil</td>
+            </tr>
+            <tr>
+              <th>Kapama Şekli</th>
+              <td>Düğme + Fermuar</td>
+            </tr>
+            <tr>
+              <th>Kemer/Kuşak Durumu</th>
+              <td>Kemersiz</td>
+            </tr>
+            <tr>
+              <th>Dokuma Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Sürdürülebilirlik Detayı</th>
+              <td>Hayır</td>
+            </tr>
+            <tr>
+              <th>Persona</th>
+              <td>Cool & Comfort</td>
+            </tr>
+            <tr>
+              <th>Materyal Bileşeni</th>
+              <td>94% Pamuk, 5% Polyester, 1% Elastan</td>
+            </tr>
+            <tr>
+              <th>Yıkama Talimatı</th>
+              <td>Type 1</td>
+            </tr>
+            <tr>
+              <th>Paket İçeriği</th>
+              <td>Tekli</td>
+            </tr>
+            <tr>
+              <th>Menşei</th>
+              <td>TR</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>",Trendyol,Jean,Jean,,TRUE,active,,,Size,"24/32,25/32,26/30,26/32,28/30,28/32,30/30,31/30,33/30,23/32,24/28,24/30,25/28,25/30,26/28,28/28,29/28,30/28,31/28,22/30,31/32,23/28,27/28,27/32,27/30,29/30,29/32,30/32",Color,gri-84023,,,1724.99,,1499.99,,500,g,TRUE,manual,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/c7bc823b-1c69-3c40-8787-4826d50f15b9/1_org_zoom.jpg,4,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 - Görsel 4,,FALSE,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",Jean,Unisex,Adult
+mavi-malibu-kolej-açık-gri-jean-pantolon-1010152-89199,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"<div class=""product-description"">
+        <h2>Ürün Açıklaması</h2>
+        <p>Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+        <h2>Ürün Özellikleri</h2>
+        <table class=""product-specs"">
+          <tbody>
+            <tr>
+              <th>Paça Tipi</th>
+              <td>Regular</td>
+            </tr>
+            <tr>
+              <th>Bel</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Renk</th>
+              <td>Gri</td>
+            </tr>
+            <tr>
+              <th>Materyal</th>
+              <td>Pamuklu</td>
+            </tr>
+            <tr>
+              <th>Cep</th>
+              <td>Cepsiz</td>
+            </tr>
+            <tr>
+              <th>Ürün Tipi</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Koleksiyon</th>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <th>Boy</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Kumaş Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Siluet</th>
+              <td>Straight</td>
+            </tr>
+            <tr>
+              <th>Ortam</th>
+              <td>Casual/Günlük</td>
+            </tr>
+            <tr>
+              <th>Kalıp</th>
+              <td>Wide Leg</td>
+            </tr>
+            <tr>
+              <th>Desen</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Ek Özellik</th>
+              <td>Ek Özellik Mevcut Değil</td>
+            </tr>
+            <tr>
+              <th>Kapama Şekli</th>
+              <td>Düğme + Fermuar</td>
+            </tr>
+            <tr>
+              <th>Kemer/Kuşak Durumu</th>
+              <td>Kemersiz</td>
+            </tr>
+            <tr>
+              <th>Dokuma Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Sürdürülebilirlik Detayı</th>
+              <td>Hayır</td>
+            </tr>
+            <tr>
+              <th>Persona</th>
+              <td>Cool & Comfort</td>
+            </tr>
+            <tr>
+              <th>Materyal Bileşeni</th>
+              <td>94% Pamuk, 5% Polyester, 1% Elastan</td>
+            </tr>
+            <tr>
+              <th>Yıkama Talimatı</th>
+              <td>Type 1</td>
+            </tr>
+            <tr>
+              <th>Paket İçeriği</th>
+              <td>Tekli</td>
+            </tr>
+            <tr>
+              <th>Menşei</th>
+              <td>TR</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>",Trendyol,Jean,Jean,,TRUE,active,,,Size,"24/32,25/32,26/30,26/32,28/30,28/32,30/30,31/30,33/30,23/32,24/28,24/30,25/28,25/30,26/28,28/28,29/28,30/28,31/28,22/30,31/32,23/28,27/28,27/32,27/30,29/30,29/32,30/32",Color,gri-84023,,,1724.99,,1499.99,,500,g,TRUE,manual,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/1263267f-2610-3578-8a70-6432d96ce5de/1_org_zoom.jpg,5,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 - Görsel 5,,FALSE,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",Jean,Unisex,Adult
+mavi-malibu-kolej-açık-gri-jean-pantolon-1010152-89199,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"<div class=""product-description"">
+        <h2>Ürün Açıklaması</h2>
+        <p>Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+        <h2>Ürün Özellikleri</h2>
+        <table class=""product-specs"">
+          <tbody>
+            <tr>
+              <th>Paça Tipi</th>
+              <td>Regular</td>
+            </tr>
+            <tr>
+              <th>Bel</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Renk</th>
+              <td>Gri</td>
+            </tr>
+            <tr>
+              <th>Materyal</th>
+              <td>Pamuklu</td>
+            </tr>
+            <tr>
+              <th>Cep</th>
+              <td>Cepsiz</td>
+            </tr>
+            <tr>
+              <th>Ürün Tipi</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Koleksiyon</th>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <th>Boy</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Kumaş Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Siluet</th>
+              <td>Straight</td>
+            </tr>
+            <tr>
+              <th>Ortam</th>
+              <td>Casual/Günlük</td>
+            </tr>
+            <tr>
+              <th>Kalıp</th>
+              <td>Wide Leg</td>
+            </tr>
+            <tr>
+              <th>Desen</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Ek Özellik</th>
+              <td>Ek Özellik Mevcut Değil</td>
+            </tr>
+            <tr>
+              <th>Kapama Şekli</th>
+              <td>Düğme + Fermuar</td>
+            </tr>
+            <tr>
+              <th>Kemer/Kuşak Durumu</th>
+              <td>Kemersiz</td>
+            </tr>
+            <tr>
+              <th>Dokuma Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Sürdürülebilirlik Detayı</th>
+              <td>Hayır</td>
+            </tr>
+            <tr>
+              <th>Persona</th>
+              <td>Cool & Comfort</td>
+            </tr>
+            <tr>
+              <th>Materyal Bileşeni</th>
+              <td>94% Pamuk, 5% Polyester, 1% Elastan</td>
+            </tr>
+            <tr>
+              <th>Yıkama Talimatı</th>
+              <td>Type 1</td>
+            </tr>
+            <tr>
+              <th>Paket İçeriği</th>
+              <td>Tekli</td>
+            </tr>
+            <tr>
+              <th>Menşei</th>
+              <td>TR</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>",Trendyol,Jean,Jean,,TRUE,active,,,Size,"24/32,25/32,26/30,26/32,28/30,28/32,30/30,31/30,33/30,23/32,24/28,24/30,25/28,25/30,26/28,28/28,29/28,30/28,31/28,22/30,31/32,23/28,27/28,27/32,27/30,29/30,29/32,30/32",Color,gri-84023,,,1724.99,,1499.99,,500,g,TRUE,manual,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/5e408a71-6696-3bbb-9276-67169644ecdc/1_org_zoom.jpg,6,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 - Görsel 6,,FALSE,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",Jean,Unisex,Adult
+mavi-malibu-kolej-açık-gri-jean-pantolon-1010152-89199,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"<div class=""product-description"">
+        <h2>Ürün Açıklaması</h2>
+        <p>Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+        <h2>Ürün Özellikleri</h2>
+        <table class=""product-specs"">
+          <tbody>
+            <tr>
+              <th>Paça Tipi</th>
+              <td>Regular</td>
+            </tr>
+            <tr>
+              <th>Bel</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Renk</th>
+              <td>Gri</td>
+            </tr>
+            <tr>
+              <th>Materyal</th>
+              <td>Pamuklu</td>
+            </tr>
+            <tr>
+              <th>Cep</th>
+              <td>Cepsiz</td>
+            </tr>
+            <tr>
+              <th>Ürün Tipi</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Koleksiyon</th>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <th>Boy</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Kumaş Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Siluet</th>
+              <td>Straight</td>
+            </tr>
+            <tr>
+              <th>Ortam</th>
+              <td>Casual/Günlük</td>
+            </tr>
+            <tr>
+              <th>Kalıp</th>
+              <td>Wide Leg</td>
+            </tr>
+            <tr>
+              <th>Desen</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Ek Özellik</th>
+              <td>Ek Özellik Mevcut Değil</td>
+            </tr>
+            <tr>
+              <th>Kapama Şekli</th>
+              <td>Düğme + Fermuar</td>
+            </tr>
+            <tr>
+              <th>Kemer/Kuşak Durumu</th>
+              <td>Kemersiz</td>
+            </tr>
+            <tr>
+              <th>Dokuma Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Sürdürülebilirlik Detayı</th>
+              <td>Hayır</td>
+            </tr>
+            <tr>
+              <th>Persona</th>
+              <td>Cool & Comfort</td>
+            </tr>
+            <tr>
+              <th>Materyal Bileşeni</th>
+              <td>94% Pamuk, 5% Polyester, 1% Elastan</td>
+            </tr>
+            <tr>
+              <th>Yıkama Talimatı</th>
+              <td>Type 1</td>
+            </tr>
+            <tr>
+              <th>Paket İçeriği</th>
+              <td>Tekli</td>
+            </tr>
+            <tr>
+              <th>Menşei</th>
+              <td>TR</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>",Trendyol,Jean,Jean,,TRUE,active,,,Size,"24/32,25/32,26/30,26/32,28/30,28/32,30/30,31/30,33/30,23/32,24/28,24/30,25/28,25/30,26/28,28/28,29/28,30/28,31/28,22/30,31/32,23/28,27/28,27/32,27/30,29/30,29/32,30/32",Color,gri-84023,,,1724.99,,1499.99,,500,g,TRUE,manual,https://cdn.dsmcdn.com/ty1649/prod/QC/20250312/06/1a9ea8c4-4971-3025-b6f3-365a3ac590b0/1_org_zoom.jpg,7,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 - Görsel 7,,FALSE,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",Jean,Unisex,Adult
+mavi-malibu-kolej-açık-gri-jean-pantolon-1010152-89199,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"<div class=""product-description"">
+        <h2>Ürün Açıklaması</h2>
+        <p>Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.</p>
+        <h2>Ürün Özellikleri</h2>
+        <table class=""product-specs"">
+          <tbody>
+            <tr>
+              <th>Paça Tipi</th>
+              <td>Regular</td>
+            </tr>
+            <tr>
+              <th>Bel</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Renk</th>
+              <td>Gri</td>
+            </tr>
+            <tr>
+              <th>Materyal</th>
+              <td>Pamuklu</td>
+            </tr>
+            <tr>
+              <th>Cep</th>
+              <td>Cepsiz</td>
+            </tr>
+            <tr>
+              <th>Ürün Tipi</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Koleksiyon</th>
+              <td>Basic</td>
+            </tr>
+            <tr>
+              <th>Boy</th>
+              <td>Belirtilmemiş</td>
+            </tr>
+            <tr>
+              <th>Kumaş Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Siluet</th>
+              <td>Straight</td>
+            </tr>
+            <tr>
+              <th>Ortam</th>
+              <td>Casual/Günlük</td>
+            </tr>
+            <tr>
+              <th>Kalıp</th>
+              <td>Wide Leg</td>
+            </tr>
+            <tr>
+              <th>Desen</th>
+              <td>Düz</td>
+            </tr>
+            <tr>
+              <th>Ek Özellik</th>
+              <td>Ek Özellik Mevcut Değil</td>
+            </tr>
+            <tr>
+              <th>Kapama Şekli</th>
+              <td>Düğme + Fermuar</td>
+            </tr>
+            <tr>
+              <th>Kemer/Kuşak Durumu</th>
+              <td>Kemersiz</td>
+            </tr>
+            <tr>
+              <th>Dokuma Tipi</th>
+              <td>Denim</td>
+            </tr>
+            <tr>
+              <th>Sürdürülebilirlik Detayı</th>
+              <td>Hayır</td>
+            </tr>
+            <tr>
+              <th>Persona</th>
+              <td>Cool & Comfort</td>
+            </tr>
+            <tr>
+              <th>Materyal Bileşeni</th>
+              <td>94% Pamuk, 5% Polyester, 1% Elastan</td>
+            </tr>
+            <tr>
+              <th>Yıkama Talimatı</th>
+              <td>Type 1</td>
+            </tr>
+            <tr>
+              <th>Paket İçeriği</th>
+              <td>Tekli</td>
+            </tr>
+            <tr>
+              <th>Menşei</th>
+              <td>TR</td>
+            </tr>
+          </tbody>
+        </table>
+        </div>",Trendyol,Jean,Jean,,TRUE,active,,,Size,"24/32,25/32,26/30,26/32,28/30,28/32,30/30,31/30,33/30,23/32,24/28,24/30,25/28,25/30,26/28,28/28,29/28,30/28,31/28,22/30,31/32,23/28,27/28,27/32,27/30,29/30,29/32,30/32",Color,gri-84023,,,1724.99,,1499.99,,500,g,TRUE,manual,https://cdn.dsmcdn.com/ty1647/prod/QC/20250312/06/2ac2a276-9c00-3e64-85f7-6fa6846f6fd4/1_org_zoom.jpg,8,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 - Görsel 8,,FALSE,Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199,"Mavi Malibu Kolej Açık Gri Jean Pantolon 1010152-89199 yorumlarını inceleyin, Trendyol'a özel indirimli fiyata satın alın.",Jean,Unisex,Adult

@@ -279,74 +279,63 @@ export async function registerRoutes(app: Express) {
         ]
       });
 
-      // HTML formatında ürün detayları oluştur
-      let htmlDescription = `<div class="product-description">
-        <h2>Ürün Açıklaması</h2>
-        <p>${product.description}</p>`;
+      // HTML açıklaması ve CSV formatı düzeltmeleri
+      const htmlDescription = `<div class="product-description">
+        <h2 style="margin-bottom: 1rem; font-size: 1.5rem;">Ürün Açıklaması</h2>
+        <p style="margin-bottom: 2rem; line-height: 1.6;">${product.description}</p>
 
-      // Ürün özelliklerini ekle
-      if (Object.keys(product.attributes).length > 0) {
-        htmlDescription += `
-        <h2>Ürün Özellikleri</h2>
-        <table class="product-specs">
-          <tbody>`;
-
-        for (const [key, value] of Object.entries(product.attributes)) {
-          htmlDescription += `
-            <tr>
-              <th>${key}</th>
-              <td>${value}</td>
-            </tr>`;
-        }
-
-        htmlDescription += `
+        <h2 style="margin-bottom: 1rem; font-size: 1.5rem;">Ürün Özellikleri</h2>
+        <table style="width: 100%; border-collapse: collapse;">
+          <tbody>
+            ${Object.entries(product.attributes)
+              .map(([key, value]) => `
+                <tr style="border-bottom: 1px solid #eee;">
+                  <th style="padding: 0.75rem; text-align: left; width: 40%;">${key}</th>
+                  <td style="padding: 0.75rem;">${value}</td>
+                </tr>
+              `).join('')}
           </tbody>
         </table>
-        </div>`;
-      }
+      </div>`;
 
-      const records = [];
-
-      // Ana ürün ve görselleri
-      product.images.forEach((image: string, index: number) => {
-        records.push({
-          handle: product.title.toLowerCase().replace(/\s+/g, '-'),
-          title: product.title,
-          body: htmlDescription,
-          vendor: 'Trendyol',
-          product_category: product.categories.join(' > '),
-          type: product.categories[product.categories.length - 1] || 'Giyim',
-          tags: product.tags.join(', '),
-          published: 'TRUE',
-          status: 'active',
-          sku: '',
-          barcode: '',
-          option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
-          option1_value: product.variants.sizes[0] || '',
-          option2_name: product.variants.colors.length > 0 ? 'Color' : '',
-          option2_value: product.variants.colors[0] || '',
-          option3_name: '',
-          option3_value: '',
-          price: product.price,
-          price_international: '',
-          compare_at_price: product.basePrice,
-          compare_at_price_international: '',
-          weight: '500',
-          weight_unit: 'g',
-          requires_shipping: 'TRUE',
-          fulfillment_service: 'manual',
-          image_src: image,
-          image_position: index + 1,
-          image_alt_text: `${product.title} - Görsel ${index + 1}`,
-          variant_image: '',
-          gift_card: 'FALSE',
-          seo_title: product.title,
-          seo_description: product.description.substring(0, 320),
-          google_category: product.categories.join(' > '),
-          gender: 'Unisex',
-          age_group: 'Adult'
-        });
-      });
+      // CSV kayıt oluşturma
+      const records = product.images.map((image: string, index: number) => ({
+        handle: product.title.toLowerCase().replace(/\s+/g, '-'),
+        title: product.title,
+        body: htmlDescription,
+        vendor: product.title.split(' ')[0], // İlk kelimeyi marka olarak al
+        product_category: product.categories.join(' > '),
+        type: product.categories[product.categories.length - 1] || 'Giyim',
+        tags: product.tags.join(', '),
+        published: 'TRUE',
+        status: 'active',
+        sku: '',
+        barcode: '',
+        option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
+        option1_value: product.variants.sizes[0] || '',
+        option2_name: product.variants.colors.length > 0 ? 'Color' : '',
+        option2_value: product.variants.colors[0] || '',
+        option3_name: '',
+        option3_value: '',
+        price: product.price.toFixed(2),
+        price_international: '',
+        compare_at_price: product.basePrice.toFixed(2),
+        compare_at_price_international: '',
+        weight: '500',
+        weight_unit: 'g',
+        requires_shipping: 'TRUE',
+        fulfillment_service: 'manual',
+        image_src: image,
+        image_position: index + 1,
+        image_alt_text: `${product.title} - Görsel ${index + 1}`,
+        variant_image: '',
+        gift_card: 'FALSE',
+        seo_title: product.title,
+        seo_description: product.description.substring(0, 320),
+        google_category: product.categories.join(' > '),
+        gender: 'Unisex',
+        age_group: 'Adult'
+      }));
 
       await csvWriter.writeRecords(records);
       console.log("CSV başarıyla oluşturuldu");
