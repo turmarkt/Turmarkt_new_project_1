@@ -64,18 +64,18 @@ async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<st
   const attributes: Record<string, string> = {};
 
   try {
-    // 1. Ürün detay tablosundan özellikleri al
-    $(".detail-attr-container tr").each((_, row) => {
-      const label = $(row).find("th").text().trim();
-      const value = $(row).find("td").text().trim();
+    // 1. Ana özellik tablosundan özellikleri al
+    $(".detail-attr-container tr, .product-feature-table tr").each((_, row) => {
+      const label = $(row).find("th, td:first-child").text().trim();
+      const value = $(row).find("td:last-child").text().trim();
       if (label && value) {
         attributes[label] = value;
       }
     });
 
-    // 2. Alternatif özellik bloklarını kontrol et
+    // 2. Alternatif özellik listesinden al
     if (Object.keys(attributes).length === 0) {
-      $(".product-feature-list li").each((_, item) => {
+      $(".product-feature-list li, .detail-attr-item").each((_, item) => {
         const text = $(item).text().trim();
         const [label, value] = text.split(':').map(s => s.trim());
         if (label && value) {
@@ -84,11 +84,11 @@ async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<st
       });
     }
 
-    // 3. Diğer özellik bloklarını kontrol et
+    // 3. DOM'daki diğer özellik alanlarını kontrol et
     if (Object.keys(attributes).length === 0) {
-      $("[data-drroot='properties'] .detail-attr-item").each((_, item) => {
-        const label = $(item).find(".detail-attr-label").text().trim();
-        const value = $(item).find(".detail-attr-value").text().trim();
+      $("[data-drroot='properties'] .detail-attr-item, .product-properties li").each((_, item) => {
+        const label = $(item).find(".detail-attr-label, .property-label").text().trim();
+        const value = $(item).find(".detail-attr-value, .property-value").text().trim();
         if (label && value) {
           attributes[label] = value;
         }
@@ -149,7 +149,7 @@ async function exportToShopify(product: Product) {
     'SEO title': product.title,
     'SEO description': Object.entries(product.attributes)
       .map(([key, value]) => `${key}: ${value}`)
-      .join('. '),
+      .join('. ').substring(0, 320),
     'Google Shopping / Google product category': 'Apparel & Accessories > Clothing',
     'Google Shopping / Gender': 'Unisex',
     'Google Shopping / Age group': 'Adult',
@@ -162,14 +162,15 @@ async function exportToShopify(product: Product) {
 
   const records = [mainRecord];
 
-  // Size varyantları
+  // Varyant kayıtları
   if (product.variants.sizes.length > 0) {
     for (let i = 1; i < product.variants.sizes.length; i++) {
       records.push({
         'URL handle': handle,
         'Title': '',
-        'SKU': `${handle}-size-${i}`,
+        'Option1 Name': mainRecord['Option1 Name'],
         'Option1 Value': product.variants.sizes[i],
+        'SKU': `${handle}-size-${i}`,
         'Price': product.price,
         'Inventory quantity': '100',
         'Inventory policy': 'deny',
@@ -181,15 +182,15 @@ async function exportToShopify(product: Product) {
     }
   }
 
-  // Renk varyantları
   if (product.variants.colors.length > 0) {
     for (let i = 1; i < product.variants.colors.length; i++) {
       const variantImage = product.images[i] || product.images[0];
       records.push({
         'URL handle': handle,
         'Title': '',
-        'SKU': `${handle}-color-${i}`,
+        'Option2 Name': mainRecord['Option2 Name'],
         'Option2 Value': product.variants.colors[i],
+        'SKU': `${handle}-color-${i}`,
         'Price': product.price,
         'Inventory quantity': '100',
         'Inventory policy': 'deny',
@@ -201,16 +202,6 @@ async function exportToShopify(product: Product) {
         'Variant image URL': variantImage
       });
     }
-  }
-
-  // Ek görsel kayıtları
-  for (let i = 1; i < product.images.length; i++) {
-    records.push({
-      'URL handle': handle,
-      'Product image URL': product.images[i],
-      'Image position': (i + 1).toString(),
-      'Image alt text': `${product.title} - Görsel ${i + 1}`
-    });
   }
 
   // CSV başlıkları
