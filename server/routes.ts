@@ -438,9 +438,76 @@ export async function registerRoutes(app: Express) {
 }
 
 function mapToShopifyCategory(categories: string[]): string {
-  const normalizedCategories = categories.map(c => c.toLowerCase().trim());
-  const config = getCategoryConfig(normalizedCategories);
-  return config.shopifyCategory;
+  // Shopify'ın resmi kategori taksonomisi
+  const shopifyCategories = {
+    // Giyim & Aksesuar
+    "erkek": "Apparel & Accessories > Clothing > Men's Clothing",
+    "kadın": "Apparel & Accessories > Clothing > Women's Clothing",
+    "çocuk": "Apparel & Accessories > Clothing > Baby & Toddler Clothing",
+    "tişört": "Apparel & Accessories > Clothing > Shirts & Tops",
+    "gömlek": "Apparel & Accessories > Clothing > Shirts & Tops",
+    "pantolon": "Apparel & Accessories > Clothing > Pants",
+    "elbise": "Apparel & Accessories > Clothing > Dresses",
+    "etek": "Apparel & Accessories > Clothing > Skirts",
+    "ceket": "Apparel & Accessories > Clothing > Outerwear",
+    "kazak": "Apparel & Accessories > Clothing > Sweaters",
+
+    // Ayakkabı
+    "ayakkabı": "Apparel & Accessories > Shoes",
+    "spor ayakkabı": "Apparel & Accessories > Shoes > Athletic Shoes",
+    "sneaker": "Apparel & Accessories > Shoes > Athletic Shoes",
+    "bot": "Apparel & Accessories > Shoes > Boots",
+    "sandalet": "Apparel & Accessories > Shoes > Sandals",
+
+    // Çanta & Aksesuar
+    "çanta": "Apparel & Accessories > Handbags, Wallets & Cases > Handbags",
+    "cüzdan": "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips",
+    "kartlık": "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips",
+    "kemer": "Apparel & Accessories > Clothing Accessories > Belts",
+    "şapka": "Apparel & Accessories > Clothing Accessories > Hats & Caps",
+
+    // Takı & Saat
+    "kolye": "Jewelry & Watches > Jewelry > Necklaces",
+    "bileklik": "Jewelry & Watches > Jewelry > Bracelets",
+    "yüzük": "Jewelry & Watches > Jewelry > Rings",
+    "saat": "Jewelry & Watches > Watches",
+
+    // Kozmetik & Bakım
+    "parfüm": "Health & Beauty > Personal Care > Cosmetics > Fragrances",
+    "makyaj": "Health & Beauty > Personal Care > Cosmetics",
+    "cilt bakımı": "Health & Beauty > Personal Care > Skin Care",
+
+    // Elektronik
+    "telefon": "Electronics > Communications > Telephony > Mobile Phones",
+    "tablet": "Electronics > Computers > Tablets",
+    "laptop": "Electronics > Computers > Laptops",
+
+    // Ev & Yaşam
+    "nevresim": "Home & Garden > Linens > Bedding",
+    "masa örtüsü": "Home & Garden > Linens > Table Linens",
+    "havlu": "Home & Garden > Linens > Towels"
+  };
+
+  // Normalize kategorileri
+  const normalizedCategories = categories.map(cat => cat.toLowerCase().trim());
+
+  // Kategori eşleştirme
+  for (const [key, value] of Object.entries(shopifyCategories)) {
+    if (normalizedCategories.some(cat => cat.includes(key))) {
+      return value;
+    }
+  }
+
+  // Cinsiyet bazlı varsayılan kategori
+  if (normalizedCategories.some(cat => cat.includes('erkek'))) {
+    return "Apparel & Accessories > Clothing > Men's Clothing";
+  }
+  if (normalizedCategories.some(cat => cat.includes('kadın'))) {
+    return "Apparel & Accessories > Clothing > Women's Clothing";
+  }
+
+  // Genel varsayılan kategori
+  return "Apparel & Accessories > Clothing";
 }
 
 function getVariantConfig(categories: string[]): {
