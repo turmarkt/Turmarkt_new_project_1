@@ -6,6 +6,7 @@ import { urlSchema, type InsertProduct, type Product } from "@shared/schema";
 import { ZodError } from "zod";
 import fetch from "node-fetch";
 import { TrendyolScrapingError, URLValidationError, ProductDataError, handleError } from "./errors";
+import { createObjectCsvWriter } from "csv-writer";
 
 async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]> {
   let categories: string[] = [];
@@ -355,6 +356,147 @@ export async function registerRoutes(app: Express) {
 
     } catch (error) {
       console.error("Hata oluştu:", error);
+      const { status, message, details } = handleError(error);
+      res.status(status).json({ message, details });
+    }
+  });
+
+  async function exportToShopify(product: Product) {
+    const handle = product.title
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+
+    // Ana ürün kaydı
+    const mainRecord = {
+      'Title': product.title,
+      'URL handle': handle,
+      'Description': Object.entries(product.attributes)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n')
+        .replace(/"/g, '""'), // Çift tırnak karakterlerini escape et
+      'Vendor': product.brand || '',
+      'Product category': 'Apparel & Accessories > Clothing',
+      'Type': 'Clothing',
+      'Tags': product.categories.join(','),
+      'Published': 'TRUE',
+      'Status': 'active',
+      'SKU': `${handle}-1`,
+      'Barcode': '',
+      'Option1 Name': product.variants.sizes.length > 0 ? 'Size' : '',
+      'Option1 Value': product.variants.sizes[0] || '',
+      'Option2 Name': product.variants.colors.length > 0 ? 'Color' : '',
+      'Option2 Value': product.variants.colors[0] || '',
+      'Option3 Name': '',
+      'Option3 Value': '',
+      'Price': product.price,
+      'Inventory policy': 'deny',
+      'Inventory quantity': '100',
+      'Requires shipping': 'TRUE',
+      'Weight': '500',
+      'Weight unit': 'g',
+      'Variant image': '',
+      'Image position': '1',
+      'Image Src': product.images[0] || '',
+      'SEO Title': product.title,
+      'SEO Description': Object.entries(product.attributes)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('. ')
+        .substring(0, 320)
+        .replace(/"/g, '""') // Çift tırnak karakterlerini escape et
+    };
+
+    const records = [mainRecord];
+
+    // Varyant kayıtları
+    if (product.variants.sizes.length > 0) {
+      for (let i = 1; i < product.variants.sizes.length; i++) {
+        records.push({
+          'URL handle': handle,
+          'Option1 Name': 'Size',
+          'Option1 Value': product.variants.sizes[i],
+          'SKU': `${handle}-size-${i}`,
+          'Price': product.price,
+          'Inventory policy': 'deny',
+          'Inventory quantity': '100',
+          'Requires shipping': 'TRUE'
+        });
+      }
+    }
+
+    if (product.variants.colors.length > 0) {
+      for (let i = 1; i < product.variants.colors.length; i++) {
+        const variantImage = product.images[i] || product.images[0];
+        records.push({
+          'URL handle': handle,
+          'Option2 Name': 'Color',
+          'Option2 Value': product.variants.colors[i],
+          'SKU': `${handle}-color-${i}`,
+          'Price': product.price,
+          'Inventory policy': 'deny',
+          'Inventory quantity': '100',
+          'Requires shipping': 'TRUE',
+          'Image Src': variantImage,
+          'Variant image': variantImage
+        });
+      }
+    }
+
+    // CSV başlıkları
+    const csvWriter = createObjectCsvWriter({
+      path: 'products.csv',
+      header: [
+        {id: 'Title', title: 'Title'},
+        {id: 'URL handle', title: 'Handle'},
+        {id: 'Description', title: 'Body (HTML)'},
+        {id: 'Vendor', title: 'Vendor'},
+        {id: 'Product category', title: 'Product Category'},
+        {id: 'Type', title: 'Type'},
+        {id: 'Tags', title: 'Tags'},
+        {id: 'Published', title: 'Published'},
+        {id: 'Status', title: 'Status'},
+        {id: 'SKU', title: 'SKU'},
+        {id: 'Barcode', title: 'Barcode'},
+        {id: 'Option1 Name', title: 'Option1 Name'},
+        {id: 'Option1 Value', title: 'Option1 Value'},
+        {id: 'Option2 Name', title: 'Option2 Name'},
+        {id: 'Option2 Value', title: 'Option2 Value'},
+        {id: 'Option3 Name', title: 'Option3 Name'},
+        {id: 'Option3 Value', title: 'Option3 Value'},
+        {id: 'Price', title: 'Price'},
+        {id: 'Inventory policy', title: 'Inventory policy'},
+        {id: 'Inventory quantity', title: 'Inventory quantity'},
+        {id: 'Requires shipping', title: 'Requires shipping'},
+        {id: 'Weight', title: 'Weight'},
+        {id: 'Weight unit', title: 'Weight unit'},
+        {id: 'Image Src', title: 'Image Src'},
+        {id: 'Image position', title: 'Image Position'},
+        {id: 'Variant image', title: 'Variant Image'},
+        {id: 'SEO Title', title: 'SEO Title'},
+        {id: 'SEO Description', title: 'SEO Description'}
+      ]
+    });
+
+    await csvWriter.writeRecords(records);
+    return 'products.csv';
+  }
+
+  // Export endpoint'i
+  app.post("/api/export", async (req, res) => {
+    try {
+      console.log("CSV export başlatıldı");
+      const { product } = req.body;
+
+      if (!product) {
+        throw new ProductDataError("Ürün verisi bulunamadı", "product");
+      }
+
+      const csvFile = await exportToShopify(product);
+      res.download(csvFile);
+
+    } catch (error) {
+      console.error("CSV export hatası:", error);
       const { status, message, details } = handleError(error);
       res.status(status).json({ message, details });
     }
