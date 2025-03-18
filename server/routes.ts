@@ -81,29 +81,61 @@ export async function registerRoutes(app: Express) {
 
       // Kategori bilgisi
       let categories: string[] = [];
-      if (schema.breadcrumb?.itemListElement) {
-        categories = schema.breadcrumb.itemListElement
-          .map((item: any) => item.item?.name)
-          .filter((name: string | null) => name && name !== "Trendyol");
+
+      try {
+        // Önce schema.org'dan dene
+        if (schema.breadcrumb?.itemListElement) {
+          categories = schema.breadcrumb.itemListElement
+            .map((item: any) => {
+              return item.item?.name || item.name;
+            })
+            .filter((name: string | null) => name && name !== "Trendyol");
+        }
+
+        // Schema.org'dan alınamadıysa DOM'dan dene
+        if (categories.length === 0) {
+          console.warn("Kategoriler schema.org'dan alınamadı, DOM'dan çekiliyor");
+
+          // Ana kategori yolu
+          categories = $("div.product-path span")
+            .map((_, el) => $(el).text().trim())
+            .get()
+            .filter(cat => cat !== ">" && cat !== "Trendyol");
+
+          // Alternatif breadcrumb
+          if (categories.length === 0) {
+            categories = $("div.breadcrumb-wrapper span")
+              .map((_, el) => $(el).text().trim())
+              .get()
+              .filter(cat => cat !== ">" && cat !== "Trendyol");
+          }
+        }
+
+        // Yine bulunamadıysa son bir deneme
+        if (categories.length === 0) {
+          const productType = schema.pattern || schema["@type"];
+          if (productType) {
+            categories = [productType];
+          }
+        }
+
+        if (categories.length === 0) {
+          throw new ProductDataError("Kategori bilgisi bulunamadı", "categories");
+        }
+
+        console.log("Bulunan kategoriler:", categories);
+
+      } catch (error) {
+        console.error("Kategori çekme hatası:", error);
+        throw new ProductDataError("Kategori bilgisi işlenirken hata oluştu", "categories");
       }
 
-      if (categories.length === 0) {
-        console.warn("Kategoriler bulunamadı, DOM'dan çekiliyor");
-        categories = $(".product-path span")
-          .map((_, el) => $(el).text().trim())
-          .get()
-          .filter(cat => cat !== ">");
-      }
-
-      if (categories.length === 0) {
-        throw new ProductDataError("Kategori bilgisi bulunamadı", "categories");
-      }
 
       // Tüm ürün görselleri
       let images: string[] = [];
       if (schema.image?.contentUrl) {
-        images = Array.isArray(schema.image.contentUrl) 
-          ? schema.image.contentUrl 
+        images = Array.isArray(schema.image.contentUrl)
+          ? schema.image.contentUrl
           : [schema.image.contentUrl];
       }
 
