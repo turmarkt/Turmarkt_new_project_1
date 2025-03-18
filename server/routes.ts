@@ -59,6 +59,49 @@ async function scrapeTrendyolCategories($: cheerio.CheerioAPI): Promise<string[]
 }
 
 
+// Ürün özelliklerini çekme fonksiyonu
+async function scrapeProductAttributes($: cheerio.CheerioAPI): Promise<Record<string, string>> {
+  const attributes: Record<string, string> = {};
+
+  try {
+    // 1. Ürün detay tablosundan özellikleri al
+    $(".detail-attr-container tr").each((_, row) => {
+      const label = $(row).find("th").text().trim();
+      const value = $(row).find("td").text().trim();
+      if (label && value) {
+        attributes[label] = value;
+      }
+    });
+
+    // 2. Alternatif özellik bloklarını kontrol et
+    if (Object.keys(attributes).length === 0) {
+      $(".product-feature-list li").each((_, item) => {
+        const text = $(item).text().trim();
+        const [label, value] = text.split(':').map(s => s.trim());
+        if (label && value) {
+          attributes[label] = value;
+        }
+      });
+    }
+
+    // 3. Diğer özellik bloklarını kontrol et
+    if (Object.keys(attributes).length === 0) {
+      $("[data-drroot='properties'] .detail-attr-item").each((_, item) => {
+        const label = $(item).find(".detail-attr-label").text().trim();
+        const value = $(item).find(".detail-attr-value").text().trim();
+        if (label && value) {
+          attributes[label] = value;
+        }
+      });
+    }
+
+    return attributes;
+  } catch (error) {
+    console.error("Özellik çekme hatası:", error);
+    return {};
+  }
+}
+
 async function exportToShopify(product: Product) {
   const handle = product.title
     .toLowerCase()
@@ -66,48 +109,28 @@ async function exportToShopify(product: Product) {
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '');
 
-  // Shopify kategori eşleştirmesi
-  let productCategory = "Apparel & Accessories > Clothing";
-  let productType = "Clothing";
-
-  if (product.categories.some(c => c.toLowerCase().includes('cüzdan'))) {
-    productCategory = "Apparel & Accessories > Handbags, Wallets & Cases > Wallets & Money Clips";
-    productType = "Wallets";
-  } else if (product.categories.some(c => c.toLowerCase().includes('tişört'))) {
-    productCategory = "Apparel & Accessories > Clothing > Shirts & Tops";
-    productType = "T-Shirts";
-  } else if (product.categories.some(c => c.toLowerCase().includes('ayakkabı'))) {
-    productCategory = "Apparel & Accessories > Shoes > Athletic Shoes";
-    productType = "Shoes";
-  }
-
-  // Ürün özellikleri HTML'ini oluştur
-  const specificationsHtml = Object.entries(product.attributes)
-    .map(([key, value]) => `
-      <tr>
-        <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${key}</td>
-        <td style="padding: 8px; border-bottom: 1px solid #eee;">${value}</td>
-      </tr>
-    `).join('');
-
   // Ana ürün kaydı
   const mainRecord = {
     'Title': product.title,
     'URL handle': handle,
     'Description': product.description,
-    'Vendor': product.brand,
-    'Product category': productCategory,
-    'Type': productType,
+    'Vendor': product.brand || '',
+    'Product category': 'Apparel & Accessories > Clothing',
+    'Type': 'Clothing',
     'Tags': product.categories.join(','),
     'Published on online store': 'TRUE',
     'Status': 'active',
     'SKU': `${handle}-1`,
-    'Option1 name': product.variants.sizes.length > 0 ? 'Size' : '',
-    'Option1 value': product.variants.sizes[0] || '',
-    'Option2 name': product.variants.colors.length > 0 ? 'Color' : '',
-    'Option2 value': product.variants.colors[0] || '',
+    'Barcode': '',
+    'Option1 Name': product.variants.sizes.length > 0 ? 'Size' : '',
+    'Option1 Value': product.variants.sizes[0] || '',
+    'Option2 Name': product.variants.colors.length > 0 ? 'Color' : '',
+    'Option2 Value': product.variants.colors[0] || '',
+    'Option3 Name': '',
+    'Option3 Value': '',
     'Price': product.price,
     'Charge tax': 'TRUE',
+    'Tax code': '',
     'Inventory tracker': 'shopify',
     'Inventory quantity': '100',
     'Continue selling when out of stock': 'deny',
@@ -115,10 +138,21 @@ async function exportToShopify(product: Product) {
     'Weight unit for display': 'g',
     'Requires shipping': 'TRUE',
     'Fulfillment service': 'manual',
-    'Product image URL': product.images[0],
+    'Product image URL': product.images[0] || '',
     'Image position': '1',
     'Image alt text': product.title,
+    'Variant image URL': '',
     'Gift card': 'FALSE',
+    'SEO title': product.title,
+    'SEO description': product.description.substring(0, 320),
+    'Google Shopping / Google product category': 'Apparel & Accessories > Clothing',
+    'Google Shopping / Gender': 'Unisex',
+    'Google Shopping / Age group': 'Adult',
+    'Google Shopping / MPN': `${handle}-${Date.now()}`,
+    'Google Shopping / AdWords Grouping': '',
+    'Google Shopping / AdWords labels': '',
+    'Google Shopping / Condition': 'new',
+    'Google Shopping / Custom product': 'FALSE',
     'Body (HTML)': `
       <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
         <div style="margin-bottom: 20px;">
@@ -129,7 +163,13 @@ async function exportToShopify(product: Product) {
           <h3 style="font-size: 18px; color: #333; margin-bottom: 15px;">Ürün Özellikleri</h3>
           <table style="width: 100%; border-collapse: collapse; background: white;">
             <tbody>
-              ${specificationsHtml}
+              ${Object.entries(product.attributes)
+                .map(([key, value]) => `
+                  <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${key}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">${value}</td>
+                  </tr>
+                `).join('')}
             </tbody>
           </table>
         </div>
@@ -145,9 +185,9 @@ async function exportToShopify(product: Product) {
       records.push({
         'Title': '',
         'URL handle': handle,
+        'Option1 Name': 'Size',
+        'Option1 Value': product.variants.sizes[i],
         'SKU': `${handle}-size-${i}`,
-        'Option1 name': 'Size',
-        'Option1 value': product.variants.sizes[i],
         'Price': product.price,
         'Charge tax': 'TRUE',
         'Inventory tracker': 'shopify',
@@ -167,9 +207,9 @@ async function exportToShopify(product: Product) {
       records.push({
         'Title': '',
         'URL handle': handle,
+        'Option2 Name': 'Color',
+        'Option2 Value': product.variants.colors[i],
         'SKU': `${handle}-color-${i}`,
-        'Option2 name': 'Color',
-        'Option2 value': product.variants.colors[i],
         'Price': product.price,
         'Charge tax': 'TRUE',
         'Inventory tracker': 'shopify',
@@ -210,12 +250,16 @@ async function exportToShopify(product: Product) {
       {id: 'Published on online store', title: 'Published on online store'},
       {id: 'Status', title: 'Status'},
       {id: 'SKU', title: 'SKU'},
-      {id: 'Option1 name', title: 'Option1 name'},
-      {id: 'Option1 value', title: 'Option1 value'},
-      {id: 'Option2 name', title: 'Option2 name'},
-      {id: 'Option2 value', title: 'Option2 value'},
+      {id: 'Barcode', title: 'Barcode'},
+      {id: 'Option1 Name', title: 'Option1 Name'},
+      {id: 'Option1 Value', title: 'Option1 Value'},
+      {id: 'Option2 Name', title: 'Option2 Name'},
+      {id: 'Option2 Value', title: 'Option2 Value'},
+      {id: 'Option3 Name', title: 'Option3 Name'},
+      {id: 'Option3 Value', title: 'Option3 Value'},
       {id: 'Price', title: 'Price'},
       {id: 'Charge tax', title: 'Charge tax'},
+      {id: 'Tax code', title: 'Tax code'},
       {id: 'Inventory tracker', title: 'Inventory tracker'},
       {id: 'Inventory quantity', title: 'Inventory quantity'},
       {id: 'Continue selling when out of stock', title: 'Continue selling when out of stock'},
@@ -228,6 +272,16 @@ async function exportToShopify(product: Product) {
       {id: 'Image alt text', title: 'Image alt text'},
       {id: 'Variant image URL', title: 'Variant image URL'},
       {id: 'Gift card', title: 'Gift card'},
+      {id: 'SEO title', title: 'SEO title'},
+      {id: 'SEO description', title: 'SEO description'},
+      {id: 'Google Shopping / Google product category', title: 'Google Shopping / Google product category'},
+      {id: 'Google Shopping / Gender', title: 'Google Shopping / Gender'},
+      {id: 'Google Shopping / Age group', title: 'Google Shopping / Age group'},
+      {id: 'Google Shopping / MPN', title: 'Google Shopping / MPN'},
+      {id: 'Google Shopping / AdWords Grouping', title: 'Google Shopping / AdWords Grouping'},
+      {id: 'Google Shopping / AdWords labels', title: 'Google Shopping / AdWords labels'},
+      {id: 'Google Shopping / Condition', title: 'Google Shopping / Condition'},
+      {id: 'Google Shopping / Custom product', title: 'Google Shopping / Custom product'},
       {id: 'Body (HTML)', title: 'Body (HTML)'}
     ]
   });
@@ -429,15 +483,18 @@ export async function registerRoutes(app: Express) {
       }
 
 
+      // Ürün özelliklerini çek
+      const attributes = await scrapeProductAttributes($);
+
       // Özellikler
-      const attributes: Record<string, string> = {};
-      if (Array.isArray(schema.additionalProperty)) {
-        schema.additionalProperty.forEach((prop: any) => {
-          if (prop.name && prop.value) {
-            attributes[prop.name] = prop.value;
-          }
-        });
-      }
+      //const attributes: Record<string, string> = {};
+      //if (Array.isArray(schema.additionalProperty)) {
+      //  schema.additionalProperty.forEach((prop: any) => {
+      //    if (prop.name && prop.value) {
+      //      attributes[prop.name] = prop.value;
+      //    }
+      //  });
+      //}
 
       const product: InsertProduct = {
         url,
