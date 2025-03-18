@@ -37,7 +37,7 @@ export async function registerRoutes(app: Express) {
 
       // Ürün özellikleri
       const attributes: Record<string, string> = {};
-      $(".detail-attr-container .detail-attr-item").each((_, el) => {
+      $("div.detail-attr-container div.detail-attr-item").each((_, el) => {
         const key = $(el).find(".detail-attr-key").text().trim();
         const value = $(el).find(".detail-attr-value").text().trim();
         if (key && value) {
@@ -46,7 +46,7 @@ export async function registerRoutes(app: Express) {
       });
 
       // Kategori bilgisi
-      const categories = $(".product-path span")
+      const categories = $("div.product-path span")
         .map((_, el) => $(el).text().trim())
         .get()
         .filter(cat => cat !== ">");
@@ -57,26 +57,29 @@ export async function registerRoutes(app: Express) {
         .get();
 
       // Tüm ürün görselleri
-      const images = [];
-      // Ana ürün görselleri
-      $("img.detail-section-img").each((_, el) => {
-        const src = $(el).attr("src");
-        if (src && !images.includes(src)) {
-          images.push(src);
-        }
-      });
+      const images: string[] = [];
+
+      // Ana ürün görseli
+      const mainImage = $("img.detail-section-img").first().attr("src");
+      if (mainImage) images.push(mainImage);
+
       // Galeri görselleri
-      $(".gallery-modal-content img").each((_, el) => {
+      $("div.gallery-modal-content img").each((_, el) => {
         const src = $(el).attr("src");
         if (src && !images.includes(src)) {
           images.push(src);
         }
       });
-      // Ek görseller
-      $("img[data-gallery]").each((_, el) => {
+
+      // Küçük resimler
+      $("div.thumb-gallery img").each((_, el) => {
         const src = $(el).attr("src");
-        if (src && !images.includes(src)) {
-          images.push(src);
+        if (src) {
+          // Küçük resimleri büyük boyutlu versiyonlarıyla değiştir
+          const fullSizeSrc = src.replace("/mnresize/128/192", "");
+          if (!images.includes(fullSizeSrc)) {
+            images.push(fullSizeSrc);
+          }
         }
       });
 
@@ -91,12 +94,26 @@ export async function registerRoutes(app: Express) {
           .filter(Boolean)
       };
 
+      // Debug için log
+      console.log("Çekilen veriler:", {
+        title,
+        price,
+        priceWithProfit,
+        attributes: Object.keys(attributes).length,
+        attributesList: attributes,
+        categories,
+        tags,
+        images: images.length,
+        imageUrls: images,
+        variants
+      });
+
       const product: InsertProduct = {
         url,
         title,
         description,
         price: priceWithProfit,
-        basePrice: price, // Added basePrice
+        basePrice: price,
         images,
         variants,
         attributes,
@@ -141,7 +158,9 @@ export async function registerRoutes(app: Express) {
           {id: 'option3_name', title: 'Option3 name'},
           {id: 'option3_value', title: 'Option3 value'},
           {id: 'price', title: 'Price'},
+          {id: 'price_international', title: 'Price / International'},
           {id: 'compare_at_price', title: 'Compare-at price'},
+          {id: 'compare_at_price_international', title: 'Compare-at price / International'},
           {id: 'weight', title: 'Weight value (grams)'},
           {id: 'weight_unit', title: 'Weight unit for display'},
           {id: 'requires_shipping', title: 'Requires shipping'},
@@ -155,13 +174,13 @@ export async function registerRoutes(app: Express) {
           {id: 'seo_description', title: 'SEO description'},
           {id: 'google_category', title: 'Google Shopping / Google product category'},
           {id: 'gender', title: 'Google Shopping / Gender'},
-          {id: 'age_group', title: 'Google Shopping / Age group'}
+          {id: 'age_group', title: 'Google Shopping / Age group'},
+          {id: 'mpn', title: 'Google Shopping / MPN'},
+          {id: 'adwords_grouping', title: 'Google Shopping / AdWords Grouping'},
+          {id: 'adwords_labels', title: 'Google Shopping / AdWords labels'},
+          {id: 'condition', title: 'Google Shopping / Condition'}
         ]
       });
-
-      // Varyant kontrolü yaparak ana ürün kaydını oluştur
-      const hasSizes = product.variants.sizes && product.variants.sizes.length > 0;
-      const hasColors = product.variants.colors && product.variants.colors.length > 0;
 
       // HTML formatında ürün detayları oluştur
       let htmlDescription = `<div class="product-description">
@@ -205,14 +224,16 @@ export async function registerRoutes(app: Express) {
           status: 'active',
           sku: '',
           barcode: '',
-          option1_name: hasSizes ? 'Size' : '',
-          option1_value: hasSizes ? product.variants.sizes[0] : '',
-          option2_name: hasColors ? 'Color' : '',
-          option2_value: hasColors ? product.variants.colors[0] : '',
+          option1_name: product.variants.sizes.length > 0 ? 'Size' : '',
+          option1_value: product.variants.sizes[0] || '',
+          option2_name: product.variants.colors.length > 0 ? 'Color' : '',
+          option2_value: product.variants.colors[0] || '',
           option3_name: '',
           option3_value: '',
           price: product.price,
+          price_international: '',
           compare_at_price: product.basePrice,
+          compare_at_price_international: '',
           weight: '500',
           weight_unit: 'g',
           requires_shipping: 'TRUE',
@@ -226,58 +247,15 @@ export async function registerRoutes(app: Express) {
           seo_description: product.description.substring(0, 320),
           google_category: product.categories.join(' > '),
           gender: 'Unisex',
-          age_group: 'Adult'
+          age_group: 'Adult',
+          mpn: '',
+          adwords_grouping: product.categories[product.categories.length - 1] || 'Giyim',
+          adwords_labels: product.tags.join(','),
+          condition: 'new'
         });
       });
 
-      // Tüm varyantları ayrı kayıtlar olarak ekle
-      if (hasSizes && hasColors) {
-        for (const size of product.variants.sizes) {
-          for (const color of product.variants.colors) {
-            if (size === product.variants.sizes[0] && color === product.variants.colors[0]) {
-              continue; // Ana ürün kaydını tekrar ekleme
-            }
-            records.push({
-              handle: product.title.toLowerCase().replace(/\s+/g, '-'),
-              title: product.title,
-              body: htmlDescription,
-              vendor: 'Trendyol',
-              product_category: product.categories.join(' > '),
-              type: product.categories[product.categories.length - 1] || 'Giyim',
-              tags: product.tags.join(', '),
-              published: 'TRUE',
-              status: 'active',
-              sku: '',
-              barcode: '',
-              option1_name: 'Size',
-              option1_value: size,
-              option2_name: 'Color',
-              option2_value: color,
-              option3_name: '',
-              option3_value: '',
-              price: product.price,
-              compare_at_price: product.basePrice,
-              weight: '500',
-              weight_unit: 'g',
-              requires_shipping: 'TRUE',
-              fulfillment_service: 'manual',
-              image_src: product.images[0] || '',
-              image_position: 1,
-              image_alt_text: `${product.title} - ${size} - ${color}`,
-              variant_image: '',
-              gift_card: 'FALSE',
-              seo_title: product.title,
-              seo_description: product.description.substring(0, 320),
-              google_category: product.categories.join(' > '),
-              gender: 'Unisex',
-              age_group: 'Adult'
-            });
-          }
-        }
-      }
-
       await csvWriter.writeRecords(records);
-
       res.download('products.csv');
 
     } catch (error) {
