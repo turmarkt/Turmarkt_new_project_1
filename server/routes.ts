@@ -28,22 +28,58 @@ export async function registerRoutes(app: Express) {
       const html = await response.text();
       const $ = cheerio.load(html);
 
+      // Temel ürün bilgileri
       const title = $("h1.pr-new-br").text().trim();
       const description = $("div.detail-border-container").text().trim();
       const price = parseFloat($("span.prc-dsc").text().replace("TL", "").trim());
 
-      const images = $("div.gallery-modal-content img")
-        .map((_, img) => $(img).attr("src"))
-        .get()
-        .filter(Boolean);
+      // Ürün özellikleri
+      const attributes: Record<string, string> = {};
+      $(".detail-attr-container .detail-attr-item").each((_, el) => {
+        const key = $(el).find(".detail-attr-key").text().trim();
+        const value = $(el).find(".detail-attr-value").text().trim();
+        if (key && value) {
+          attributes[key] = value;
+        }
+      });
 
+      // Kategori bilgisi
+      const categories = $(".product-path span")
+        .map((_, el) => $(el).text().trim())
+        .get()
+        .filter(cat => cat !== ">");
+
+      // Ürün etiketleri
+      const tags = $(".product-tag")
+        .map((_, el) => $(el).text().trim())
+        .get();
+
+      // Tüm ürün görselleri
+      const images = [];
+      // Ana ürün görselleri
+      $("img.detail-section-img").each((_, el) => {
+        const src = $(el).attr("src");
+        if (src && !images.includes(src)) {
+          images.push(src);
+        }
+      });
+      // Galeri görselleri
+      $(".gallery-modal-content img").each((_, el) => {
+        const src = $(el).attr("src");
+        if (src && !images.includes(src)) {
+          images.push(src);
+        }
+      });
+
+      // Beden ve renk varyantları
       const variants = {
-        sizes: $("div.sp-itm")
+        sizes: $(".sp-itm:not(.so)")
           .map((_, el) => $(el).text().trim())
           .get(),
-        colors: $("div.slc-txt")
+        colors: $(".slc-txt")
           .map((_, el) => $(el).text().trim())
           .get()
+          .filter(Boolean)
       };
 
       const product: InsertProduct = {
@@ -52,7 +88,10 @@ export async function registerRoutes(app: Express) {
         description,
         price,
         images,
-        variants
+        variants,
+        attributes,
+        categories,
+        tags
       };
 
       const saved = await storage.saveProduct(product);
@@ -60,9 +99,9 @@ export async function registerRoutes(app: Express) {
 
     } catch (error) {
       if (error instanceof ZodError) {
-        res.status(400).json({ message: "Invalid URL format" });
+        res.status(400).json({ message: "Geçersiz URL formatı" });
       } else {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ message: error instanceof Error ? error.message : "Bilinmeyen bir hata oluştu" });
       }
     }
   });
@@ -79,6 +118,8 @@ export async function registerRoutes(app: Express) {
           {id: 'body', title: 'Body (HTML)'},
           {id: 'vendor', title: 'Vendor'},
           {id: 'type', title: 'Type'},
+          {id: 'tags', title: 'Tags'},
+          {id: 'published', title: 'Published'},
           {id: 'price', title: 'Price'},
           {id: 'option1_name', title: 'Option1 Name'},
           {id: 'option1_value', title: 'Option1 Value'},
@@ -94,12 +135,26 @@ export async function registerRoutes(app: Express) {
       const hasSizes = product.variants.sizes && product.variants.sizes.length > 0;
       const hasColors = product.variants.colors && product.variants.colors.length > 0;
 
+      // HTML formatında ürün detayları oluştur
+      let htmlDescription = `<p>${product.description}</p>`;
+
+      // Ürün özelliklerini ekle
+      if (Object.keys(product.attributes).length > 0) {
+        htmlDescription += '<h3>Ürün Özellikleri</h3><ul>';
+        for (const [key, value] of Object.entries(product.attributes)) {
+          htmlDescription += `<li><strong>${key}:</strong> ${value}</li>`;
+        }
+        htmlDescription += '</ul>';
+      }
+
       records.push({
         handle: product.title.toLowerCase().replace(/\s+/g, '-'),
         title: product.title,
-        body: product.description,
+        body: htmlDescription,
         vendor: 'Trendyol',
-        type: 'Clothing',
+        type: product.categories[product.categories.length - 1] || 'Giyim',
+        tags: product.tags.join(', '),
+        published: 'TRUE',
         price: product.price,
         option1_name: hasSizes ? 'Size' : '',
         option1_value: hasSizes ? product.variants.sizes[0] : '',
@@ -118,9 +173,11 @@ export async function registerRoutes(app: Express) {
             records.push({
               handle: product.title.toLowerCase().replace(/\s+/g, '-'),
               title: product.title,
-              body: product.description,
+              body: htmlDescription,
               vendor: 'Trendyol',
-              type: 'Clothing',
+              type: product.categories[product.categories.length - 1] || 'Giyim',
+              tags: product.tags.join(', '),
+              published: 'TRUE',
               price: product.price,
               option1_name: 'Size',
               option1_value: size,

@@ -9,7 +9,10 @@ export const products = pgTable("products", {
   description: text("description").notNull(),
   price: numeric("price").notNull(),
   images: text("images").array().notNull(),
-  variants: jsonb("variants").notNull()
+  variants: jsonb("variants").notNull(),
+  attributes: jsonb("attributes").notNull(),
+  categories: text("categories").array().notNull(),
+  tags: text("tags").array().notNull()
 });
 
 export const insertProductSchema = createInsertSchema(products).pick({
@@ -18,7 +21,10 @@ export const insertProductSchema = createInsertSchema(products).pick({
   description: true,
   price: true,
   images: true,
-  variants: true
+  variants: true,
+  attributes: true,
+  categories: true,
+  tags: true
 });
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;
