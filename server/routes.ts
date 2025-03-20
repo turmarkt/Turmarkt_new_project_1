@@ -62,18 +62,40 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     // Fiyat bilgilerini çek ve kar oranını uygula
-    const rawPrice = $('.prc-box-dscntd').first().text().trim() || $('.prc-box-sllng').first().text().trim();
-    const rawBasePrice = $('.prc-box-orgnl').first().text().trim() || rawPrice;
+    let rawPrice = '';
+    let rawBasePrice = '';
 
+    // Farklı fiyat selektörlerini dene
+    $('.product-price-container').find('.prc-box-dscntd, .prc-box-sllng').each((_, el) => {
+      const price = $(el).text().trim();
+      if (price && !rawPrice) {
+        rawPrice = price;
+      }
+    });
+
+    $('.product-price-container').find('.prc-box-orgnl').each((_, el) => {
+      const price = $(el).text().trim();
+      if (price) {
+        rawBasePrice = price;
+      }
+    });
+
+    // Eğer indirimli fiyat yoksa normal fiyatı kullan
     if (!rawPrice) {
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
+
+    if (!rawBasePrice) {
+      rawBasePrice = rawPrice;
+    }
+
+    debug("Ham fiyat verileri:", { rawPrice, rawBasePrice });
 
     // Fiyatları temizle ve hesapla
     const basePrice = cleanPrice(rawBasePrice);
     const price = (basePrice * 1.15).toFixed(2); // %15 kar ekle
 
-    debug("Fiyat hesaplandı:", { rawPrice, rawBasePrice, basePrice, calculatedPrice: price });
+    debug("Fiyat hesaplandı:", { basePrice, calculatedPrice: price });
 
     const description = $('.product-description-text').text().trim();
 
