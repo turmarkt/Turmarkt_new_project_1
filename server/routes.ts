@@ -1,5 +1,3 @@
-import puppeteer from 'puppeteer-extra';
-import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
@@ -7,114 +5,87 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
-
-// Stealth modu etkinleştir
-puppeteer.use(StealthPlugin());
+import fetch from "node-fetch";
 
 // Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.CheerioAPI> {
   console.log(`Veri çekme denemesi ${retryCount + 1}/5 başlatıldı:`, url);
 
-  let browser;
   try {
-    browser = await puppeteer.launch({
-      headless: "new",
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-infobars',
-        '--window-position=0,0',
-        '--ignore-certifcate-errors',
-        '--ignore-certifcate-errors-spki-list',
-        '--disable-accelerated-2d-canvas',
-        '--disable-gpu',
-        '--hide-scrollbars',
-        '--disable-notifications',
-        '--disable-extensions',
-        '--force-device-scale-factor=1',
-      ]
-    });
-
-    const page = await browser.newPage();
-
-    // Temel gizleme ayarları
-    await page.setJavaScriptEnabled(true);
-    await page.setDefaultNavigationTimeout(30000);
-
-    await page.evaluateOnNewDocument(() => {
-      // WebGL parmak izini gizle
-      const getParameter = WebGLRenderingContext.prototype.getParameter;
-      WebGLRenderingContext.prototype.getParameter = function(parameter) {
-        if (parameter === 37445) return 'Intel Open Source Technology Center';
-        if (parameter === 37446) return 'Mesa DRI Intel(R) HD Graphics (HSW GT2)';
-        return getParameter.apply(this, [parameter]);
-      };
-
-      // Bot tespitini engelle
-      Object.defineProperty(navigator, 'webdriver', { get: () => false });
-      Object.defineProperty(navigator, 'languages', { get: () => ['tr-TR', 'tr', 'en-US', 'en'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-    });
-
-    // User agent ve headers ayarla
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    await page.setExtraHTTPHeaders({
+    // Gelişmiş request headers
+    const headers = {
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
       'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
       'Accept-Encoding': 'gzip, deflate, br',
-      'Connection': 'keep-alive',
-      'Upgrade-Insecure-Requests': '1',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+      'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': '"Windows"',
       'Sec-Fetch-Dest': 'document',
       'Sec-Fetch-Mode': 'navigate',
       'Sec-Fetch-Site': 'none',
       'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1',
+      'Connection': 'keep-alive'
+    };
+
+    // HTTP isteği
+    console.log("HTTP isteği yapılıyor...");
+    const response = await fetch(url, { 
+      headers,
+      redirect: 'follow'
     });
 
-    // Sayfayı yükle
-    console.log("Sayfa yükleniyor...");
-    await page.goto(url, {
-      waitUntil: 'networkidle0',
-      timeout: 30000
-    });
+    if (!response.ok) {
+      if (response.status === 403) {
+        console.error("403 Forbidden - Erişim engellendi");
+        throw new TrendyolScrapingError("Erişim engellendi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
+          status: response.status,
+          statusText: response.statusText
+        });
+      }
 
-    // İnsan benzeri davranış simülasyonu
-    await page.waitForTimeout(2000 + Math.random() * 1000);
-    await page.mouse.move(Math.random() * 500, Math.random() * 500);
-    await page.waitForTimeout(1000 + Math.random() * 500);
+      throw new TrendyolScrapingError("Ürün sayfası yüklenemedi", {
+        status: response.status,
+        statusText: response.statusText
+      });
+    }
 
-    // Ürün detaylarının yüklendiğinden emin ol
-    await page.waitForSelector('.product-detail-container', { timeout: 10000 });
+    const html = await response.text();
 
-    // HTML içeriğini al
-    const html = await page.content();
+    // HTML içeriğini kontrol et
+    if (!html.includes('trendyol.com') || html.includes('Attention Required! | Cloudflare')) {
+      throw new TrendyolScrapingError("Geçersiz sayfa yanıtı alındı", {
+        status: response.status,
+        statusText: "Invalid Response"
+      });
+    }
+
     return cheerio.load(html);
 
   } catch (error) {
     console.error("Veri çekme hatası:", error);
 
-    if (error.message.includes('timeout')) {
-      if (retryCount < 4) {
-        console.log(`Yeniden deneniyor (${retryCount + 1}/5)...`);
-        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, retryCount), 30000)));
-        return fetchProductPage(url, retryCount + 1);
-      }
-      throw new TrendyolScrapingError("Sayfa yüklenemedi, zaman aşımı", {
-        status: 504,
-        statusText: "Timeout",
+    if (error instanceof TrendyolScrapingError) {
+      throw error;
+    }
+
+    // Ağ hatalarını yakala
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
+      throw new TrendyolScrapingError("Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.", {
+        status: 503,
+        statusText: "Connection Error",
         details: error.message
       });
     }
 
-    throw new TrendyolScrapingError("Ürün verileri çekilirken bir hata oluştu", {
+    throw new TrendyolScrapingError("Ürün verileri çekilirken bir hata oluştu. Lütfen tekrar deneyin.", {
       status: 500,
       statusText: "Scraping Error",
       details: error.message
     });
-
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
 }
 
