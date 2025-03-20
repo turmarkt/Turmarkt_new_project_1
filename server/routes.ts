@@ -143,10 +143,48 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     }
 
-    // Alternatif görsel kaynaklarını kontrol et
+    // productImages script'inden görselleri çek
+    $('script').each((_, element) => {
+      const scriptContent = $(element).html() || '';
+      if (scriptContent.includes('productImages')) {
+        try {
+          const match = scriptContent.match(/var\s+productImages\s*=\s*(\[.*?\])/s);
+          if (match) {
+            const productImages = JSON.parse(match[1]);
+            if (Array.isArray(productImages)) {
+              productImages.forEach(img => {
+                if (typeof img === 'string') {
+                  const highResUrl = getHighResImageUrl(img);
+                  if (!images.includes(highResUrl)) {
+                    images.push(highResUrl);
+                    debug(`Script'ten görsel eklendi: ${highResUrl}`);
+                  }
+                }
+              });
+            }
+          }
+        } catch (error) {
+          debug("Script parse hatası:", error);
+        }
+      }
+    });
+
+    // Yedek görsel toplama
+    $('.gallery-modal-content img, .product-img img, .image-container img').each((_, element) => {
+      const src = $(element).attr('src');
+      if (src && src.includes('ty')) {
+        const highResUrl = getHighResImageUrl(src);
+        if (!images.includes(highResUrl)) {
+          images.push(highResUrl);
+          debug(`DOM'dan görsel eklendi: ${highResUrl}`);
+        }
+      }
+    });
+
+    // data-src ve data-original özelliklerini kontrol et
     $('[data-src*="ty"], [data-original*="ty"]').each((_, element) => {
       const src = $(element).attr('data-src') || $(element).attr('data-original');
-      if (src && src.includes('ty')) {
+      if (src) {
         const highResUrl = getHighResImageUrl(src);
         if (!images.includes(highResUrl)) {
           images.push(highResUrl);
@@ -154,43 +192,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         }
       }
     });
-
-    // Yedek görsel toplama
-    $('.product-img img, .image-container img').each((_, element) => {
-      const src = $(element).attr('src');
-      if (src && src.includes('ty')) {
-        const highResUrl = getHighResImageUrl(src);
-        if (!images.includes(highResUrl)) {
-          images.push(highResUrl);
-          debug(`Yedek görsel eklendi: ${highResUrl}`);
-        }
-      }
-    });
-
-    // data-gallery-list özelliğinden görselleri çek
-    const galleryListData = $('[data-gallery-list]').first().attr('data-gallery-list');
-    debug("Gallery List Data raw:", galleryListData);
-
-    if (galleryListData) {
-      try {
-        const galleryList = JSON.parse(galleryListData);
-        debug("Parsed gallery list:", galleryList);
-
-        if (Array.isArray(galleryList)) {
-          galleryList.forEach(item => {
-            if (typeof item === 'string' && item.includes('ty')) {
-              const highResUrl = getHighResImageUrl(item);
-              if (!images.includes(highResUrl)) {
-                images.push(highResUrl);
-                debug(`Gallery List'den görsel eklendi: ${highResUrl}`);
-              }
-            }
-          });
-        }
-      } catch (error) {
-        debug("Gallery List parse hatası:", error);
-      }
-    }
 
     debug(`Toplam ${images.length} görsel bulundu:`, images);
 
