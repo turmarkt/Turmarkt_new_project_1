@@ -14,13 +14,8 @@ export class SeleniumManager {
     try {
       // Firefox options
       const options = new firefox.Options()
-        .addArguments('--headless')
-        .addArguments('--no-sandbox')
-        .addArguments('--disable-dev-shm-usage')
-        .addArguments('--disable-gpu')
-        .addArguments('--window-size=1920,1080')
-        .addArguments('--width=1920')
-        .addArguments('--height=1080')
+        .headless()
+        .windowSize({ width: 1920, height: 1080 })
         .setPreference('general.useragent.override', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
         .setPreference('dom.webdriver.enabled', false)
         .setPreference('useAutomationExtension', false)
@@ -30,19 +25,12 @@ export class SeleniumManager {
         .setPreference('network.proxy.ssl', this.proxyConfig.host)
         .setPreference('network.proxy.ssl_port', this.proxyConfig.port)
         .setPreference('javascript.enabled', true)
-        .setPreference('permissions.default.image', 2); // Disable images for faster loading
-
-      // Configure Firefox service
-      const service = new firefox.ServiceBuilder()
-        .setFirefoxBinary(process.env.FIREFOX_BIN || 'firefox')
-        .enableVerboseLogging()
-        .build();
+        .setPreference('permissions.default.image', 2);
 
       // Build driver with explicit wait timeout
       this.driver = await new Builder()
         .forBrowser('firefox')
         .setFirefoxOptions(options)
-        .setFirefoxService(service)
         .build();
 
       await this.setupStealth();
