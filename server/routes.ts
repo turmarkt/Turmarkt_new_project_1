@@ -5,14 +5,38 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
-import fetch from "node-fetch";
+import axios from "axios";
+import axiosRetry from "axios-retry";
+
+// Axios yapılandırması
+const client = axios.create({
+  timeout: 30000,
+  maxRedirects: 5
+});
+
+// Retry yapılandırması
+axiosRetry(client, { 
+  retries: 3,
+  retryDelay: (retryCount) => {
+    return retryCount * 1000; // Progressive delay
+  },
+  retryCondition: (error) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || 
+           error.response?.status === 403 ||
+           error.response?.status === 429;
+  }
+});
 
 // Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.CheerioAPI> {
   console.log(`Veri çekme denemesi ${retryCount + 1}/5 başlatıldı:`, url);
 
   try {
-    // Gelişmiş request headers
+    // Random delay
+    const delay = Math.floor(Math.random() * 2000) + 1000;
+    await new Promise(resolve => setTimeout(resolve, delay));
+
+    // Request headers
     const headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
@@ -28,35 +52,29 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
       'Sec-Fetch-Site': 'none',
       'Sec-Fetch-User': '?1',
       'Upgrade-Insecure-Requests': '1',
-      'Connection': 'keep-alive'
+      'Connection': 'keep-alive',
+      'Referer': 'https://www.google.com/'
     };
 
     // HTTP isteği
     console.log("HTTP isteği yapılıyor...");
-    const response = await fetch(url, { 
-      headers,
-      redirect: 'follow'
-    });
+    const response = await client.get(url, { headers });
 
-    if (!response.ok) {
-      if (response.status === 403) {
-        console.error("403 Forbidden - Erişim engellendi");
-        throw new TrendyolScrapingError("Erişim engellendi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
-          status: response.status,
-          statusText: response.statusText
-        });
-      }
-
+    if (response.status !== 200) {
       throw new TrendyolScrapingError("Ürün sayfası yüklenemedi", {
         status: response.status,
         statusText: response.statusText
       });
     }
 
-    const html = await response.text();
+    const html = response.data;
 
     // HTML içeriğini kontrol et
-    if (!html.includes('trendyol.com') || html.includes('Attention Required! | Cloudflare')) {
+    if (!html.includes('trendyol.com')) {
+      if (retryCount < 4) {
+        console.log("Geçersiz yanıt, yeniden deneniyor...");
+        return fetchProductPage(url, retryCount + 1);
+      }
       throw new TrendyolScrapingError("Geçersiz sayfa yanıtı alındı", {
         status: response.status,
         statusText: "Invalid Response"
@@ -65,24 +83,31 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
 
     return cheerio.load(html);
 
-  } catch (error) {
-    console.error("Veri çekme hatası:", error);
+  } catch (error: any) {
+    console.error("Veri çekme hatası:", error?.response?.status || error.message);
 
     if (error instanceof TrendyolScrapingError) {
       throw error;
     }
 
-    // Ağ hatalarını yakala
-    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
-      throw new TrendyolScrapingError("Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.", {
-        status: 503,
-        statusText: "Connection Error",
-        details: error.message
+    // Cloudflare veya bot koruması kontrolü
+    if (error?.response?.status === 403) {
+      throw new TrendyolScrapingError("Erişim engellendi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
+        status: 403,
+        statusText: "Access Denied"
+      });
+    }
+
+    // Rate limit kontrolü
+    if (error?.response?.status === 429) {
+      throw new TrendyolScrapingError("Çok fazla istek yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
+        status: 429,
+        statusText: "Too Many Requests"
       });
     }
 
     throw new TrendyolScrapingError("Ürün verileri çekilirken bir hata oluştu. Lütfen tekrar deneyin.", {
-      status: 500,
+      status: error?.response?.status || 500,
       statusText: "Scraping Error",
       details: error.message
     });
