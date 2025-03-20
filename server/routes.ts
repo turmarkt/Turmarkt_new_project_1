@@ -14,9 +14,11 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
 
   const headers = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
     'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br',
     'Cache-Control': 'no-cache',
+    'Cookie': '', // Will be populated from response
     'Pragma': 'no-cache',
     'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
     'Sec-Ch-Ua-Mobile': '?0',
@@ -25,14 +27,35 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
     'Sec-Fetch-Mode': 'navigate',
     'Sec-Fetch-Site': 'none',
     'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1'
+    'Upgrade-Insecure-Requests': '1',
+    'Connection': 'keep-alive'
   };
 
   try {
-    const response = await fetch(url, { headers });
+    // First request to get cookies
+    const initialResponse = await fetch(url, { 
+      headers,
+      redirect: 'follow'
+    });
+
+    // Get cookies from response
+    const cookies = initialResponse.headers.get('set-cookie');
+    if (cookies) {
+      headers.Cookie = cookies;
+    }
+
+    // Wait a bit before second request
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Second request with cookies
+    const response = await fetch(url, { 
+      headers,
+      redirect: 'follow'
+    });
 
     if (!response.ok) {
       if (response.status === 403) {
+        console.error("403 Forbidden - Cloudflare blocked access");
         throw new TrendyolScrapingError("Trendyol erişimi engelledi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
           status: response.status,
           statusText: response.statusText
@@ -46,7 +69,9 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
     }
 
     const html = await response.text();
-    if (!html.includes('trendyol.com')) {
+
+    // Verify we got a valid response
+    if (!html.includes('trendyol.com') || html.includes('Attention Required! | Cloudflare')) {
       throw new TrendyolScrapingError("Geçersiz sayfa yanıtı alındı", {
         status: response.status,
         statusText: "Invalid Response"
