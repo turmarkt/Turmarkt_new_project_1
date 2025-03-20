@@ -1,3 +1,6 @@
+// Firefox binary path'ini belirle
+process.env.FIREFOX_BIN = '/nix/store/*/bin/firefox-esr';
+
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
@@ -10,7 +13,7 @@ import { getNextProxy, checkProxyStatus } from './proxy';
 import fetch from "node-fetch";
 
 
-// Debug loglama fonksiyonu
+// Debug loglama
 function debug(message: string, data?: any) {
   console.log(`[DEBUG] ${message}`, data ? JSON.stringify(data, null, 2) : '');
 }
@@ -24,19 +27,25 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
   try {
     // Proxy seç ve kontrol et
     const proxy = getNextProxy();
-    const proxyStatus = await checkProxyStatus(proxy);
+    debug("Proxy seçildi:", proxy);
 
+    const proxyStatus = await checkProxyStatus(proxy);
     if (!proxyStatus) {
       throw new Error('Selected proxy is not working');
     }
+    debug("Proxy kontrolü başarılı");
 
     // Selenium manager oluştur
     seleniumManager = new SeleniumManager(proxy);
+    debug("Selenium manager başlatılıyor...");
+
     await seleniumManager.initDriver();
+    debug("Driver başarıyla başlatıldı");
 
     // Sayfayı yükle
     debug("Sayfa yükleniyor...");
     const html = await seleniumManager.loadPage(url);
+    debug("Sayfa başarıyla yüklendi, HTML uzunluğu:", html.length);
 
     // HTML içeriğini kontrol et
     if (!html.includes('trendyol.com')) {
