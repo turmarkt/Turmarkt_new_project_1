@@ -20,23 +20,32 @@ function cleanPrice(price: string): number {
   return parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.'));
 }
 
-// Görsel URL'sini yüksek çözünürlüklü hale getir
+// Görsel işleme ve çekme fonksiyonları
 function getHighResImageUrl(url: string): string {
   if (!url) return '';
 
   // URL'yi düzelt
   let imageUrl = url.startsWith('http') ? url : `https:${url}`;
 
-  // Tüm boyut dönüşümlerini uygula
-  const resolutions = ['128/192', '256/384', '500/750', '600/900', '800/1200'];
-  for (const res of resolutions) {
-    imageUrl = imageUrl.replace(`/mnresize/${res}/`, '/mnresize/1200/1800/');
-  }
+  // Boyut parametrelerini ekle
+  imageUrl = imageUrl.replace(/\/mnresize\/\d+\/\d+\//, '/mnresize/1200/1800/');
 
   return imageUrl;
 }
 
-// Temel veri çekme fonksiyonu
+// Script içeriğinden JSON benzeri verileri çıkar
+function extractJSONFromScript(content: string, pattern: RegExp): any {
+  try {
+    const match = content.match(pattern);
+    if (match && match[1]) {
+      return JSON.parse(match[1].replace(/\\'/g, "'"));
+    }
+  } catch (error) {
+    debug("JSON parse hatası:", error);
+  }
+  return null;
+}
+
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
     const response = await fetch(url, {
@@ -67,7 +76,6 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   }
 }
 
-// Ana scraping fonksiyonu
 async function scrapeProduct(url: string): Promise<InsertProduct> {
   debug("Scraping başlatıldı:", url);
 
@@ -104,9 +112,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     if (!rawPrice) {
-      // HTML yapısını debug için yazdır
-      debug("Fiyat elementi bulunamadı. HTML yapısı:", $('.product-price-container').html());
-      debug("Featured price container:", $('.featured-price-container').html());
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
 
@@ -116,7 +121,122 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     debug("Fiyat hesaplandı:", { rawPrice, basePrice, calculatedPrice: price });
 
     // Görselleri çek
-    const images: string[] = [];
+    const images: Set<string> = new Set();
+
+    // Script kaynaklarından görselleri çek
+    $('script').each((_, element) => {
+      const scriptContent = $(element).html() || '';
+
+      // productDetailModel'den görselleri çek
+      if (scriptContent.includes('productDetailModel')) {
+        const data = extractJSONFromScript(scriptContent, /window\.productDetailModel\s*=\s*({.*?});/s);
+        if (data?.images) {
+          data.images.forEach((img: string) => {
+            if (typeof img === 'string') {
+              images.add(getHighResImageUrl(img));
+            }
+          });
+        }
+      }
+
+      // TYPageName.product'dan görselleri çek
+      if (scriptContent.includes('TYPageName.product')) {
+        const data = extractJSONFromScript(scriptContent, /TYPageName\.product\s*=\s*({.*?});/s);
+        if (data?.images) {
+          data.images.forEach((img: string) => {
+            if (typeof img === 'string') {
+              images.add(getHighResImageUrl(img));
+            }
+          });
+        }
+      }
+
+      // productImages değişkeninden görselleri çek
+      if (scriptContent.includes('productImages')) {
+        const data = extractJSONFromScript(scriptContent, /var\s+productImages\s*=\s*(\[.*?\])/s);
+        if (Array.isArray(data)) {
+          data.forEach((img: string) => {
+            if (typeof img === 'string') {
+              images.add(getHighResImageUrl(img));
+            }
+          });
+        }
+      }
+
+      // productDetail.images'dan görselleri çek
+      if (scriptContent.includes('productDetail')) {
+        const data = extractJSONFromScript(scriptContent, /var\s+productDetail\s*=\s*({.*?});/s);
+        if (data?.images) {
+          data.images.forEach((img: string) => {
+            if (typeof img === 'string') {
+              images.add(getHighResImageUrl(img));
+            }
+          });
+        }
+      }
+    });
+
+    // DOM'dan görselleri çek
+    const imageSelectors = [
+      '.gallery-modal-content img',
+      '.product-img img',
+      '.image-container img',
+      '.product-slide img',
+      '.slick-slide img',
+      '[data-src*="ty"]',
+      '[data-original*="ty"]',
+      'picture source[srcset*="ty"]'
+    ];
+
+    imageSelectors.forEach(selector => {
+      $(selector).each((_, element) => {
+        const src = $(element).attr('src') || 
+                   $(element).attr('data-src') || 
+                   $(element).attr('data-original') ||
+                   $(element).attr('srcset');
+
+        if (src) {
+          // Srcset içindeki tüm URL'leri işle
+          const urls = src.split(',').map(s => s.trim().split(' ')[0]);
+          urls.forEach(url => {
+            if (url.includes('ty')) {
+              images.add(getHighResImageUrl(url));
+            }
+          });
+        }
+      });
+    });
+
+    // data-gallery-images özelliğinden görselleri çek
+    const galleryElements = [
+      '[data-gallery-images]',
+      '[data-images]',
+      '[data-product-images]'
+    ];
+
+    galleryElements.forEach(selector => {
+      const element = $(selector).first();
+      const data = element.attr('data-gallery-images') || 
+                  element.attr('data-images') || 
+                  element.attr('data-product-images');
+
+      if (data) {
+        try {
+          const galleryImages = JSON.parse(data);
+          if (Array.isArray(galleryImages)) {
+            galleryImages.forEach(img => {
+              if (typeof img === 'string') {
+                images.add(getHighResImageUrl(img));
+              }
+            });
+          }
+        } catch (error) {
+          debug(`Gallery data parse hatası (${selector}):`, error);
+        }
+      }
+    });
+
+    debug(`Toplam ${images.size} benzersiz görsel bulundu`);
 
     // Varyantları çek
     const variants = {
@@ -142,107 +262,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Script tag'lerinden görselleri çek
-    $('script').each((_, element) => {
-      const scriptContent = $(element).html() || '';
-
-      // productDetailModel'den görselleri çek
-      if (scriptContent.includes('productDetailModel')) {
-        try {
-          const match = scriptContent.match(/window\.productDetailModel\s*=\s*({.*?});/s);
-          if (match) {
-            const productDetail = JSON.parse(match[1]);
-            if (productDetail.images && Array.isArray(productDetail.images)) {
-              productDetail.images.forEach(img => {
-                if (typeof img === 'string' && !images.includes(img)) {
-                  images.push(getHighResImageUrl(img));
-                  debug(`ProductDetailModel'den görsel eklendi: ${img}`);
-                }
-              });
-            }
-          }
-        } catch (error) {
-          debug("ProductDetailModel parse hatası:", error);
-        }
-      }
-
-      // TYPageName.product'dan görselleri çek
-      if (scriptContent.includes('TYPageName.product')) {
-        try {
-          const match = scriptContent.match(/TYPageName\.product\s*=\s*({.*?});/s);
-          if (match) {
-            const product = JSON.parse(match[1]);
-            if (product.images && Array.isArray(product.images)) {
-              product.images.forEach(img => {
-                if (typeof img === 'string' && !images.includes(img)) {
-                  images.push(getHighResImageUrl(img));
-                  debug(`TYPageName.product'dan görsel eklendi: ${img}`);
-                }
-              });
-            }
-          }
-        } catch (error) {
-          debug("TYPageName.product parse hatası:", error);
-        }
-      }
-
-      // productImages değişkeninden görselleri çek
-      if (scriptContent.includes('productImages')) {
-        try {
-          const match = scriptContent.match(/var\s+productImages\s*=\s*(\[.*?\])/s);
-          if (match) {
-            const productImages = JSON.parse(match[1]);
-            if (Array.isArray(productImages)) {
-              productImages.forEach(img => {
-                if (typeof img === 'string' && !images.includes(img)) {
-                  images.push(getHighResImageUrl(img));
-                  debug(`productImages'dan görsel eklendi: ${img}`);
-                }
-              });
-            }
-          }
-        } catch (error) {
-          debug("productImages parse hatası:", error);
-        }
-      }
-    });
-
-    // data-gallery-images özelliğinden görselleri çek
-    const galleryData = $('[data-gallery-images]').first().attr('data-gallery-images');
-    if (galleryData) {
-      try {
-        const galleryImages = JSON.parse(galleryData);
-        if (Array.isArray(galleryImages)) {
-          galleryImages.forEach(img => {
-            if (typeof img === 'string' && !images.includes(img)) {
-              images.push(getHighResImageUrl(img));
-              debug(`Gallery JSON'dan görsel eklendi: ${img}`);
-            }
-          });
-        }
-      } catch (error) {
-        debug("Gallery JSON parse hatası:", error);
-      }
-    }
-
-    // DOM'dan görselleri çek
-    $('.gallery-modal-content img, .product-img img, .image-container img').each((_, element) => {
-      const src = $(element).attr('src') || $(element).attr('data-src') || $(element).attr('data-original');
-      if (src && src.includes('ty') && !images.includes(src)) {
-        images.push(getHighResImageUrl(src));
-        debug(`DOM'dan görsel eklendi: ${src}`);
-      }
-    });
-
-    debug(`Toplam ${images.length} görsel bulundu:`, images);
-
-    // Video URL'sini çek
-    let videoUrl = null;
-    const videoElement = $('.gallery-modal-content video source').first();
-    if (videoElement.length > 0) {
-      videoUrl = videoElement.attr('src') || null;
-    }
-
     // Özellikleri çek
     const attributes: Record<string, string> = {};
 
@@ -266,11 +285,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Ürün açıklamasını çek
-    const description = $('.product-description-text').text().trim() || 
-                       $('.detail-desc-content').text().trim() || 
-                       $('.description-text').text().trim();
-
     // Kategorileri çek
     const categories: string[] = [];
     $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
@@ -281,6 +295,18 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // Video URL'sini çek
+    let videoUrl = null;
+    const videoElement = $('.gallery-modal-content video source').first();
+    if (videoElement.length > 0) {
+      videoUrl = videoElement.attr('src') || null;
+    }
+
+    // Ürün açıklamasını çek
+    const description = $('.product-description-text').text().trim() || 
+                       $('.detail-desc-content').text().trim() || 
+                       $('.description-text').text().trim();
+
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
@@ -288,7 +314,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       description: description || '',
       price: price.toString(),
       basePrice: basePrice.toString(),
-      images,
+      images: Array.from(images),
       video: videoUrl,
       variants,
       attributes,
