@@ -117,7 +117,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Ana ürün görsellerini çek
     $('.gallery-modal-content [data-original], .product-slide img').each((_, element) => {
       let src = $(element).attr('data-original') || $(element).attr('src');
-
       if (src) {
         // URL'yi düzelt
         if (!src.startsWith('http')) {
@@ -139,64 +138,64 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // data-gallery-images özelliğini kontrol et
-    const galleryData = $('[data-gallery-images]').first().attr('data-gallery-images');
-    if (galleryData) {
-      try {
-        const galleryImages = JSON.parse(galleryData);
-        if (Array.isArray(galleryImages)) {
-          galleryImages.forEach(img => {
-            if (typeof img === 'string') {
-              let imgUrl = img;
-              if (!imgUrl.startsWith('http')) {
-                imgUrl = `https:${imgUrl}`;
-              }
+    // data-gallery-images özelliğini kontrol et ve işle
+    const galleryDataElements = $('[data-gallery-images]');
+    galleryDataElements.each((_, element) => {
+      const galleryData = $(element).attr('data-gallery-images');
+      if (galleryData) {
+        try {
+          const galleryImages = JSON.parse(galleryData);
+          if (Array.isArray(galleryImages)) {
+            galleryImages.forEach(img => {
+              if (typeof img === 'string') {
+                let imgUrl = img;
+                if (!imgUrl.startsWith('http')) {
+                  imgUrl = `https:${imgUrl}`;
+                }
 
-              const highResSrc = imgUrl
-                .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
-                .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
-                .replace('/mnresize/500/750/', '/mnresize/1200/1800/')
-                .replace('/mnresize/600/900/', '/mnresize/1200/1800/')
-                .replace('/mnresize/800/1200/', '/mnresize/1200/1800/');
+                const highResSrc = imgUrl
+                  .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
+                  .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
+                  .replace('/mnresize/500/750/', '/mnresize/1200/1800/')
+                  .replace('/mnresize/600/900/', '/mnresize/1200/1800/')
+                  .replace('/mnresize/800/1200/', '/mnresize/1200/1800/');
 
-              if (!images.includes(highResSrc)) {
-                images.push(highResSrc);
-                debug(`Gallery JSON'dan görsel eklendi: ${highResSrc}`);
+                if (!images.includes(highResSrc)) {
+                  images.push(highResSrc);
+                  debug(`Gallery JSON'dan görsel eklendi: ${highResSrc}`);
+                }
               }
-            }
-          });
+            });
+          }
+        } catch (error) {
+          debug("Gallery JSON parse hatası:", error);
         }
-      } catch (error) {
-        debug("Gallery JSON parse hatası:", error);
       }
-    }
+    });
 
-    // Eğer hiç görsel bulunamadıysa son bir deneme yap
-    if (images.length === 0) {
-      $('img[src*="ty"], [data-src*="ty"]').each((_, element) => {
-        let src = $(element).attr('src') || $(element).attr('data-src');
-        if (src) {
-          if (!src.startsWith('http')) {
-            src = `https:${src}`;
-          }
-
-          const highResSrc = src
-            .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
-            .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
-            .replace('/mnresize/500/750/', '/mnresize/1200/1800/')
-            .replace('/mnresize/600/900/', '/mnresize/1200/1800/')
-            .replace('/mnresize/800/1200/', '/mnresize/1200/1800/');
-
-          if (!images.includes(highResSrc)) {
-            images.push(highResSrc);
-            debug(`Yedek görsel eklendi: ${highResSrc}`);
-          }
+    // Yedek görsel toplama stratejisi
+    $('img[src*="ty"], [data-src*="ty"], .product-img img, .image-container img').each((_, element) => {
+      let src = $(element).attr('src') || $(element).attr('data-src');
+      if (src) {
+        if (!src.startsWith('http')) {
+          src = `https:${src}`;
         }
-      });
-    }
+
+        const highResSrc = src
+          .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
+          .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
+          .replace('/mnresize/500/750/', '/mnresize/1200/1800/')
+          .replace('/mnresize/600/900/', '/mnresize/1200/1800/')
+          .replace('/mnresize/800/1200/', '/mnresize/1200/1800/');
+
+        if (!images.includes(highResSrc)) {
+          images.push(highResSrc);
+          debug(`Yedek görsel eklendi: ${highResSrc}`);
+        }
+      }
+    });
 
     debug(`Toplam ${images.length} görsel bulundu:`, images);
-
 
     // Video URL'sini çek
     let videoUrl = null;
@@ -238,9 +237,20 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Özellikleri çek
     const attributes: Record<string, string> = {};
+
+    // Ana özellik tablosunu çek
     $('.detail-attr-container tr, .product-feature-details tr').each((_, row) => {
       const label = $(row).find('th').text().trim();
       const value = $(row).find('td').text().trim();
+      if (label && value) {
+        attributes[label] = value;
+      }
+    });
+
+    // Ek özellikleri çek
+    $('.product-information-list li').each((_, item) => {
+      const label = $(item).find('.title').text().trim();
+      const value = $(item).find('.value').text().trim();
       if (label && value) {
         attributes[label] = value;
       }
