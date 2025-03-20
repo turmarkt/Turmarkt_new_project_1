@@ -211,8 +211,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     dataSelectors.forEach(selector => {
       const elements = $(selector);
       elements.each((_, element) => {
-        const data = $(element).attr('data-gallery-images') || 
-                    $(element).attr('data-images') || 
+        const data = $(element).attr('data-gallery-images') ||
+                    $(element).attr('data-images') ||
                     $(element).attr('data-product-images') ||
                     $(element).attr('data-gallery-list') ||
                     $(element).attr('data-media-gallery');
@@ -319,6 +319,28 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // Ürün detaylarını çek
+    $('.detail-attr-item').each((_, item) => {
+      const label = $(item).find('.attr-label').text().trim();
+      const value = $(item).find('.attr-value').text().trim();
+      if (label && value) {
+        attributes[label] = value;
+        debug(`Detay özellik eklendi: ${label} = ${value}`);
+      }
+    });
+
+    // Özellik listesini çek
+    $('.feature-list li').each((_, item) => {
+      const text = $(item).text().trim();
+      const [label, value] = text.split(':').map(s => s.trim());
+      if (label && value) {
+        attributes[label] = value;
+        debug(`Liste özellik eklendi: ${label} = ${value}`);
+      }
+    });
+
+    debug("Toplam özellik sayısı:", Object.keys(attributes).length);
+
     // Kategorileri çek
     const categories: string[] = [];
     $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
@@ -337,8 +359,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     // Açıklama içeriğini çek
-    const description = $('.product-description-text').text().trim() || 
-                       $('.detail-desc-content').text().trim() || 
+    const description = $('.product-description-text').text().trim() ||
+                       $('.detail-desc-content').text().trim() ||
                        $('.description-text').text().trim();
 
     // Ürün nesnesi oluştur
