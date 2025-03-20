@@ -31,6 +31,7 @@ function extractJSONFromScript(content: string): string[] {
     if (initialStateMatch) {
       const data = JSON.parse(initialStateMatch[1]);
       if (data?.product?.images) {
+        debug("PRODUCT_DETAIL_APP_INITIAL_STATE görsel sayısı:", data.product.images.length);
         images.push(...data.product.images);
       }
     }
@@ -40,9 +41,11 @@ function extractJSONFromScript(content: string): string[] {
     if (modelMatch) {
       const data = JSON.parse(modelMatch[1]);
       if (data?.images) {
+        debug("productDetailModel görsel sayısı:", data.images.length);
         images.push(...data.images);
       }
       if (data?.productImages) {
+        debug("productDetailModel.productImages görsel sayısı:", data.productImages.length);
         images.push(...data.productImages);
       }
     }
@@ -52,6 +55,7 @@ function extractJSONFromScript(content: string): string[] {
     if (pageMatch) {
       const data = JSON.parse(pageMatch[1]);
       if (data?.images) {
+        debug("TYPageName.product görsel sayısı:", data.images.length);
         images.push(...data.images);
       }
     }
@@ -61,51 +65,50 @@ function extractJSONFromScript(content: string): string[] {
     if (imagesMatch) {
       const data = JSON.parse(imagesMatch[1]);
       if (Array.isArray(data)) {
+        debug("productImages görsel sayısı:", data.length);
         images.push(...data);
       }
     }
 
-    // productDetail kontrolü
-    const detailMatch = content.match(/var\s+productDetail\s*=\s*({.*?});/s);
-    if (detailMatch) {
-      const data = JSON.parse(detailMatch[1]);
-      if (data?.images) {
-        images.push(...data.images);
-      }
-      if (data?.productImages) {
-        images.push(...data.productImages);
-      }
-    }
-
-    // window.PRODUCT_DETAIL_MODULE_DATA kontrolü
-    const moduleDataMatch = content.match(/window\.PRODUCT_DETAIL_MODULE_DATA\s*=\s*({.*?});/s);
-    if (moduleDataMatch) {
-      const data = JSON.parse(moduleDataMatch[1]);
-      if (data?.product?.images) {
-        images.push(...data.product.images);
-      }
-    }
+    debug("Toplam bulunan script görselleri:", images.length);
   } catch (error) {
     debug("Script parse hatası:", error);
   }
 
-  return images;
+  return images.filter(img => img && typeof img === 'string');
 }
 
 // Görsel URL'sini yüksek çözünürlüklü hale getir
 function getHighResImageUrl(url: string): string {
   if (!url) return '';
 
-  // URL'yi düzelt
-  let imageUrl = url.startsWith('http') ? url : `https:${url}`;
+  try {
+    // URL'yi düzelt
+    let imageUrl = url;
+    if (!imageUrl.startsWith('http')) {
+      imageUrl = `https://cdn.dsmcdn.com${imageUrl}`;
+    }
 
-  // Tüm boyut dönüşümlerini uygula
-  return imageUrl
-    .replace(/\/mnresize\/128\/192\//, '/mnresize/1200/1800/')
-    .replace(/\/mnresize\/256\/384\//, '/mnresize/1200/1800/')
-    .replace(/\/mnresize\/500\/750\//, '/mnresize/1200/1800/')
-    .replace(/\/mnresize\/600\/900\//, '/mnresize/1200/1800/')
-    .replace(/\/mnresize\/800\/1200\//, '/mnresize/1200/1800/');
+    // Debug için orijinal ve düzeltilmiş URL'yi göster
+    debug(`Orijinal URL: ${url}`);
+    debug(`Düzeltilmiş URL: ${imageUrl}`);
+
+    // Tüm boyut dönüşümlerini uygula
+    imageUrl = imageUrl
+      .replace(/\/mnresize\/128\/192\//, '/mnresize/1200/1800/')
+      .replace(/\/mnresize\/256\/384\//, '/mnresize/1200/1800/')
+      .replace(/\/mnresize\/500\/750\//, '/mnresize/1200/1800/')
+      .replace(/\/mnresize\/600\/900\//, '/mnresize/1200/1800/')
+      .replace(/\/mnresize\/800\/1200\//, '/mnresize/1200/1800/');
+
+    // Son URL'yi debug için göster
+    debug(`Son URL: ${imageUrl}`);
+
+    return imageUrl;
+  } catch (error) {
+    debug("URL dönüştürme hatası:", error);
+    return url;
+  }
 }
 
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
