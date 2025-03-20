@@ -69,12 +69,13 @@ function processCategories($: cheerio.CheerioAPI): string[] {
   // Breadcrumb kategorilerini çek
   $('.product-path span').each((_, el) => {
     const category = $(el).text().trim();
-    if (category) {
+    if (category && category !== '/') {
       categories.push(category);
     }
   });
 
-  return categories.length > 0 ? categories : ['Giyim'];
+  // Eğer kategori bulunamadıysa varsayılan olarak Giyim kategorisini ekle
+  return categories.length > 0 ? categories : ['Trendyol', 'Giyim'];
 }
 
 // Temel veri çekme fonksiyonu
@@ -123,7 +124,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
         try {
           const parsed = JSON.parse(content);
-          if (parsed["@type"] === "Product" || parsed["@type"] === "ProductGroup") {
+          if (parsed["@type"] === "ProductGroup" || parsed["@type"] === "Product") {
             schema = parsed;
             return false; // each döngüsünü durdur
           }
@@ -153,7 +154,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Video URL'sini çek
     let videoUrl = null;
-    if (schema.video) {
+    const videoElement = $('.gallery-modal-content video source');
+    if (videoElement.length > 0) {
+      videoUrl = videoElement.attr('src') || null;
+    } else if (schema.video) {
       videoUrl = schema.video.contentUrl || schema.video.url || null;
     }
 
