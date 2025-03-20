@@ -339,6 +339,26 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // Alternative özellik çekme yöntemleri
+    $('.product-stamp-text').each((_, item) => {
+      const text = $(item).text().trim();
+      if (text) {
+        attributes['Ürün Özelliği'] = text;
+        debug(`Stamp özellik eklendi: Ürün Özelliği = ${text}`);
+      }
+    });
+
+    $('.detail-desc-list li').each((_, item) => {
+      const text = $(item).text().trim();
+      if (text.includes(':')) {
+        const [label, value] = text.split(':').map(s => s.trim());
+        if (label && value) {
+          attributes[label] = value;
+          debug(`Açıklama listesi özelliği eklendi: ${label} = ${value}`);
+        }
+      }
+    });
+
     debug("Toplam özellik sayısı:", Object.keys(attributes).length);
 
     // Kategorileri çek
