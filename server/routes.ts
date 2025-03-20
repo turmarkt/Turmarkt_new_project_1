@@ -81,18 +81,39 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     // Fiyat bilgilerini çek
-    const priceElement = $('.prc-box-dscntd').first() || $('.prc-box-sllng').first();
-    const rawPrice = priceElement.text().trim();
+    const priceSelectors = [
+      '.prc-box-dscntd',
+      '.prc-box-sllng',
+      '.product-price-container .prc-dsc',
+      '.product-price-container .prc',
+      '.featured-prices .prc-dsc',
+      '.featured-prices span',
+      '.pr-bx-pr-dsc',
+      '.pr-bx-pr-sv',
+      '.prc-dsc'
+    ];
+
+    let rawPrice = '';
+    for (const selector of priceSelectors) {
+      const priceElement = $(selector).first();
+      if (priceElement.length > 0) {
+        rawPrice = priceElement.text().trim();
+        debug(`Fiyat bulundu (${selector}):`, rawPrice);
+        if (rawPrice) break;
+      }
+    }
 
     if (!rawPrice) {
-      debug("Fiyat elementi bulunamadı:", $('.product-price-container').html());
+      // HTML yapısını debug için yazdır
+      debug("Fiyat elementi bulunamadı. HTML yapısı:", $('.product-price-container').html());
+      debug("Featured price container:", $('.featured-price-container').html());
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
 
     const basePrice = cleanPrice(rawPrice);
     const price = (basePrice * 1.15).toFixed(2); // %15 kar ekle
 
-    debug("Fiyat hesaplandı:", { basePrice, calculatedPrice: price });
+    debug("Fiyat hesaplandı:", { rawPrice, basePrice, calculatedPrice: price });
 
     // Görselleri çek
     const images: string[] = [];
