@@ -67,10 +67,10 @@ function processCategories($: cheerio.CheerioAPI): string[] {
   const categories: string[] = [];
 
   // Breadcrumb kategorilerini çek
-  $('.product-path span').each((_, el) => {
+  $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
     const category = $(el).text().trim();
-    // Sadece anlamlı kategori isimlerini al ('/' gibi ayraçları atlayarak)
-    if (category && category !== '/' && category !== '>' && category !== '') {
+    // Sadece anlamlı kategori isimlerini al ('>' gibi ayraçları atlayarak)
+    if (category && !category.includes('>') && category !== '') {
       categories.push(category);
     }
   });
