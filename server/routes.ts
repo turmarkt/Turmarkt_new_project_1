@@ -21,6 +21,29 @@ function cleanPrice(price: string): number {
   return parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.'));
 }
 
+// Varyant işleme fonksiyonu
+function processVariants(variants: any[]): { sizes: string[], colors: string[] } {
+  const result = {
+    sizes: [] as string[],
+    colors: [] as string[]
+  };
+
+  if (Array.isArray(variants)) {
+    variants.forEach(variant => {
+      // Bedenleri ekle (tekrarsız)
+      if (variant.size && !result.sizes.includes(variant.size)) {
+        result.sizes.push(variant.size);
+      }
+      // Renkleri ekle (tekrarsız)
+      if (variant.color && !result.colors.includes(variant.color)) {
+        result.colors.push(variant.color);
+      }
+    });
+  }
+
+  return result;
+}
+
 // Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
@@ -81,26 +104,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       price: price.toString(),
       basePrice: basePrice.toString(),
       images: schema.image?.contentUrl || [],
-      variants: {
-        sizes: [],
-        colors: []
-      },
+      variants: processVariants(schema.hasVariant),
       attributes: {},
       categories: ['Giyim'],
       tags: []
     };
-
-    // Varyantları çek (renkler ve bedenler)
-    if (schema.hasVariant) {
-      schema.hasVariant.forEach((variant: any) => {
-        if (variant.size && !product.variants.sizes.includes(variant.size)) {
-          product.variants.sizes.push(variant.size);
-        }
-        if (variant.color && !product.variants.colors.includes(variant.color)) {
-          product.variants.colors.push(variant.color);
-        }
-      });
-    }
 
     // Özellikleri çek
     if (schema.additionalProperty) {
@@ -166,7 +174,7 @@ export async function registerRoutes(app: Express) {
     }
   });
 
-  // Export endpoint'i
+  // CSV export endpoint'i
   app.post("/api/export", async (req, res) => {
     try {
       const { product } = req.body;
@@ -177,24 +185,71 @@ export async function registerRoutes(app: Express) {
       const csvWriter = createObjectCsvWriter({
         path: 'products.csv',
         header: [
-          { id: 'Title', title: 'Title' },
           { id: 'Handle', title: 'Handle' },
-          { id: 'Price', title: 'Price' },
-          { id: 'Image Src', title: 'Image Src' },
+          { id: 'Title', title: 'Title' },
           { id: 'Body', title: 'Body (HTML)' },
-          { id: 'Tags', title: 'Tags' }
+          { id: 'Vendor', title: 'Vendor' },
+          { id: 'Product Category', title: 'Product Category' },
+          { id: 'Type', title: 'Type' },
+          { id: 'Tags', title: 'Tags' },
+          { id: 'Published', title: 'Published' },
+          { id: 'Option1 Name', title: 'Option1 Name' },
+          { id: 'Option1 Value', title: 'Option1 Value' },
+          { id: 'Option2 Name', title: 'Option2 Name' },
+          { id: 'Option2 Value', title: 'Option2 Value' },
+          { id: 'Variant SKU', title: 'Variant SKU' },
+          { id: 'Variant Price', title: 'Variant Price' },
+          { id: 'Variant Compare At Price', title: 'Variant Compare At Price' },
+          { id: 'Image Src', title: 'Image Src' },
+          { id: 'Image Alt Text', title: 'Image Alt Text' }
         ]
       });
 
-      await csvWriter.writeRecords([{
-        Title: product.title,
-        Handle: product.title.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-        Price: product.price,
-        'Image Src': product.images[0] || '',
-        Body: product.description,
-        Tags: product.tags.join(',')
-      }]);
+      // Ürün handle'ı oluştur
+      const handle = product.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
 
+      // CSV kaydı oluştur
+      const records = [];
+
+      // Her bir beden için varyant oluştur
+      product.variants.sizes.forEach((size: string) => {
+        records.push({
+          Handle: handle,
+          Title: product.title,
+          'Body': product.description,
+          'Vendor': product.brand || 'Trendyol',
+          'Product Category': product.categories[0] || 'Giyim',
+          'Type': product.categories[0] || 'Giyim',
+          'Tags': product.tags.join(','),
+          'Published': 'TRUE',
+          'Option1 Name': 'Size',
+          'Option1 Value': size,
+          'Option2 Name': 'Color',
+          'Option2 Value': product.variants.colors[0] || 'Default',
+          'Variant SKU': `${handle}-${size}`,
+          'Variant Price': product.price,
+          'Variant Compare At Price': product.basePrice,
+          'Image Src': product.images[0] || '',
+          'Image Alt Text': product.title
+        });
+      });
+
+      // Ek görseller için kayıtlar
+      if (product.images.length > 1) {
+        product.images.slice(1).forEach((image: string) => {
+          records.push({
+            Handle: handle,
+            'Image Src': image,
+            'Image Alt Text': product.title
+          });
+        });
+      }
+
+      await csvWriter.writeRecords(records);
       res.download('products.csv');
 
     } catch (error) {
