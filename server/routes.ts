@@ -14,13 +14,16 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
 
   let driver;
   try {
-    // Firefox ayarları
+    // Firefox ayarları - güncellenmiş headless modu
     const options = new firefox.Options()
-      .headless()
-      .windowSize({ width: 1920, height: 1080 })
+      .addArguments('-headless')  // Yeni headless syntax
+      .addArguments('--width=1920')
+      .addArguments('--height=1080')
       .setPreference('general.useragent.override', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36')
       .setPreference('dom.webdriver.enabled', false)
-      .setPreference('useAutomationExtension', false);
+      .setPreference('useAutomationExtension', false)
+      .setPreference('network.http.sendRefererHeader', 0)
+      .setPreference('javascript.enabled', true);
 
     // Driver başlatma
     driver = await new Builder()
