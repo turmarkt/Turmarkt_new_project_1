@@ -40,7 +40,6 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
     const html = await response.text();
     debug("HTML içeriği başarıyla alındı, uzunluk:", html.length);
     return cheerio.load(html);
-
   } catch (error: any) {
     debug("Veri çekme hatası:", error);
     throw new TrendyolScrapingError("Sayfa yüklenemedi", {
@@ -95,8 +94,22 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     debug("Fiyat hesaplandı:", { basePrice, calculatedPrice: price });
 
-    // Açıklama
-    const description = $('.product-description-text').text().trim();
+    // Açıklama için tüm olası seçicileri dene
+    let description = '';
+    const descriptionSelectors = [
+      '.product-description-text',
+      '.detail-desc-content',
+      '.description-text',
+      '.prdct-desc-cntnr-description'
+    ];
+
+    for (const selector of descriptionSelectors) {
+      const descElement = $(selector);
+      if (descElement.length > 0) {
+        description = descElement.text().trim();
+        if (description) break;
+      }
+    }
 
     // Görselleri çek
     const images: string[] = [];
@@ -154,6 +167,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         attributes[label] = value;
       }
     });
+
+    // Ürün açıklamasına özellikleri ekle
+    if (Object.keys(attributes).length > 0) {
+      const attributeText = Object.entries(attributes)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join('\n');
+      description = description ? `${description}\n\nÖzellikler:\n${attributeText}` : attributeText;
+    }
 
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
