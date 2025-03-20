@@ -137,98 +137,97 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
   try {
     const $ = await fetchProductPage(url);
 
-    // Schema.org verisini çek
-    let schema;
-    try {
-      const schemaScripts = $('script[type="application/ld+json"]');
-      debug("Bulunan schema script sayısı:", schemaScripts.length);
-
-      schemaScripts.each((_, element) => {
-        const content = $(element).html();
-        if (!content) return;
-
-        try {
-          const parsed = JSON.parse(content);
-          if (parsed["@type"] === "Product") {
-            schema = parsed;
-            return false; // each döngüsünü durdur
-          }
-        } catch (e) {
-          debug("Script parse hatası:", e);
-        }
-      });
-
-      if (!schema) {
-        // Schema bulunamadıysa HTML'den direkt çekmeyi dene
-        const title = $('.pr-new-br span').first().text().trim() || $('.prdct-desc-cntnr-ttl').first().text().trim();
-        const price = $('.prc-box-dscntd').first().text().trim() || $('.prc-box-sllng').first().text().trim();
-        const description = $('.product-description-text').text().trim();
-
-        schema = {
-          name: title,
-          description: description,
-          offers: {
-            price: cleanPrice(price)
-          }
-        };
-      }
-    } catch (error) {
-      debug("Schema parse hatası:", error);
-      throw new ProductDataError("Ürün şeması bulunamadı", "schema");
+    // Temel ürün bilgilerini çek
+    const title = $('.pr-new-br span').first().text().trim() || $('.prdct-desc-cntnr-ttl').first().text().trim();
+    if (!title) {
+      throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
-    debug("Schema verisi bulundu:", schema);
-
-    // Fiyat bilgisini al ve %15 kar ekle
-    const basePrice = parseFloat(schema.offers?.price || "0");
-    if (!basePrice) {
+    // Fiyat bilgilerini çek
+    const rawPrice = $('.prc-box-dscntd').first().text().trim() || $('.prc-box-sllng').first().text().trim();
+    if (!rawPrice) {
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
 
+    const basePrice = cleanPrice(rawPrice);
     const price = (basePrice * 1.15).toFixed(2); // %15 kar ekle
+
     debug("Fiyat hesaplandı:", { basePrice, calculatedPrice: price });
+
+    // Açıklama
+    const description = $('.product-description-text').text().trim();
+
+    // Görselleri çek
+    const images: string[] = [];
+    $('.gallery-modal-content img, .product-img img').each((_, img) => {
+      const src = $(img).attr('src');
+      if (src && !images.includes(src)) {
+        images.push(src);
+      }
+    });
 
     // Video URL'sini çek
     let videoUrl = null;
     const videoElement = $('.gallery-modal-content video source');
     if (videoElement.length > 0) {
       videoUrl = videoElement.attr('src') || null;
-    } else if (schema.video) {
-      videoUrl = schema.video.contentUrl || schema.video.url || null;
     }
 
-    debug("Video URL'si:", videoUrl);
+    // Varyantları çek
+    const variants = {
+      sizes: [] as string[],
+      colors: [] as string[]
+    };
+
+    // Bedenleri çek
+    $('.sp-itm:not(.so), .variant-list-item:not(.disabled)').each((_, size) => {
+      const sizeText = $(size).text().trim();
+      if (sizeText && !variants.sizes.includes(sizeText)) {
+        variants.sizes.push(sizeText);
+      }
+    });
+
+    // Renkleri çek
+    $('.slc-txt, .color-list li span').each((_, color) => {
+      const colorText = $(color).text().trim();
+      if (colorText && !variants.colors.includes(colorText)) {
+        variants.colors.push(colorText);
+      }
+    });
+
+    // Özellikleri çek
+    const attributes: Record<string, string> = {};
+    $('.detail-attr-container tr, .product-feature-details tr').each((_, row) => {
+      const label = $(row).find('th').text().trim();
+      const value = $(row).find('td').text().trim();
+      if (label && value) {
+        attributes[label] = value;
+      }
+    });
+
+    // Kategorileri çek
+    const categories: string[] = [];
+    $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
+      const category = $(el).text().trim();
+      if (category && !category.includes('>') && category !== '') {
+        categories.push(category);
+      }
+    });
 
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
-      title: schema.name,
-      description: schema.description || "",
+      title,
+      description,
       price: price.toString(),
       basePrice: basePrice.toString(),
-      images: schema.image?.contentUrl || [],
+      images,
       video: videoUrl,
-      variants: processVariants(schema.hasVariant || []),
-      attributes: {},
-      categories: processCategories($),
-      tags: []
+      variants,
+      attributes,
+      categories: categories.length > 0 ? categories : ['Trendyol', 'Giyim'],
+      tags: [...categories, ...variants.colors, ...variants.sizes].filter(Boolean)
     };
-
-    // Özellikleri çek
-    if (schema.additionalProperty) {
-      schema.additionalProperty.forEach((prop: any) => {
-        if (prop.name && prop.unitText) {
-          product.attributes[prop.name] = prop.unitText;
-        }
-      });
-    }
-
-    // Etiketleri oluştur
-    product.tags = [
-      ...product.categories,
-      ...product.variants.colors,
-      ...product.variants.sizes
-    ].filter(Boolean);
 
     debug("Ürün verisi oluşturuldu:", product);
     return product;
