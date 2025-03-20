@@ -195,6 +195,13 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     debug(`Toplam ${images.length} görsel bulundu:`, images);
 
+    // Video URL'sini çek
+    let videoUrl = null;
+    const videoElement = $('.gallery-modal-content video source').first();
+    if (videoElement.length > 0) {
+      videoUrl = videoElement.attr('src') || null;
+    }
+
     // Açıklama ve özellikleri çek
     const description = $('.product-description-text').text().trim() || 
                        $('.detail-desc-content').text().trim() || 
@@ -255,13 +262,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         categories.push(category);
       }
     });
-
-    // Video URL'sini çek
-    let videoUrl = null;
-    const videoElement = $('.gallery-modal-content video source').first();
-    if (videoElement.length > 0) {
-      videoUrl = videoElement.attr('src') || null;
-    }
 
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
