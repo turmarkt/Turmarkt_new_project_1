@@ -118,6 +118,30 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Görselleri çek
     const images: string[] = [];
 
+    // Varyantları çek
+    const variants = {
+      sizes: [] as string[],
+      colors: [] as string[]
+    };
+
+    // Bedenleri çek
+    $('.variant-list-item:not(.disabled), .sp-itm:not(.so), .size-variant-wrapper:not(.disabled)').each((_, el) => {
+      const size = $(el).text().trim();
+      if (size && !variants.sizes.includes(size)) {
+        variants.sizes.push(size);
+        debug(`Beden eklendi: ${size}`);
+      }
+    });
+
+    // Renkleri çek
+    $('.color-list li span, .slc-txt, .color-variant-wrapper').each((_, el) => {
+      const color = $(el).text().trim();
+      if (color && !variants.colors.includes(color)) {
+        variants.colors.push(color);
+        debug(`Renk eklendi: ${color}`);
+      }
+    });
+
     // Script tag'lerinden görselleri çek
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
@@ -253,6 +277,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       const category = $(el).text().trim();
       if (category && !category.includes('>') && category !== '') {
         categories.push(category);
+        debug(`Kategori eklendi: ${category}`);
       }
     });
 
