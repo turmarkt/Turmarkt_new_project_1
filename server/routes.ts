@@ -118,32 +118,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Görselleri çek
     const images: string[] = [];
 
-    // data-gallery-images özelliğinden görselleri çek
-    const galleryData = $('[data-gallery-images]').first().attr('data-gallery-images');
-    debug("Gallery Data raw:", galleryData);
-
-    if (galleryData) {
-      try {
-        const galleryImages = JSON.parse(galleryData);
-        debug("Parsed gallery images:", galleryImages);
-
-        if (Array.isArray(galleryImages)) {
-          galleryImages.forEach(img => {
-            if (typeof img === 'string') {
-              const highResUrl = getHighResImageUrl(img);
-              if (!images.includes(highResUrl)) {
-                images.push(highResUrl);
-                debug(`Gallery JSON'dan görsel eklendi: ${highResUrl}`);
-              }
-            }
-          });
-        }
-      } catch (error) {
-        debug("Gallery JSON parse hatası:", error);
-      }
-    }
-
-    // productImages script'inden görselleri çek
+    // Önce script tag'lerini kontrol et
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('productImages')) {
@@ -151,6 +126,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           const match = scriptContent.match(/var\s+productImages\s*=\s*(\[.*?\])/s);
           if (match) {
             const productImages = JSON.parse(match[1]);
+            debug("Script'ten parse edilen görseller:", productImages);
             if (Array.isArray(productImages)) {
               productImages.forEach(img => {
                 if (typeof img === 'string') {
@@ -169,8 +145,32 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Yedek görsel toplama
-    $('.gallery-modal-content img, .product-img img, .image-container img').each((_, element) => {
+    // data-gallery-images özelliğini kontrol et
+    const galleryData = $('[data-gallery-images]').first().attr('data-gallery-images');
+    debug("Gallery Data raw:", galleryData);
+
+    if (galleryData) {
+      try {
+        const galleryImages = JSON.parse(galleryData);
+        debug("Parsed gallery images:", galleryImages);
+        if (Array.isArray(galleryImages)) {
+          galleryImages.forEach(img => {
+            if (typeof img === 'string') {
+              const highResUrl = getHighResImageUrl(img);
+              if (!images.includes(highResUrl)) {
+                images.push(highResUrl);
+                debug(`Gallery JSON'dan görsel eklendi: ${highResUrl}`);
+              }
+            }
+          });
+        }
+      } catch (error) {
+        debug("Gallery JSON parse hatası:", error);
+      }
+    }
+
+    // DOM'daki görsel elementlerini kontrol et
+    $('.gallery-modal-content img, .product-img img, .image-container img, .gallery-modal-content picture source').each((_, element) => {
       const src = $(element).attr('src');
       if (src && src.includes('ty')) {
         const highResUrl = getHighResImageUrl(src);
@@ -203,8 +203,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     // Açıklama ve özellikleri çek
-    const description = $('.product-description-text').text().trim() || 
-                       $('.detail-desc-content').text().trim() || 
+    const description = $('.product-description-text').text().trim() ||
+                       $('.detail-desc-content').text().trim() ||
                        $('.description-text').text().trim();
 
     // Özellikleri çek
