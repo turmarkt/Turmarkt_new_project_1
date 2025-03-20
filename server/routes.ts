@@ -69,13 +69,20 @@ function processCategories($: cheerio.CheerioAPI): string[] {
   // Breadcrumb kategorilerini çek
   $('.product-path span').each((_, el) => {
     const category = $(el).text().trim();
-    if (category && category !== '/') {
+    // Sadece anlamlı kategori isimlerini al ('/' gibi ayraçları atlayarak)
+    if (category && category !== '/' && category !== '>' && category !== '') {
       categories.push(category);
     }
   });
 
-  // Eğer kategori bulunamadıysa varsayılan olarak Giyim kategorisini ekle
-  return categories.length > 0 ? categories : ['Trendyol', 'Giyim'];
+  debug("Çekilen kategori yolu:", categories);
+
+  // Eğer kategori bulunamadıysa varsayılan kategori yapısını kullan
+  if (categories.length === 0) {
+    return ['Trendyol', 'Giyim'];
+  }
+
+  return categories;
 }
 
 // Temel veri çekme fonksiyonu
@@ -160,6 +167,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     } else if (schema.video) {
       videoUrl = schema.video.contentUrl || schema.video.url || null;
     }
+
+    debug("Video URL'si:", videoUrl);
 
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
