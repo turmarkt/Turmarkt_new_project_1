@@ -1,3 +1,4 @@
+import { Cluster } from 'puppeteer-cluster';
 import { PuppeteerExtra } from 'puppeteer-extra';
 import StealthPlugin from 'puppeteer-extra-plugin-stealth';
 import type { Express } from "express";
@@ -17,143 +18,194 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
   console.log(`Gelişmiş veri çekme denemesi ${retryCount + 1}/5 başlatıldı:`, url);
 
   try {
-    // Browser başlatma ayarları
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: [
-        '--no-sandbox',
-        '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--disable-blink-features=AutomationControlled',
-        '--disable-web-security',
-        '--disable-features=IsolateOrigins,site-per-process',
-        '--disable-site-isolation-trials',
-        '--window-size=1920,1080'
-      ],
-      ignoreHTTPSErrors: true,
-      defaultViewport: {
-        width: 1920,
-        height: 1080
+    // Cluster oluştur
+    const cluster = await Cluster.launch({
+      concurrency: Cluster.CONCURRENCY_PAGE,
+      maxConcurrency: 2,
+      puppeteer,
+      puppeteerOptions: {
+        headless: true,
+        args: [
+          '--no-sandbox',
+          '--disable-setuid-sandbox',
+          '--disable-dev-shm-usage',
+          '--disable-accelerated-2d-canvas',
+          '--disable-blink-features=AutomationControlled',
+          '--disable-web-security',
+          '--disable-features=IsolateOrigins,site-per-process',
+          '--disable-site-isolation-trials',
+          '--window-size=1920,1080',
+          '--disable-gpu',
+          '--hide-scrollbars',
+          '--mute-audio'
+        ],
+        ignoreHTTPSErrors: true,
+        defaultViewport: {
+          width: 1920,
+          height: 1080
+        }
       }
     });
 
-    const page = await browser.newPage();
+    // Cluster task tanımla
+    const html = await cluster.execute(async ({ page, data: pageUrl }) => {
+      // Gelişmiş browser fingerprint gizleme
+      await page.evaluateOnNewDocument(() => {
+        // WebGL fingerprint gizleme
+        const originalGetParameter = WebGLRenderingContext.prototype.getParameter;
+        WebGLRenderingContext.prototype.getParameter = function(parameter) {
+          if (parameter === 37445) {
+            return 'Intel Inc.';
+          }
+          if (parameter === 37446) {
+            return 'Intel Iris OpenGL Engine';
+          }
+          return originalGetParameter.apply(this, arguments);
+        };
 
-    // Browser parmak izini gizleme
-    await page.evaluateOnNewDocument(() => {
-      // WebGL
-      const originalGetParameter = WebGLRenderingContext.prototype.getParameter;
-      WebGLRenderingContext.prototype.getParameter = function(parameter) {
-        if (parameter === 37445) {
-          return 'Intel Inc.';
-        }
-        if (parameter === 37446) {
-          return 'Intel Iris OpenGL Engine';
-        }
-        return originalGetParameter.apply(this, arguments);
-      };
+        // Canvas fingerprint gizleme
+        const originalGetContext = HTMLCanvasElement.prototype.getContext;
+        HTMLCanvasElement.prototype.getContext = function(...args) {
+          const context = originalGetContext.apply(this, args);
+          if (context && args[0] === '2d') {
+            const originalGetImageData = context.getImageData;
+            context.getImageData = function(...args) {
+              const imageData = originalGetImageData.apply(this, args);
+              const noise = () => Math.random() * 0.1;
+              for (let i = 0; i < imageData.data.length; i += 4) {
+                imageData.data[i] = imageData.data[i] + noise();
+                imageData.data[i + 1] = imageData.data[i + 1] + noise();
+                imageData.data[i + 2] = imageData.data[i + 2] + noise();
+              }
+              return imageData;
+            };
+          }
+          return context;
+        };
 
-      // Canvas
-      const originalGetContext = HTMLCanvasElement.prototype.getContext;
-      HTMLCanvasElement.prototype.getContext = function(...args) {
-        const context = originalGetContext.apply(this, args);
-        if (context && args[0] === '2d') {
-          const originalGetImageData = context.getImageData;
-          context.getImageData = function(...args) {
-            const imageData = originalGetImageData.apply(this, args);
-            const noise = () => Math.random() * 0.1;
-            for (let i = 0; i < imageData.data.length; i += 4) {
-              imageData.data[i] = imageData.data[i] + noise();
-              imageData.data[i + 1] = imageData.data[i + 1] + noise();
-              imageData.data[i + 2] = imageData.data[i + 2] + noise();
+        // Navigator fingerprint gizleme
+        Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
+        Object.defineProperty(navigator, 'languages', { get: () => ['tr-TR', 'tr', 'en-US', 'en'] });
+        Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+        Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+        Object.defineProperty(navigator, 'platform', { get: () => 'Win32' });
+        Object.defineProperty(navigator, 'deviceMemory', { get: () => 8 });
+
+        // Chrome özelliklerini simüle et
+        window.chrome = {
+          app: {
+            isInstalled: false,
+            InstallState: {
+              DISABLED: 'disabled',
+              INSTALLED: 'installed',
+              NOT_INSTALLED: 'not_installed'
+            },
+            RunningState: {
+              CANNOT_RUN: 'cannot_run',
+              READY_TO_RUN: 'ready_to_run',
+              RUNNING: 'running'
             }
-            return imageData;
-          };
-        }
-        return context;
-      };
+          },
+          runtime: {
+            OnInstalledReason: {
+              CHROME_UPDATE: 'chrome_update',
+              INSTALL: 'install',
+              SHARED_MODULE_UPDATE: 'shared_module_update',
+              UPDATE: 'update'
+            },
+            OnRestartRequiredReason: {
+              APP_UPDATE: 'app_update',
+              OS_UPDATE: 'os_update',
+              PERIODIC: 'periodic'
+            },
+            PlatformArch: {
+              ARM: 'arm',
+              ARM64: 'arm64',
+              MIPS: 'mips',
+              MIPS64: 'mips64',
+              X86_32: 'x86-32',
+              X86_64: 'x86-64'
+            },
+            PlatformNaclArch: {
+              ARM: 'arm',
+              MIPS: 'mips',
+              MIPS64: 'mips64',
+              X86_32: 'x86-32',
+              X86_64: 'x86-64'
+            },
+            PlatformOs: {
+              ANDROID: 'android',
+              CROS: 'cros',
+              LINUX: 'linux',
+              MAC: 'mac',
+              OPENBSD: 'openbsd',
+              WIN: 'win'
+            },
+            RequestUpdateCheckStatus: {
+              NO_UPDATE: 'no_update',
+              THROTTLED: 'throttled',
+              UPDATE_AVAILABLE: 'update_available'
+            }
+          }
+        };
+      });
 
-      // Tarayıcı özellikleri
-      Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-      Object.defineProperty(navigator, 'languages', { get: () => ['tr-TR', 'tr', 'en-US', 'en'] });
-      Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-      Object.defineProperty(navigator, 'hardwareConcurrency', { get: () => 8 });
+      // Headers ve diğer ayarlar
+      await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
+      await page.setExtraHTTPHeaders({
+        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Encoding': 'gzip, deflate, br',
+        'Connection': 'keep-alive',
+        'Pragma': 'no-cache',
+        'Cache-Control': 'no-cache',
+        'Upgrade-Insecure-Requests': '1',
+        'DNT': '1'
+      });
 
-      // Chrome Runtime
-      window.chrome = {
-        runtime: {}
-      };
-    });
+      // Gelişmiş insan davranışı simülasyonu
+      await simulateAdvancedHumanBehavior(page);
 
-    // User agent ve headers ayarla
-    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36');
-    await page.setExtraHTTPHeaders({
-      'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Connection': 'keep-alive',
-      'Pragma': 'no-cache',
-      'Cache-Control': 'no-cache',
-      'Upgrade-Insecure-Requests': '1',
-      'DNT': '1'
-    });
+      // Sayfa yükleme
+      console.log("Sayfa yükleniyor...");
+      await page.goto(pageUrl, { 
+        waitUntil: 'networkidle0',
+        timeout: 30000 
+      });
 
-    // Sayfa yükleme
-    console.log("Sayfa yükleniyor...");
-    await page.goto(url, { 
-      waitUntil: 'networkidle0',
-      timeout: 30000 
-    });
+      // Sayfanın tam olarak yüklenmesini bekle
+      await page.waitForFunction(() => {
+        const readyState = document.readyState;
+        return readyState === 'complete';
+      });
 
-    // İnsan benzeri davranış simülasyonu
-    await simulateHumanBehavior(page);
+      // Cloudflare kontrolü
+      const cloudflareDetected = await page.evaluate(() => {
+        return document.title.includes('Attention Required') || 
+               document.body.textContent.includes('Checking your browser') ||
+               document.querySelector('*:contains("Attention Required")') !== null;
+      });
 
-    // Cloudflare kontrolü
-    const cloudflareDetected = await page.evaluate(() => {
-      return document.querySelector('*:contains("Attention Required")') !== null;
-    });
-
-    if (cloudflareDetected) {
-      console.error("Cloudflare koruması tespit edildi");
-      await browser.close();
-
-      if (retryCount < 4) {
-        console.log(`Yeniden deneniyor (${retryCount + 1}/5)...`);
-        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, retryCount), 30000)));
-        return fetchProductPage(url, retryCount + 1);
+      if (cloudflareDetected) {
+        throw new TrendyolScrapingError("Güvenlik kontrolü nedeniyle erişim engellendi", {
+          status: 403,
+          statusText: "Cloudflare Protection",
+          details: "Cloudflare güvenlik kontrolü aşılamadı"
+        });
       }
 
-      throw new TrendyolScrapingError("Güvenlik kontrolü nedeniyle erişim engellendi", {
-        status: 403,
-        statusText: "Cloudflare Protection",
-        details: "Maksimum yeniden deneme sayısına ulaşıldı"
-      });
-    }
-
-    // Ürün detay kontrolü
-    try {
+      // Ürün detay kontrolü
       await page.waitForSelector('.product-detail-container', { timeout: 10000 });
-    } catch (error) {
-      await browser.close();
 
-      if (retryCount < 4) {
-        return fetchProductPage(url, retryCount + 1);
-      }
+      // Son kontroller ve insan davranışı
+      await simulateAdvancedHumanBehavior(page);
 
-      throw new TrendyolScrapingError("Ürün detayları yüklenemedi", {
-        status: 404,
-        statusText: "Product Not Found",
-        details: "Ürün detay sayfası bulunamadı"
-      });
-    }
+      // HTML içeriğini al
+      return await page.content();
+    }, url);
 
-    // Son kontroller ve insan benzeri davranış
-    await simulateHumanBehavior(page);
-
-    // HTML içeriğini al
-    const html = await page.content();
-    await browser.close();
+    await cluster.idle();
+    await cluster.close();
 
     return cheerio.load(html);
 
@@ -161,6 +213,11 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
     console.error("Veri çekme hatası:", error);
 
     if (error instanceof TrendyolScrapingError) {
+      if (retryCount < 4) {
+        console.log(`Yeniden deneniyor (${retryCount + 1}/5)...`);
+        await new Promise(resolve => setTimeout(resolve, Math.min(1000 * Math.pow(2, retryCount), 30000)));
+        return fetchProductPage(url, retryCount + 1);
+      }
       throw error;
     }
 
@@ -172,83 +229,126 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
   }
 }
 
-// İnsan benzeri davranış simülasyonu
-async function simulateHumanBehavior(page: any) {
-  // Mouse hareketleri simülasyonu
-  const box = await page.evaluate(() => {
-    const { top, left, width, height } = document.body.getBoundingClientRect();
-    return { top, left, width, height };
-  });
+// Gelişmiş insan davranışı simülasyonu
+async function simulateAdvancedHumanBehavior(page: any) {
+  // Dinamik bekleme süresi
+  const randomDelay = () => Math.floor(Math.random() * 500) + 200;
 
-  const points = [];
-  for (let i = 0; i < 10; i++) {
-    points.push({
-      x: box.left + Math.random() * box.width,
-      y: box.top + Math.random() * box.height
+  // Mouse hareketi simülasyonu
+  const viewportSize = await page.viewport();
+  const points = generateNaturalMousePath(viewportSize.width, viewportSize.height);
+
+  for (const point of points) {
+    await page.mouse.move(point.x, point.y, {
+      steps: Math.floor(Math.random() * 10) + 5
     });
-  }
-
-  // Bezier eğrisi ile doğal mouse hareketi
-  for (let i = 0; i < points.length - 1; i++) {
-    const point1 = points[i];
-    const point2 = points[i + 1];
-
-    const control1 = {
-      x: point1.x + (Math.random() * 100 - 50),
-      y: point1.y + (Math.random() * 100 - 50)
-    };
-
-    const control2 = {
-      x: point2.x + (Math.random() * 100 - 50),
-      y: point2.y + (Math.random() * 100 - 50)
-    };
-
-    await page.mouse.move(point1.x, point1.y);
-    await page.waitForTimeout(Math.random() * 200);
+    await page.waitForTimeout(randomDelay());
   }
 
   // Scroll davranışı
   await page.evaluate(async () => {
-    const scrollHeight = document.documentElement.scrollHeight;
-    const viewportHeight = window.innerHeight;
-    let currentScroll = 0;
-
-    while (currentScroll < scrollHeight) {
-      const scrollAmount = Math.floor(Math.random() * 100) + 50;
+    const scroll = (amount: number) => new Promise(resolve => {
       window.scrollBy({
-        top: scrollAmount,
+        top: amount,
         behavior: 'smooth'
       });
-      currentScroll += scrollAmount;
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 100));
-    }
+      setTimeout(resolve, Math.random() * 100 + 50);
+    });
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    const height = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight
+    );
 
-    while (currentScroll > 0) {
-      const scrollAmount = Math.floor(Math.random() * 100) + 50;
-      window.scrollBy({
-        top: -scrollAmount,
-        behavior: 'smooth'
-      });
-      currentScroll -= scrollAmount;
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 300 + 100));
-    }
-  });
+    let position = 0;
+    const scrollStep = Math.floor(Math.random() * 100) + 50;
 
-  // Rastgele element etkileşimleri
-  await page.evaluate(async () => {
-    const elements = document.querySelectorAll('img, a, button');
-    for (const element of elements) {
+    while (position < height) {
+      position += scrollStep;
+      await scroll(scrollStep);
+
+      // Rastgele duraklamalar
       if (Math.random() > 0.7) {
-        element.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center'
-        });
-        await new Promise(resolve => setTimeout(resolve, Math.random() * 500 + 200));
+        await new Promise(resolve => setTimeout(resolve, Math.random() * 1000 + 500));
       }
     }
   });
+
+  // Klavye ve fare etkileşimleri
+  const interactionElements = await page.$$('a, button, img, input');
+  for (const element of interactionElements) {
+    if (Math.random() > 0.7) {
+      const box = await element.boundingBox();
+      if (box) {
+        await page.mouse.move(
+          box.x + box.width / 2,
+          box.y + box.height / 2,
+          { steps: 5 }
+        );
+        await page.waitForTimeout(randomDelay());
+
+        if (Math.random() > 0.8) {
+          await element.hover();
+          await page.waitForTimeout(randomDelay());
+        }
+      }
+    }
+  }
+
+  // Sayfada gezinme simülasyonu
+  const keys = ['PageDown', 'PageUp', 'ArrowDown', 'ArrowUp', 'Home', 'End'];
+  for (let i = 0; i < Math.floor(Math.random() * 3) + 1; i++) {
+    const key = keys[Math.floor(Math.random() * keys.length)];
+    await page.keyboard.press(key);
+    await page.waitForTimeout(randomDelay());
+  }
+}
+
+// Doğal mouse hareketi için yol oluştur
+function generateNaturalMousePath(width: number, height: number) {
+  const points = [];
+  const numPoints = Math.floor(Math.random() * 5) + 5;
+
+  for (let i = 0; i < numPoints; i++) {
+    points.push({
+      x: Math.floor(Math.random() * width),
+      y: Math.floor(Math.random() * height)
+    });
+  }
+
+  // Bezier eğrisi noktaları ekle
+  const smoothPoints = [];
+  for (let i = 0; i < points.length - 1; i++) {
+    const p1 = points[i];
+    const p2 = points[i + 1];
+
+    const cp1 = {
+      x: p1.x + (Math.random() * 100 - 50),
+      y: p1.y + (Math.random() * 100 - 50)
+    };
+
+    const cp2 = {
+      x: p2.x + (Math.random() * 100 - 50),
+      y: p2.y + (Math.random() * 100 - 50)
+    };
+
+    // Bezier noktalarını ekle
+    for (let t = 0; t <= 1; t += 0.1) {
+      const bx = Math.pow(1-t,3)*p1.x + 
+                 3*Math.pow(1-t,2)*t*cp1.x + 
+                 3*(1-t)*Math.pow(t,2)*cp2.x + 
+                 Math.pow(t,3)*p2.x;
+
+      const by = Math.pow(1-t,3)*p1.y + 
+                 3*Math.pow(1-t,2)*t*cp1.y + 
+                 3*(1-t)*Math.pow(t,2)*cp2.y + 
+                 Math.pow(t,3)*p2.y;
+
+      smoothPoints.push({x: bx, y: by});
+    }
+  }
+
+  return smoothPoints;
 }
 
 // Schema.org verisi çekme
