@@ -8,8 +8,6 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
-import { SeleniumManager } from './selenium-manager';
-import { getNextProxy, checkProxyStatus } from './proxy';
 import fetch from "node-fetch";
 
 
@@ -18,97 +16,30 @@ function debug(message: string, data?: any) {
   console.log(`[DEBUG] ${message}`, data ? JSON.stringify(data, null, 2) : '');
 }
 
-// Gelişmiş veri çekme fonksiyonu
-async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.CheerioAPI> {
-  debug(`Veri çekme denemesi ${retryCount + 1}/5 başlatıldı:`, { url });
-
-  let seleniumManager: SeleniumManager | null = null;
-
+// Temel veri çekme fonksiyonu
+async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
-    // Proxy seç ve kontrol et
-    const proxy = getNextProxy();
-    debug("Proxy seçildi:", proxy);
-
-    const proxyStatus = await checkProxyStatus(proxy);
-    if (!proxyStatus) {
-      throw new Error('Selected proxy is not working');
-    }
-    debug("Proxy kontrolü başarılı");
-
-    // Selenium manager oluştur
-    seleniumManager = new SeleniumManager(proxy);
-    debug("Selenium manager başlatılıyor...");
-
-    await seleniumManager.initDriver();
-    debug("Driver başarıyla başlatıldı");
-
-    // Sayfayı yükle
-    debug("Sayfa yükleniyor...");
-    const html = await seleniumManager.loadPage(url);
-    debug("Sayfa başarıyla yüklendi, HTML uzunluğu:", html.length);
-
-    // HTML içeriğini kontrol et
-    if (!html.includes('trendyol.com')) {
-      debug("Geçersiz HTML yanıtı");
-      throw new Error('Invalid response - trendyol.com not found in content');
-    }
-
-    return cheerio.load(html);
-
-  } catch (error: any) {
-    debug("Veri çekme hatası:", {
-      message: error.message,
-      stack: error.stack,
-      retryCount
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7'
+      }
     });
 
-    if (retryCount < 4) {
-      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 8000);
-      debug(`${waitTime}ms bekledikten sonra yeniden denenecek`);
-      await new Promise(resolve => setTimeout(resolve, waitTime));
-      return fetchProductPage(url, retryCount + 1);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    throw new TrendyolScrapingError(
-      error.message.includes('Bot protection')
-        ? "Bot koruması nedeniyle erişim engellendi"
-        : "Ürün verisi çekilemedi",
-      {
-        status: 500,
-        statusText: "Scraping Error",
-        details: error.message
-      }
-    );
-
-  } finally {
-    if (seleniumManager) {
-      await seleniumManager.cleanup();
-    }
-  }
-}
-
-// Schema.org verisi çekme
-async function extractProductSchema($: cheerio.CheerioAPI) {
-  debug("Schema.org verisi çekiliyor");
-
-  try {
-    const schemaScript = $('script[type="application/ld+json"]').first().html();
-    if (!schemaScript) {
-      throw new Error('Schema script not found');
-    }
-
-    const schema = JSON.parse(schemaScript);
-    debug("Schema verisi:", schema);
-
-    // Temel şema kontrolü
-    if (!schema["@type"] || !schema.name) {
-      throw new Error('Invalid schema structure');
-    }
-
-    return schema;
+    const html = await response.text();
+    return cheerio.load(html);
   } catch (error: any) {
-    debug("Schema çekme hatası:", error);
-    throw new ProductDataError("Ürün şeması geçersiz", "schema");
+    debug("Veri çekme hatası:", error);
+    throw new TrendyolScrapingError("Sayfa yüklenemedi", {
+      status: 500,
+      statusText: "Fetch Error",
+      details: error.message
+    });
   }
 }
 
@@ -118,24 +49,24 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
   try {
     const $ = await fetchProductPage(url);
-    const schema = await extractProductSchema($);
 
-    debug("Temel ürün bilgileri çekiliyor");
-
-    // Temel veri kontrolü
-    if (!schema.name || !schema.description) {
-      throw new ProductDataError("Eksik ürün bilgisi", "basic");
+    // Temel ürün bilgilerini çek
+    const title = $('.pr-new-br span').first().text().trim() || $('.prdct-desc-cntnr-ttl').first().text().trim();
+    if (!title) {
+      throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
-    // Özellikleri çek
-    const attributes: Record<string, string> = {};
-    if (schema.additionalProperty) {
-      schema.additionalProperty.forEach((prop: any) => {
-        if (prop.name && prop.unitText) {
-          attributes[prop.name] = prop.unitText;
-        }
-      });
-    }
+    const price = $('.prc-box-dscntd').first().text().trim() || $('.prc-box-sllng').first().text().trim();
+    const basePrice = $('.prc-box-orgnl').first().text().trim() || price;
+
+    const description = $('.product-description-text').text().trim();
+
+    // Görselleri çek
+    const images: string[] = [];
+    $('.gallery-modal-content img').each((_, img) => {
+      const src = $(img).attr('src');
+      if (src) images.push(src);
+    });
 
     // Varyantları çek
     const variants = {
@@ -143,42 +74,44 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       colors: [] as string[]
     };
 
-    if (schema.hasVariant) {
-      schema.hasVariant.forEach((variant: any) => {
-        if (variant.size) {
-          variants.sizes = [...new Set([...variants.sizes, ...(Array.isArray(variant.size) ? variant.size : [variant.size])])];
-        }
-        if (variant.color) {
-          variants.colors = [...new Set([...variants.colors, variant.color])];
-        }
-      });
-    }
+    // Bedenleri çek
+    $('.sp-itm:not(.so)').each((_, size) => {
+      variants.sizes.push($(size).text().trim());
+    });
 
-    // Ürün nesnesi oluştur
+    // Renkleri çek
+    $('.slc-txt').each((_, color) => {
+      variants.colors.push($(color).text().trim());
+    });
+
+    // Özellikleri çek
+    const attributes: Record<string, string> = {};
+    $('.detail-attr-container tr').each((_, row) => {
+      const label = $(row).find('th').text().trim();
+      const value = $(row).find('td').text().trim();
+      if (label && value) {
+        attributes[label] = value;
+      }
+    });
+
+    // Kategorileri çek
+    const categories = $('.product-path span')
+      .map((_, el) => $(el).text().trim())
+      .get()
+      .filter(Boolean);
+
     const product: InsertProduct = {
       url,
-      title: schema.name,
-      description: schema.description,
-      price: schema.offers?.price?.toString() || "",
-      basePrice: schema.offers?.price?.toString() || "",
-      images: schema.image ? 
-        (Array.isArray(schema.image.contentUrl) ? schema.image.contentUrl : [schema.image.contentUrl]) : [],
+      title,
+      description,
+      price: price.replace(/[^\d,]/g, ''),
+      basePrice: basePrice.replace(/[^\d,]/g, ''),
+      images,
       variants,
       attributes,
-      categories: schema.category ?
-        (Array.isArray(schema.category) ? schema.category : [schema.category]) :
-        ['Giyim'],
-      tags: [],
-      brand: schema.brand?.name || schema.manufacturer || ""
+      categories: categories.length > 0 ? categories : ['Giyim'],
+      tags: [...categories, ...variants.colors, ...variants.sizes].filter(Boolean)
     };
-
-    // Etiketleri oluştur
-    product.tags = [
-      ...product.categories,
-      product.brand,
-      ...variants.colors,
-      ...variants.sizes
-    ].filter(Boolean);
 
     debug("Ürün verisi oluşturuldu:", product);
     return product;
@@ -195,7 +128,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     });
   }
 }
-
 
 // Ana route'lar
 export async function registerRoutes(app: Express) {
