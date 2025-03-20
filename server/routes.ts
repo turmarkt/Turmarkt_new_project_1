@@ -112,12 +112,34 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const $ = await fetchProductPage(url);
 
     // Schema.org verisini çek
-    const schemaScript = $('script[type="application/ld+json"]').first().html();
-    if (!schemaScript) {
+    let schema;
+    try {
+      const schemaScripts = $('script[type="application/ld+json"]');
+      debug("Bulunan schema script sayısı:", schemaScripts.length);
+
+      schemaScripts.each((_, element) => {
+        const content = $(element).html();
+        if (!content) return;
+
+        try {
+          const parsed = JSON.parse(content);
+          if (parsed["@type"] === "Product" || parsed["@type"] === "ProductGroup") {
+            schema = parsed;
+            return false; // each döngüsünü durdur
+          }
+        } catch (e) {
+          debug("Script parse hatası:", e);
+        }
+      });
+
+      if (!schema) {
+        throw new Error("Ürün şeması bulunamadı");
+      }
+    } catch (error) {
+      debug("Schema parse hatası:", error);
       throw new ProductDataError("Ürün şeması bulunamadı", "schema");
     }
 
-    const schema = JSON.parse(schemaScript);
     debug("Schema verisi bulundu:", schema);
 
     // Fiyat bilgisini al ve %15 kar ekle
@@ -130,9 +152,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     debug("Fiyat hesaplandı:", { basePrice, calculatedPrice: price });
 
     // Video URL'sini çek
-    let videoUrl = '';
+    let videoUrl = null;
     if (schema.video) {
-      videoUrl = schema.video.contentUrl || schema.video.url || '';
+      videoUrl = schema.video.contentUrl || schema.video.url || null;
     }
 
     // Ürün nesnesi oluştur
@@ -144,7 +166,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       basePrice: basePrice.toString(),
       images: schema.image?.contentUrl || [],
       video: videoUrl,
-      variants: processVariants(schema.hasVariant),
+      variants: processVariants(schema.hasVariant || []),
       attributes: {},
       categories: processCategories($),
       tags: []
