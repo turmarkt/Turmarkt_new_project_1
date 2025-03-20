@@ -1,4 +1,3 @@
-import { chromium } from "playwright";
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
@@ -6,101 +5,97 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct, type Product } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
+import fetch from "node-fetch";
 
-// HTML veri çekme fonksiyonu
-async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
+// HTTP veri çekme fonksiyonu
+async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.CheerioAPI> {
   console.log("Trendyol'dan veri çekiliyor:", url);
 
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Cache-Control': 'no-cache',
+    'Pragma': 'no-cache',
+    'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+    'Sec-Ch-Ua-Mobile': '?0',
+    'Sec-Ch-Ua-Platform': '"Windows"',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+    'Sec-Fetch-User': '?1',
+    'Upgrade-Insecure-Requests': '1',
+    'Connection': 'keep-alive'
+  };
+
   try {
-    console.log("Tarayıcı başlatılıyor...");
-    const browser = await chromium.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+    // İlk istek
+    console.log("HTTP isteği yapılıyor...");
+    const response = await fetch(url, { 
+      headers,
+      redirect: 'follow'
     });
 
-    console.log("Tarayıcı konteksti oluşturuluyor...");
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      viewport: { width: 1920, height: 1080 }
-    });
+    if (!response.ok) {
+      if (response.status === 403) {
+        console.error("403 Forbidden - Erişim engellendi");
 
-    const page = await context.newPage();
+        // Yeniden deneme mekanizması
+        if (retryCount < 3) {
+          console.log(`Yeniden deneniyor (${retryCount + 1}/3)...`);
+          await new Promise(resolve => setTimeout(resolve, 5000)); // 5 saniye bekle
+          return fetchProductPage(url, retryCount + 1);
+        }
 
-    // Sayfa yükleme süreci
-    console.log("Sayfa yükleniyor:", url);
-    try {
-      await page.goto(url, { 
-        waitUntil: 'networkidle',
-        timeout: 30000 
-      });
-    } catch (error) {
-      console.error("Sayfa yükleme hatası:", error);
-      throw new TrendyolScrapingError("Sayfa yüklenirken zaman aşımı oluştu. Lütfen tekrar deneyin.", {
-        status: 504,
-        statusText: "Timeout",
-        details: error.message
-      });
-    }
+        throw new TrendyolScrapingError("Trendyol erişimi engelledi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
+          status: response.status,
+          statusText: response.statusText,
+          details: "Maksimum yeniden deneme sayısına ulaşıldı"
+        });
+      }
 
-    // Cloudflare kontrolü
-    const cloudflareDetected = await page.$$eval('*:contains("Attention Required")', elements => elements.length > 0);
-    if (cloudflareDetected) {
-      console.error("Cloudflare koruması tespit edildi");
-      throw new TrendyolScrapingError("Güvenlik kontrolü nedeniyle erişim engellendi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
-        status: 403,
-        statusText: "Cloudflare Protection",
-        details: "Cloudflare güvenlik kontrolü aşılamadı"
+      throw new TrendyolScrapingError("Ürün sayfası yüklenemedi", {
+        status: response.status,
+        statusText: response.statusText
       });
     }
 
-    // Sayfanın yüklendiğinden emin ol
-    try {
-      await page.waitForSelector('.product-detail-container', { timeout: 10000 });
-    } catch (error) {
-      console.error("Ürün detay sayfası yüklenemedi:", error);
-      throw new TrendyolScrapingError("Ürün detayları yüklenemedi. Lütfen geçerli bir ürün sayfası olduğundan emin olun.", {
-        status: 404,
-        statusText: "Product Not Found",
-        details: error.message
+    const html = await response.text();
+
+    // HTML içeriğini kontrol et
+    if (!html.includes('trendyol.com') || html.includes('Attention Required! | Cloudflare')) {
+      if (retryCount < 3) {
+        console.log(`Geçersiz yanıt, yeniden deneniyor (${retryCount + 1}/3)...`);
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        return fetchProductPage(url, retryCount + 1);
+      }
+
+      throw new TrendyolScrapingError("Geçersiz sayfa yanıtı alındı", {
+        status: response.status,
+        statusText: "Invalid Response",
+        details: "Sayfa içeriği doğrulanamadı"
       });
     }
-
-    // Sayfanın HTML içeriğini al
-    const html = await page.content();
-    console.log("Sayfa içeriği başarıyla alındı");
-
-    // Tarayıcıyı kapat
-    await browser.close();
-    console.log("Tarayıcı başarıyla kapatıldı");
 
     return cheerio.load(html);
 
   } catch (error) {
     console.error("Veri çekme hatası:", error);
 
-    // Özel hata durumlarını kontrol et
     if (error instanceof TrendyolScrapingError) {
       throw error;
     }
 
-    // Genel hataları sınıflandır
-    if (error.message.includes("net::ERR_CONNECTION_TIMED_OUT")) {
-      throw new TrendyolScrapingError("Bağlantı zaman aşımına uğradı. Lütfen internet bağlantınızı kontrol edin.", {
-        status: 504,
-        statusText: "Connection Timeout",
+    // Ağ hatalarını yakala
+    if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
+      throw new TrendyolScrapingError("Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.", {
+        status: 503,
+        statusText: "Connection Error",
         details: error.message
       });
     }
 
-    if (error.message.includes("browser has been closed")) {
-      throw new TrendyolScrapingError("Tarayıcı beklenmedik şekilde kapandı. Lütfen tekrar deneyin.", {
-        status: 500,
-        statusText: "Browser Closed",
-        details: error.message
-      });
-    }
-
-    // Diğer hatalar için genel hata mesajı
     throw new TrendyolScrapingError("Ürün verileri çekilirken bir hata oluştu. Lütfen tekrar deneyin.", {
       status: 500,
       statusText: "Scraping Error",
