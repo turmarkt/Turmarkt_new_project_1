@@ -90,10 +90,21 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7'
-      }
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache',
+        'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+        'Sec-Ch-Ua-Mobile': '?0',
+        'Sec-Ch-Ua-Platform': '"Windows"',
+        'Sec-Fetch-Dest': 'document',
+        'Sec-Fetch-Mode': 'navigate',
+        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-User': '?1',
+        'Upgrade-Insecure-Requests': '1'
+      },
+      redirect: 'follow'
     });
 
     if (!response.ok) {
@@ -101,6 +112,13 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
     }
 
     const html = await response.text();
+
+    // HTML içeriğini kontrol et
+    if (!html.includes('trendyol.com')) {
+      throw new Error('Invalid response - trendyol.com not found in content');
+    }
+
+    debug("HTML içeriği başarıyla alındı, uzunluk:", html.length);
     return cheerio.load(html);
   } catch (error: any) {
     debug("Veri çekme hatası:", error);
@@ -131,7 +149,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
         try {
           const parsed = JSON.parse(content);
-          if (parsed["@type"] === "ProductGroup" || parsed["@type"] === "Product") {
+          if (parsed["@type"] === "Product") {
             schema = parsed;
             return false; // each döngüsünü durdur
           }
@@ -141,7 +159,18 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       });
 
       if (!schema) {
-        throw new Error("Ürün şeması bulunamadı");
+        // Schema bulunamadıysa HTML'den direkt çekmeyi dene
+        const title = $('.pr-new-br span').first().text().trim() || $('.prdct-desc-cntnr-ttl').first().text().trim();
+        const price = $('.prc-box-dscntd').first().text().trim() || $('.prc-box-sllng').first().text().trim();
+        const description = $('.product-description-text').text().trim();
+
+        schema = {
+          name: title,
+          description: description,
+          offers: {
+            price: cleanPrice(price)
+          }
+        };
       }
     } catch (error) {
       debug("Schema parse hatası:", error);
