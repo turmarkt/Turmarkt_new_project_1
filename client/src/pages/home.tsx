@@ -11,13 +11,20 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import {
   Loader2,
   Package,
   ArrowRight,
   FileText,
   AlertTriangle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  RefreshCcw
 } from "lucide-react";
 import {
   Alert,
@@ -31,6 +38,7 @@ export default function Home() {
     message: string;
     status?: number;
     details?: string;
+    solution?: string;
   } | null>(null);
 
   const { toast } = useToast();
@@ -51,6 +59,24 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
+  const getErrorSolution = (status?: number, details?: string) => {
+    switch (status) {
+      case 403:
+        return "Birkaç dakika bekleyip tekrar deneyin veya farklı bir tarayıcı kullanın.";
+      case 404:
+        return "URL'nin doğru olduğundan emin olun ve ürünün hala satışta olup olmadığını kontrol edin.";
+      case 429:
+        return "Çok fazla istek yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.";
+      case 500:
+        if (details?.includes('Firefox driver')) {
+          return "Sistem yöneticinize başvurun veya farklı bir tarayıcı ile deneyin.";
+        }
+        return "Teknik bir hata oluştu. Lütfen daha sonra tekrar deneyin.";
+      default:
+        return "Sayfayı yenileyip tekrar deneyin veya farklı bir ürün URL'si ile tekrar deneyin.";
+    }
+  };
+
   const scrapeMutation = useMutation({
     mutationFn: async (url: string) => {
       const res = await apiRequest("POST", "/api/scrape", { url });
@@ -70,7 +96,8 @@ export default function Home() {
       setError({
         message: error.message,
         status: error.status,
-        details: error.details
+        details: error.details,
+        solution: getErrorSolution(error.status, error.details)
       });
       toast({
         title: "Hata",
@@ -114,6 +141,34 @@ export default function Home() {
     scrapeMutation.mutate(data.url);
   });
 
+  const getErrorIcon = (status?: number) => {
+    switch (status) {
+      case 403:
+        return <XCircle className="h-5 w-5" />;
+      case 404:
+        return <AlertTriangle className="h-5 w-5" />;
+      case 429:
+        return <RefreshCcw className="h-5 w-5" />;
+      default:
+        return <AlertCircle className="h-5 w-5" />;
+    }
+  };
+
+  const getErrorTitle = (status?: number) => {
+    switch (status) {
+      case 403:
+        return "Erişim Engellendi";
+      case 404:
+        return "Ürün Bulunamadı";
+      case 429:
+        return "İstek Limiti Aşıldı";
+      case 500:
+        return "Sistem Hatası";
+      default:
+        return "Hata Oluştu";
+    }
+  };
+
   return (
     <div className="min-h-screen bg-black text-white p-4">
       <div className="max-w-2xl mx-auto space-y-6">
@@ -137,15 +192,15 @@ export default function Home() {
                 className="mb-4"
               >
                 <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>
-                    {error.status === 403 ? "Erişim Engellendi" :
-                     error.status === 404 ? "Ürün Bulunamadı" :
-                     error.status === 504 ? "Zaman Aşımı" :
-                     "Hata Oluştu"}
-                  </AlertTitle>
-                  <AlertDescription className="mt-2">
+                  {getErrorIcon(error.status)}
+                  <AlertTitle>{getErrorTitle(error.status)}</AlertTitle>
+                  <AlertDescription className="mt-2 space-y-2">
                     <p>{error.message}</p>
+                    {error.solution && (
+                      <p className="text-sm mt-2 p-2 bg-red-900/50 rounded-md">
+                        <strong>Çözüm önerisi:</strong> {error.solution}
+                      </p>
+                    )}
                     {error.details && (
                       <p className="text-xs mt-1 text-gray-400">
                         Teknik detay: {error.details}
@@ -200,7 +255,21 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <Accordion type="single" collapsible className="w-full">
+                  <div className="space-y-2">
+                    <h3 className="text-xs font-semibold text-gray-400">Ürün Görselleri</h3>
+                    <div className="flex gap-2 overflow-x-auto pb-2">
+                      {product.images.map((image: string, index: number) => (
+                        <img
+                          key={index}
+                          src={image}
+                          alt={`${product.title} - Görsel ${index + 1}`}
+                          className="w-20 h-20 object-cover rounded-md flex-shrink-0"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <Accordion type="single" collapsible className="w-full mt-4">
                     <AccordionItem value="features">
                       <AccordionTrigger className="text-sm hover:no-underline">
                         <div className="flex items-center gap-2">
@@ -223,21 +292,7 @@ export default function Home() {
                     </AccordionItem>
                   </Accordion>
 
-                  <div className="space-y-2">
-                    <h3 className="text-xs font-semibold text-gray-400">Ürün Görselleri</h3>
-                    <div className="flex gap-2 overflow-x-auto pb-2">
-                      {product.images.map((image: string, index: number) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`${product.title} - Görsel ${index + 1}`}
-                          className="w-20 h-20 object-cover rounded-md flex-shrink-0"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-3">
+                  <div className="space-y-3 mt-4">
                     {product.variants.sizes.length > 0 && (
                       <div className="space-y-2">
                         <h3 className="text-xs font-semibold text-gray-400">Bedenler</h3>
