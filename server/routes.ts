@@ -113,33 +113,62 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Görselleri çek
     const images: string[] = [];
-    $('.gallery-modal-content img, .product-img img, .product-slide img, .product-stamp img').each((_, img) => {
-      const src = $(img).attr('src') || $(img).attr('data-src');
+
+    // Ana ürün görsellerini çek
+    $('.gallery-modal-content img, .product-img img, .product-slide img, .gallery-modal-content picture source').each((_, element) => {
+      let src = $(element).attr('src') || $(element).attr('data-src') || $(element).attr('srcset');
+
       if (src) {
-        // URL'yi yüksek çözünürlüklü versiyona dönüştür
-        const highResSrc = src.replace('/mnresize/128/192/', '/mnresize/1200/1800/');
+        // Virgülle ayrılmış srcset değerlerini işle
+        if (src.includes(',')) {
+          src = src.split(',')[0].trim().split(' ')[0];
+        }
+
+        // Thumbnail URL'lerini yüksek çözünürlüklü versiyonlara dönüştür
+        const highResSrc = src
+          .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
+          .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
+          .replace('/mnresize/500/750/', '/mnresize/1200/1800/');
+
         if (!images.includes(highResSrc)) {
           images.push(highResSrc);
-          debug(`Görsel eklendi: ${highResSrc}`);
+          debug(`Ana görsel eklendi: ${highResSrc}`);
         }
       }
     });
 
-    // Eğer hala görsel bulunamadıysa alternatif seçicileri dene
-    if (images.length === 0) {
-      $('.product-container img, .image-container img').each((_, img) => {
-        const src = $(img).attr('src') || $(img).attr('data-src');
+    // Ek görsel kaynaklarını kontrol et
+    const additionalSelectors = [
+      '.product-container img',
+      '.image-container img',
+      '.product-stamp img',
+      'picture[data-original] source',
+      '[data-gallery-images] img'
+    ];
+
+    for (const selector of additionalSelectors) {
+      $(selector).each((_, element) => {
+        let src = $(element).attr('src') || $(element).attr('data-src') || $(element).attr('srcset');
+
         if (src) {
-          const highResSrc = src.replace('/mnresize/128/192/', '/mnresize/1200/1800/');
+          if (src.includes(',')) {
+            src = src.split(',')[0].trim().split(' ')[0];
+          }
+
+          const highResSrc = src
+            .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
+            .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
+            .replace('/mnresize/500/750/', '/mnresize/1200/1800/');
+
           if (!images.includes(highResSrc)) {
             images.push(highResSrc);
-            debug(`Alternatif görsel eklendi: ${highResSrc}`);
+            debug(`Ek görsel eklendi: ${highResSrc}`);
           }
         }
       });
     }
 
-    debug(`Toplam ${images.length} görsel bulundu`);
+    debug(`Toplam ${images.length} görsel bulundu:`, images);
 
 
     // Video URL'sini çek
