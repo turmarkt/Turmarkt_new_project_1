@@ -8,8 +8,17 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
-import fetch from "node-fetch";
+import axios from "axios";
+import axiosRetry from "axios-retry";
 
+// Axios retry konfigürasyonu
+axiosRetry(axios, { 
+  retries: 3,
+  retryDelay: (retryCount) => retryCount * 1000,
+  retryCondition: (error) => {
+    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 500;
+  }
+});
 
 // Debug loglama
 function debug(message: string, data?: any) {
@@ -88,7 +97,7 @@ function processCategories($: cheerio.CheerioAPI): string[] {
 // Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
-    const response = await fetch(url, {
+    const response = await axios.get(url, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
@@ -104,26 +113,26 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
         'Sec-Fetch-User': '?1',
         'Upgrade-Insecure-Requests': '1'
       },
-      redirect: 'follow'
+      maxRedirects: 5,
+      timeout: 10000
     });
 
-    if (!response.ok) {
+    if (response.status !== 200) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const html = await response.text();
-
-    // HTML içeriğini kontrol et
+    const html = response.data;
     if (!html.includes('trendyol.com')) {
       throw new Error('Invalid response - trendyol.com not found in content');
     }
 
     debug("HTML içeriği başarıyla alındı, uzunluk:", html.length);
     return cheerio.load(html);
+
   } catch (error: any) {
     debug("Veri çekme hatası:", error);
     throw new TrendyolScrapingError("Sayfa yüklenemedi", {
-      status: 500,
+      status: error.response?.status || 500,
       statusText: "Fetch Error",
       details: error.message
     });
@@ -144,7 +153,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     // Fiyat bilgilerini çek
-    const rawPrice = $('.prc-box-dscntd').first().text().trim() || $('.prc-box-sllng').first().text().trim();
+    const priceSelector = '.product-price-container .prc-box-dscntd, .product-price-container .prc-box-sllng';
+    const rawPrice = $(priceSelector).first().text().trim();
+
     if (!rawPrice) {
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
@@ -173,6 +184,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       videoUrl = videoElement.attr('src') || null;
     }
 
+    // Kategorileri çek
+    const categories = processCategories($);
+
+
     // Varyantları çek
     const variants = {
       sizes: [] as string[],
@@ -180,18 +195,18 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     };
 
     // Bedenleri çek
-    $('.sp-itm:not(.so), .variant-list-item:not(.disabled)').each((_, size) => {
-      const sizeText = $(size).text().trim();
-      if (sizeText && !variants.sizes.includes(sizeText)) {
-        variants.sizes.push(sizeText);
+    $('.variant-list-item:not(.disabled), .sp-itm:not(.so)').each((_, el) => {
+      const size = $(el).text().trim();
+      if (size && !variants.sizes.includes(size)) {
+        variants.sizes.push(size);
       }
     });
 
     // Renkleri çek
-    $('.slc-txt, .color-list li span').each((_, color) => {
-      const colorText = $(color).text().trim();
-      if (colorText && !variants.colors.includes(colorText)) {
-        variants.colors.push(colorText);
+    $('.color-list li span, .slc-txt').each((_, el) => {
+      const color = $(el).text().trim();
+      if (color && !variants.colors.includes(color)) {
+        variants.colors.push(color);
       }
     });
 
@@ -202,15 +217,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       const value = $(row).find('td').text().trim();
       if (label && value) {
         attributes[label] = value;
-      }
-    });
-
-    // Kategorileri çek
-    const categories: string[] = [];
-    $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
-      const category = $(el).text().trim();
-      if (category && !category.includes('>') && category !== '') {
-        categories.push(category);
       }
     });
 
