@@ -55,116 +55,75 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
   try {
     const $ = await fetchProductPage(url);
 
-    // Temel ürün bilgilerini çek
-    const title = $('.pr-new-br span').first().text().trim() || $('.prdct-desc-cntnr-ttl').first().text().trim();
-    if (!title) {
-      throw new ProductDataError("Ürün başlığı bulunamadı", "title");
+    // Schema.org verisini çek
+    const schemaScript = $('script[type="application/ld+json"]').first().html();
+    if (!schemaScript) {
+      throw new ProductDataError("Ürün şeması bulunamadı", "schema");
     }
 
-    // Fiyat bilgilerini çek ve kar oranını uygula
-    let rawPrice = '';
-    let rawBasePrice = '';
+    const schema = JSON.parse(schemaScript);
+    debug("Schema verisi bulundu:", schema);
 
-    // Farklı fiyat selektörlerini dene
-    $('.product-price-container').find('.prc-box-dscntd, .prc-box-sllng').each((_, el) => {
-      const price = $(el).text().trim();
-      if (price && !rawPrice) {
-        rawPrice = price;
-      }
-    });
-
-    $('.product-price-container').find('.prc-box-orgnl').each((_, el) => {
-      const price = $(el).text().trim();
-      if (price) {
-        rawBasePrice = price;
-      }
-    });
-
-    // Eğer indirimli fiyat yoksa normal fiyatı kullan
-    if (!rawPrice) {
+    // Fiyat bilgisini al ve %15 kar ekle
+    const basePrice = parseFloat(schema.offers?.price || "0");
+    if (!basePrice) {
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
 
-    if (!rawBasePrice) {
-      rawBasePrice = rawPrice;
-    }
-
-    debug("Ham fiyat verileri:", { rawPrice, rawBasePrice });
-
-    // Fiyatları temizle ve hesapla
-    const basePrice = cleanPrice(rawBasePrice);
     const price = (basePrice * 1.15).toFixed(2); // %15 kar ekle
-
     debug("Fiyat hesaplandı:", { basePrice, calculatedPrice: price });
 
-    const description = $('.product-description-text').text().trim();
-
-    // Görselleri çek
-    const images: string[] = [];
-    $('.gallery-modal-content img, .product-img img').each((_, img) => {
-      const src = $(img).attr('src');
-      if (src && !images.includes(src)) {
-        images.push(src);
-      }
-    });
-
-    // Varyantları çek
-    const variants = {
-      sizes: [] as string[],
-      colors: [] as string[]
-    };
-
-    // Bedenleri çek
-    $('.sp-itm:not(.so), .variant-list-item:not(.disabled)').each((_, size) => {
-      const sizeText = $(size).text().trim();
-      if (sizeText && !variants.sizes.includes(sizeText)) {
-        variants.sizes.push(sizeText);
-      }
-    });
-
-    // Renkleri çek
-    $('.slc-txt, .color-list li span').each((_, color) => {
-      const colorText = $(color).text().trim();
-      if (colorText && !variants.colors.includes(colorText)) {
-        variants.colors.push(colorText);
-      }
-    });
-
-    // Özellikleri çek
-    const attributes: Record<string, string> = {};
-    $('.detail-attr-container tr, .product-feature-details tr').each((_, row) => {
-      const label = $(row).find('th').text().trim();
-      const value = $(row).find('td').text().trim();
-      if (label && value) {
-        attributes[label] = value;
-      }
-    });
-
-    // Kategorileri çek
-    const categories = $('.product-path span')
-      .map((_, el) => $(el).text().trim())
-      .get()
-      .filter(Boolean);
-
+    // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
-      title,
-      description,
+      title: schema.name,
+      description: schema.description || "",
       price: price.toString(),
       basePrice: basePrice.toString(),
-      images,
-      variants,
-      attributes,
-      categories: categories.length > 0 ? categories : ['Giyim'],
-      tags: [...categories, ...variants.colors, ...variants.sizes].filter(Boolean)
+      images: schema.image?.contentUrl || [],
+      variants: {
+        sizes: [],
+        colors: []
+      },
+      attributes: {},
+      categories: ['Giyim'],
+      tags: []
     };
+
+    // Varyantları çek (renkler ve bedenler)
+    if (schema.hasVariant) {
+      schema.hasVariant.forEach((variant: any) => {
+        if (variant.size && !product.variants.sizes.includes(variant.size)) {
+          product.variants.sizes.push(variant.size);
+        }
+        if (variant.color && !product.variants.colors.includes(variant.color)) {
+          product.variants.colors.push(variant.color);
+        }
+      });
+    }
+
+    // Özellikleri çek
+    if (schema.additionalProperty) {
+      schema.additionalProperty.forEach((prop: any) => {
+        if (prop.name && prop.unitText) {
+          product.attributes[prop.name] = prop.unitText;
+        }
+      });
+    }
+
+    // Etiketleri oluştur
+    product.tags = [
+      ...product.categories,
+      ...product.variants.colors,
+      ...product.variants.sizes
+    ].filter(Boolean);
 
     debug("Ürün verisi oluşturuldu:", product);
     return product;
 
   } catch (error: any) {
     debug("Scraping hatası:", error);
-    if (error instanceof TrendyolScrapingError || error instanceof ProductDataError) {
+    if (error instanceof ProductDataError) {
       throw error;
     }
     throw new TrendyolScrapingError("Ürün verisi işlenirken hata oluştu", {
