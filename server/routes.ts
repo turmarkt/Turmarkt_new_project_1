@@ -7,9 +7,14 @@ import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
 import fetch from "node-fetch";
 
+// Debug loglama fonksiyonu
+function debug(message: string, data?: any) {
+  console.log(`[DEBUG] ${message}`, data ? JSON.stringify(data, null, 2) : '');
+}
+
 // Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.CheerioAPI> {
-  console.log(`Veri çekme denemesi ${retryCount + 1}/5 başlatıldı:`, url);
+  debug(`Veri çekme denemesi ${retryCount + 1}/5 başlatıldı:`, { url });
 
   try {
     // Random delay
@@ -19,99 +24,170 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
     // Request headers
     const headers = {
       'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
       'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'max-age=0',
+      'Connection': 'keep-alive',
+      'DNT': '1',
+      'Referer': 'https://www.google.com/',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'cross-site',
+      'Sec-Fetch-User': '?1',
+      'Upgrade-Insecure-Requests': '1'
     };
 
     // HTTP isteği
-    console.log("HTTP isteği yapılıyor...");
-    const response = await fetch(url, { headers });
+    debug("HTTP isteği yapılıyor...");
+    const response = await fetch(url, { 
+      headers,
+      redirect: 'follow',
+      follow: 5
+    });
+
+    debug("Yanıt alındı:", {
+      status: response.status,
+      statusText: response.statusText,
+      headers: response.headers.raw()
+    });
 
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const html = await response.text();
+    debug("HTML içeriği alındı, uzunluk:", html.length);
 
     // HTML içeriğini kontrol et
     if (!html.includes('trendyol.com')) {
-      throw new Error('Invalid response');
+      debug("Geçersiz HTML yanıtı");
+      throw new Error('Invalid response - trendyol.com not found in content');
     }
 
-    return cheerio.load(html);
+    // Bot koruması kontrolü
+    if (html.includes('Checking if the site connection is secure') || 
+        html.includes('Attention Required! | Cloudflare') ||
+        html.includes('Please Wait... | Cloudflare')) {
+      debug("Bot koruması tespit edildi");
+      throw new Error('Bot protection detected');
+    }
+
+    // Ürün sayfası kontrolü
+    const $ = cheerio.load(html);
+    const isProductPage = $('.product-detail-container').length > 0;
+
+    if (!isProductPage) {
+      debug("Ürün sayfası bulunamadı");
+      throw new Error('Product page not found');
+    }
+
+    debug("Sayfa başarıyla yüklendi");
+    return $;
 
   } catch (error: any) {
-    console.error("Veri çekme hatası:", error.message);
+    debug("Veri çekme hatası:", { 
+      message: error.message,
+      stack: error.stack,
+      retryCount 
+    });
 
+    // Retry mekanizması
     if (retryCount < 4) {
-      console.log(`Yeniden deneniyor (${retryCount + 1}/5)...`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const waitTime = Math.min(1000 * Math.pow(2, retryCount), 8000);
+      debug(`${waitTime}ms bekledikten sonra yeniden denenecek`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
       return fetchProductPage(url, retryCount + 1);
     }
 
-    throw new TrendyolScrapingError("Ürün verisi çekilemedi", {
-      status: 500,
-      statusText: "Scraping Error",
-      details: error.message
-    });
+    throw new TrendyolScrapingError(
+      error.message.includes('Bot protection') 
+        ? "Bot koruması nedeniyle erişim engellendi"
+        : "Ürün verisi çekilemedi",
+      {
+        status: 500,
+        statusText: "Scraping Error",
+        details: error.message
+      }
+    );
   }
 }
 
 // Schema.org verisi çekme
 async function extractProductSchema($: cheerio.CheerioAPI) {
-  const schemaScript = $('script[type="application/ld+json"]').first().html();
-  if (!schemaScript) {
-    throw new ProductDataError("Ürün şeması bulunamadı", "schema");
-  }
+  debug("Schema.org verisi çekiliyor");
 
   try {
-    const schema = JSON.parse(schemaScript);
-    if (!schema["@type"] || !schema.name) {
-      throw new ProductDataError("Geçersiz ürün şeması", "schema");
+    const schemaScript = $('script[type="application/ld+json"]').first().html();
+    if (!schemaScript) {
+      throw new Error('Schema script not found');
     }
+
+    const schema = JSON.parse(schemaScript);
+    debug("Schema verisi:", schema);
+
+    if (!schema["@type"] || !schema.name) {
+      throw new Error('Invalid schema structure');
+    }
+
     return schema;
-  } catch (error) {
-    console.error("Schema parse hatası:", error);
+  } catch (error: any) {
+    debug("Schema çekme hatası:", error);
     throw new ProductDataError("Ürün şeması geçersiz", "schema");
   }
 }
 
 // Ana veri çekme ve işleme fonksiyonu
 async function scrapeProduct(url: string): Promise<InsertProduct> {
-  console.log("Scraping başlatıldı:", url);
+  debug("Scraping başlatıldı:", url);
 
-  const $ = await fetchProductPage(url);
-  const schema = await extractProductSchema($);
+  try {
+    const $ = await fetchProductPage(url);
+    const schema = await extractProductSchema($);
 
-  const title = schema.name;
-  const description = schema.description;
-  const price = schema.offers?.price?.toString() || "";
-  const basePrice = price; // Fiyat hesaplaması için
-  const images = schema.image ? 
-    (Array.isArray(schema.image) ? schema.image : [schema.image]) : [];
+    debug("Temel ürün bilgileri çekiliyor");
 
-  const categories = schema.category ?
-    (Array.isArray(schema.category) ? schema.category : [schema.category]) :
-    ['Giyim'];
+    // Temel veri kontrolü
+    if (!schema.name || !schema.description) {
+      throw new ProductDataError("Eksik ürün bilgisi", "basic");
+    }
 
-  return {
-    url,
-    title,
-    description,
-    price,
-    basePrice,
-    images,
-    variants: { sizes: [], colors: [] },
-    attributes: {},
-    categories,
-    tags: [...categories],
-    brand: schema.brand?.name || title.split(' ')[0] // Added brand fallback
-  };
+    const product: InsertProduct = {
+      url,
+      title: schema.name,
+      description: schema.description,
+      price: schema.offers?.price?.toString() || "",
+      basePrice: schema.offers?.price?.toString() || "",
+      images: schema.image ? 
+        (Array.isArray(schema.image) ? schema.image : [schema.image]) : [],
+      variants: { sizes: [], colors: [] },
+      attributes: {},
+      categories: schema.category ?
+        (Array.isArray(schema.category) ? schema.category : [schema.category]) :
+        ['Giyim'],
+      tags: [],
+    };
+
+    // Kategorileri tags olarak da kullan
+    product.tags = [...product.categories];
+
+    debug("Ürün verisi oluşturuldu:", product);
+    return product;
+
+  } catch (error: any) {
+    debug("Scraping hatası:", error);
+    if (error instanceof TrendyolScrapingError || error instanceof ProductDataError) {
+      throw error;
+    }
+    throw new TrendyolScrapingError("Ürün verisi işlenirken hata oluştu", {
+      status: 500,
+      statusText: "Processing Error",
+      details: error.message
+    });
+  }
 }
 
-// Ürün özelliklerini çekme (unchanged except for error handling)
+// Ürün özelliklerini çekme
 async function extractAttributes($: cheerio.CheerioAPI): Promise<Record<string, string>> {
   const attributes: Record<string, string> = {};
 
@@ -192,27 +268,28 @@ export async function registerRoutes(app: Express) {
   // Scraping endpoint'i
   app.post("/api/scrape", async (req, res) => {
     try {
+      debug("Scrape isteği alındı:", req.body);
       const { url } = urlSchema.parse(req.body);
 
       // Cache kontrolü
       const existing = await storage.getProduct(url);
       if (existing) {
-        console.log("Ürün cache'den alındı:", existing.id);
+        debug("Ürün cache'den alındı:", existing.id);
         return res.json(existing);
       }
 
-      console.log("Ürün verileri çekiliyor:", url);
+      debug("Ürün verileri çekiliyor:", url);
       const product = await scrapeProduct(url);
       const attributes = await extractAttributes(cheerio.load(await (await fetch(product.url)).text())); // Added attribute extraction
       product.attributes = attributes; //Assign extracted attributes
-      console.log("Ürün başarıyla çekildi, kaydediliyor");
+      debug("Ürün başarıyla çekildi, kaydediliyor");
       const saved = await storage.saveProduct(product);
-      console.log("Ürün kaydedildi:", saved.id);
+      debug("Ürün kaydedildi:", saved.id);
 
       res.json(saved);
 
     } catch (error) {
-      console.error("Hata oluştu:", error);
+      debug("API hatası:", error);
       const { status, message, details } = handleError(error);
       res.status(status).json({ message, details });
     }
@@ -234,8 +311,7 @@ export async function registerRoutes(app: Express) {
           {id: 'Price', title: 'Price'},
           {id: 'Image Src', title: 'Image Src'},
           {id: 'Body', title: 'Body (HTML)'},
-          {id: 'Tags', title: 'Tags'},
-          {id: 'Brand', title: 'Brand'} // Added Brand field
+          {id: 'Tags', title: 'Tags'}
         ]
       });
 
@@ -245,14 +321,13 @@ export async function registerRoutes(app: Express) {
         Price: product.price,
         'Image Src': product.images[0] || '',
         Body: product.description,
-        Tags: product.tags.join(','),
-        Brand: product.brand // Added Brand field
+        Tags: product.tags.join(',')
       }]);
 
       res.download('products.csv');
 
     } catch (error) {
-      console.error("CSV export hatası:", error);
+      debug("CSV export hatası:", error);
       const { status, message, details } = handleError(error);
       res.status(status).json({ message, details });
     }
