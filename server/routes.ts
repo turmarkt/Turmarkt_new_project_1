@@ -1,5 +1,5 @@
 // Firefox binary path'ini belirle
-process.env.FIREFOX_BIN = '/nix/store/*/bin/firefox-esr';
+process.env.FIREFOX_BIN = '/nix/store/firefox-esr/bin/firefox-esr';
 
 import type { Express } from "express";
 import { createServer } from "http";
@@ -56,10 +56,10 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
     return cheerio.load(html);
 
   } catch (error: any) {
-    debug("Veri çekme hatası:", { 
+    debug("Veri çekme hatası:", {
       message: error.message,
       stack: error.stack,
-      retryCount 
+      retryCount
     });
 
     if (retryCount < 4) {
@@ -70,7 +70,7 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
     }
 
     throw new TrendyolScrapingError(
-      error.message.includes('Bot protection') 
+      error.message.includes('Bot protection')
         ? "Bot koruması nedeniyle erişim engellendi"
         : "Ürün verisi çekilemedi",
       {
@@ -132,7 +132,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       description: schema.description,
       price: schema.offers?.price?.toString() || "",
       basePrice: schema.offers?.price?.toString() || "",
-      images: schema.image ? 
+      images: schema.image ?
         (Array.isArray(schema.image) ? schema.image : [schema.image]) : [],
       variants: { sizes: [], colors: [] },
       attributes: {},
@@ -280,12 +280,12 @@ export async function registerRoutes(app: Express) {
       const csvWriter = createObjectCsvWriter({
         path: 'products.csv',
         header: [
-          {id: 'Title', title: 'Title'},
-          {id: 'Handle', title: 'Handle'},
-          {id: 'Price', title: 'Price'},
-          {id: 'Image Src', title: 'Image Src'},
-          {id: 'Body', title: 'Body (HTML)'},
-          {id: 'Tags', title: 'Tags'}
+          { id: 'Title', title: 'Title' },
+          { id: 'Handle', title: 'Handle' },
+          { id: 'Price', title: 'Price' },
+          { id: 'Image Src', title: 'Image Src' },
+          { id: 'Body', title: 'Body (HTML)' },
+          { id: 'Tags', title: 'Tags' }
         ]
       });
 
