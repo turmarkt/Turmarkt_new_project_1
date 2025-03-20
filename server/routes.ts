@@ -20,6 +20,22 @@ function cleanPrice(price: string): number {
   return parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.'));
 }
 
+// Görsel URL'sini yüksek çözünürlüklü hale getir
+function getHighResImageUrl(url: string): string {
+  if (!url) return '';
+
+  // URL'yi düzelt
+  let imageUrl = url.startsWith('http') ? url : `https:${url}`;
+
+  // Tüm boyut dönüşümlerini uygula
+  const resolutions = ['128/192', '256/384', '500/750', '600/900', '800/1200'];
+  for (const res of resolutions) {
+    imageUrl = imageUrl.replace(`/mnresize/${res}/`, '/mnresize/1200/1800/');
+  }
+
+  return imageUrl;
+}
+
 // Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
@@ -64,29 +80,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
-    // Tüm olası fiyat seçicileri
-    const priceSelectors = [
-      '.prc-box-dscntd',
-      '.prc-box-sllng',
-      '.product-price-container .prc-dsc',
-      '.product-price-container .prc',
-      '.pr-bx-pr-dsc',
-      '.pr-bx-pr-sv'
-    ];
-
     // Fiyat bilgilerini çek
-    let rawPrice = '';
-    for (const selector of priceSelectors) {
-      const priceElement = $(selector).first();
-      if (priceElement.length > 0) {
-        rawPrice = priceElement.text().trim();
-        debug(`Fiyat bulundu (${selector}):`, rawPrice);
-        break;
-      }
-    }
+    const priceElement = $('.prc-box-dscntd').first() || $('.prc-box-sllng').first();
+    const rawPrice = priceElement.text().trim();
 
     if (!rawPrice) {
-      debug("Fiyat elementleri bulunamadı. DOM yapısı:", $('.product-price-container').html());
+      debug("Fiyat elementi bulunamadı:", $('.product-price-container').html());
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
 
@@ -98,109 +97,62 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Görselleri çek
     const images: string[] = [];
 
-    // Ana ürün görsellerini çek
-    $('.gallery-modal-content [data-original], .product-slide img').each((_, element) => {
-      let src = $(element).attr('data-original') || $(element).attr('src');
-      if (src) {
-        // URL'yi düzelt
-        if (!src.startsWith('http')) {
-          src = `https:${src}`;
-        }
-        if (!images.includes(src)) {
-          images.push(src);
-          debug(`Ana görsel eklendi: ${src}`);
-        }
-      }
-    });
-
-    // Lazy-loaded görselleri çek
-    $('[data-src*="ty"], [data-original*="ty"]').each((_, element) => {
-      let src = $(element).attr('data-src') || $(element).attr('data-original');
-      if (src) {
-        if (!src.startsWith('http')) {
-          src = `https:${src}`;
-        }
-        if (!images.includes(src)) {
-          images.push(src);
-          debug(`Lazy-loaded görsel eklendi: ${src}`);
-        }
-      }
-    });
-
-    // data-gallery-images özelliğini kontrol et
-    const galleryDataElements = $('[data-gallery-images]');
-    galleryDataElements.each((_, element) => {
-      const galleryData = $(element).attr('data-gallery-images');
-      if (galleryData) {
-        try {
-          const galleryImages = JSON.parse(galleryData);
-          if (Array.isArray(galleryImages)) {
-            galleryImages.forEach(img => {
-              if (typeof img === 'string') {
-                let imgUrl = img;
-                if (!imgUrl.startsWith('http')) {
-                  imgUrl = `https:${imgUrl}`;
-                }
-                if (!images.includes(imgUrl)) {
-                  images.push(imgUrl);
-                  debug(`Gallery JSON'dan görsel eklendi: ${imgUrl}`);
-                }
+    // data-gallery-images özelliğinden görselleri çek
+    const galleryData = $('[data-gallery-images]').first().attr('data-gallery-images');
+    if (galleryData) {
+      try {
+        const galleryImages = JSON.parse(galleryData);
+        if (Array.isArray(galleryImages)) {
+          galleryImages.forEach(img => {
+            if (typeof img === 'string') {
+              const highResUrl = getHighResImageUrl(img);
+              if (!images.includes(highResUrl)) {
+                images.push(highResUrl);
+                debug(`Gallery JSON'dan görsel eklendi: ${highResUrl}`);
               }
-            });
-          }
-        } catch (error) {
-          debug("Gallery JSON parse hatası:", error);
+            }
+          });
+        }
+      } catch (error) {
+        debug("Gallery JSON parse hatası:", error);
+      }
+    }
+
+    // Alternatif görsel kaynaklarını kontrol et
+    $('[data-src*="ty"], [data-original*="ty"]').each((_, element) => {
+      const src = $(element).attr('data-src') || $(element).attr('data-original');
+      if (src) {
+        const highResUrl = getHighResImageUrl(src);
+        if (!images.includes(highResUrl)) {
+          images.push(highResUrl);
+          debug(`Lazy-loaded görsel eklendi: ${highResUrl}`);
         }
       }
     });
 
-    // Yedek görsel toplama stratejisi
-    $('img[src*="ty"], .product-img img, .image-container img').each((_, element) => {
-      let src = $(element).attr('src');
-      if (src) {
-        if (!src.startsWith('http')) {
-          src = `https:${src}`;
-        }
-        if (!images.includes(src)) {
-          images.push(src);
-          debug(`Yedek görsel eklendi: ${src}`);
+    // Yedek görsel toplama
+    $('.product-img img, .image-container img').each((_, element) => {
+      const src = $(element).attr('src');
+      if (src && src.includes('ty')) {
+        const highResUrl = getHighResImageUrl(src);
+        if (!images.includes(highResUrl)) {
+          images.push(highResUrl);
+          debug(`Yedek görsel eklendi: ${highResUrl}`);
         }
       }
     });
 
     debug(`Toplam ${images.length} görsel bulundu:`, images);
 
-    // Video URL'sini çek
-    let videoUrl = null;
-    const videoElement = $('.gallery-modal-content video source');
-    if (videoElement.length > 0) {
-      videoUrl = videoElement.attr('src') || null;
-    }
-
     // Açıklama ve özellikleri çek
-    let description = '';
-    const descriptionSelectors = [
-      '.product-description-text',
-      '.detail-desc-content',
-      '.description-text',
-      '.prdct-desc-cntnr-description'
-    ];
-
-    for (const selector of descriptionSelectors) {
-      const descElement = $(selector);
-      if (descElement.length > 0) {
-        const text = descElement.text().trim();
-        if (text) {
-          description = text;
-          break;
-        }
-      }
-    }
+    const description = $('.product-description-text').text().trim() || 
+                       $('.detail-desc-content').text().trim() || 
+                       $('.description-text').text().trim();
 
     // Özellikleri çek
     const attributes: Record<string, string> = {};
 
-    // Ana özellik tablosunu çek
+    // Tüm özellik tablolarını tara
     $('.detail-attr-container tr, .product-feature-details tr, .detail-border tr').each((_, row) => {
       const label = $(row).find('th, .featured-title').text().trim();
       const value = $(row).find('td, .featured-desc').text().trim();
@@ -211,9 +163,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     });
 
     // Ek özellikleri çek
-    $('.product-information-list li, .detail-list li').each((_, item) => {
-      const label = $(item).find('.title, .list-title').text().trim();
-      const value = $(item).find('.value, .list-content').text().trim();
+    $('.product-information-list li').each((_, item) => {
+      const label = $(item).find('.title').text().trim();
+      const value = $(item).find('.value').text().trim();
       if (label && value) {
         attributes[label] = value;
         debug(`Ek özellik eklendi: ${label} = ${value}`);
@@ -250,22 +202,28 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       const category = $(el).text().trim();
       if (category && !category.includes('>') && category !== '') {
         categories.push(category);
-        debug(`Kategori eklendi: ${category}`);
       }
     });
+
+    // Video URL'sini çek
+    let videoUrl = null;
+    const videoElement = $('.gallery-modal-content video source').first();
+    if (videoElement.length > 0) {
+      videoUrl = videoElement.attr('src') || null;
+    }
 
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
       title,
-      description,
+      description: description || '',
       price: price.toString(),
       basePrice: basePrice.toString(),
       images,
       video: videoUrl,
       variants,
       attributes,
-      categories: categories.length > 0 ? categories : ['Trendyol', 'Giyim'],
+      categories: categories.length > 0 ? categories : ['Trendyol'],
       tags: [...categories, ...variants.colors, ...variants.sizes].filter(Boolean)
     };
 
