@@ -142,7 +142,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Alternatif görsel kaynaklarını kontrol et
     $('[data-src*="ty"], [data-original*="ty"]').each((_, element) => {
       const src = $(element).attr('data-src') || $(element).attr('data-original');
-      if (src) {
+      if (src && src.includes('ty')) {
         const highResUrl = getHighResImageUrl(src);
         if (!images.includes(highResUrl)) {
           images.push(highResUrl);
