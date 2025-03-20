@@ -21,6 +21,54 @@ function cleanPrice(price: string): number {
 }
 
 // Görsel işleme ve çekme fonksiyonları
+// Script içeriğinden JSON benzeri verileri çıkar
+function extractJSONFromScript(content: string): string[] {
+  const images: string[] = [];
+
+  try {
+    // productDetailModel'den görselleri çek
+    const modelMatch = content.match(/window\.productDetailModel\s*=\s*({.*?});/s);
+    if (modelMatch) {
+      const data = JSON.parse(modelMatch[1]);
+      if (data?.images) {
+        images.push(...data.images);
+      }
+    }
+
+    // TYPageName.product'dan görselleri çek
+    const pageMatch = content.match(/TYPageName\.product\s*=\s*({.*?});/s);
+    if (pageMatch) {
+      const data = JSON.parse(pageMatch[1]);
+      if (data?.images) {
+        images.push(...data.images);
+      }
+    }
+
+    // productImages değişkeninden görselleri çek
+    const imagesMatch = content.match(/var\s+productImages\s*=\s*(\[.*?\])/s);
+    if (imagesMatch) {
+      const data = JSON.parse(imagesMatch[1]);
+      if (Array.isArray(data)) {
+        images.push(...data);
+      }
+    }
+
+    // productDetail.images'dan görselleri çek
+    const detailMatch = content.match(/var\s+productDetail\s*=\s*({.*?});/s);
+    if (detailMatch) {
+      const data = JSON.parse(detailMatch[1]);
+      if (data?.images) {
+        images.push(...data.images);
+      }
+    }
+  } catch (error) {
+    debug("Script parse hatası:", error);
+  }
+
+  return images;
+}
+
+// Görsel URL'sini yüksek çözünürlüklü hale getir
 function getHighResImageUrl(url: string): string {
   if (!url) return '';
 
@@ -28,22 +76,7 @@ function getHighResImageUrl(url: string): string {
   let imageUrl = url.startsWith('http') ? url : `https:${url}`;
 
   // Boyut parametrelerini ekle
-  imageUrl = imageUrl.replace(/\/mnresize\/\d+\/\d+\//, '/mnresize/1200/1800/');
-
-  return imageUrl;
-}
-
-// Script içeriğinden JSON benzeri verileri çıkar
-function extractJSONFromScript(content: string, pattern: RegExp): any {
-  try {
-    const match = content.match(pattern);
-    if (match && match[1]) {
-      return JSON.parse(match[1].replace(/\\'/g, "'"));
-    }
-  } catch (error) {
-    debug("JSON parse hatası:", error);
-  }
-  return null;
+  return imageUrl.replace(/\/mnresize\/\d+\/\d+\//, '/mnresize/1200/1800/');
 }
 
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
@@ -126,52 +159,33 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Script kaynaklarından görselleri çek
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
-
-      // productDetailModel'den görselleri çek
-      if (scriptContent.includes('productDetailModel')) {
-        const data = extractJSONFromScript(scriptContent, /window\.productDetailModel\s*=\s*({.*?});/s);
-        if (data?.images) {
-          data.images.forEach((img: string) => {
-            if (typeof img === 'string') {
-              images.add(getHighResImageUrl(img));
-            }
-          });
+      const scriptImages = extractJSONFromScript(scriptContent);
+      scriptImages.forEach(img => {
+        if (typeof img === 'string') {
+          images.add(getHighResImageUrl(img));
         }
-      }
+      });
+    });
 
-      // TYPageName.product'dan görselleri çek
-      if (scriptContent.includes('TYPageName.product')) {
-        const data = extractJSONFromScript(scriptContent, /TYPageName\.product\s*=\s*({.*?});/s);
-        if (data?.images) {
-          data.images.forEach((img: string) => {
-            if (typeof img === 'string') {
-              images.add(getHighResImageUrl(img));
-            }
-          });
-        }
-      }
+    // data-gallery-images özelliğinden görselleri çek
+    const galleryElements = $('[data-gallery-images], [data-images], [data-product-images]');
+    galleryElements.each((_, element) => {
+      const data = $(element).attr('data-gallery-images') || 
+                  $(element).attr('data-images') || 
+                  $(element).attr('data-product-images');
 
-      // productImages değişkeninden görselleri çek
-      if (scriptContent.includes('productImages')) {
-        const data = extractJSONFromScript(scriptContent, /var\s+productImages\s*=\s*(\[.*?\])/s);
-        if (Array.isArray(data)) {
-          data.forEach((img: string) => {
-            if (typeof img === 'string') {
-              images.add(getHighResImageUrl(img));
-            }
-          });
-        }
-      }
-
-      // productDetail.images'dan görselleri çek
-      if (scriptContent.includes('productDetail')) {
-        const data = extractJSONFromScript(scriptContent, /var\s+productDetail\s*=\s*({.*?});/s);
-        if (data?.images) {
-          data.images.forEach((img: string) => {
-            if (typeof img === 'string') {
-              images.add(getHighResImageUrl(img));
-            }
-          });
+      if (data) {
+        try {
+          const galleryImages = JSON.parse(data);
+          if (Array.isArray(galleryImages)) {
+            galleryImages.forEach(img => {
+              if (typeof img === 'string') {
+                images.add(getHighResImageUrl(img));
+              }
+            });
+          }
+        } catch (error) {
+          debug("Gallery data parse hatası:", error);
         }
       }
     });
@@ -185,7 +199,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       '.slick-slide img',
       '[data-src*="ty"]',
       '[data-original*="ty"]',
-      'picture source[srcset*="ty"]'
+      'picture source[srcset*="ty"]',
+      '.product-stamp img'
     ];
 
     imageSelectors.forEach(selector => {
@@ -196,44 +211,13 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                    $(element).attr('srcset');
 
         if (src) {
-          // Srcset içindeki tüm URL'leri işle
-          const urls = src.split(',').map(s => s.trim().split(' ')[0]);
-          urls.forEach(url => {
-            if (url.includes('ty')) {
-              images.add(getHighResImageUrl(url));
-            }
-          });
+          const urls = src.split(',')
+            .map(s => s.trim().split(' ')[0])
+            .filter(url => url.includes('ty'));
+
+          urls.forEach(url => images.add(getHighResImageUrl(url)));
         }
       });
-    });
-
-    // data-gallery-images özelliğinden görselleri çek
-    const galleryElements = [
-      '[data-gallery-images]',
-      '[data-images]',
-      '[data-product-images]'
-    ];
-
-    galleryElements.forEach(selector => {
-      const element = $(selector).first();
-      const data = element.attr('data-gallery-images') || 
-                  element.attr('data-images') || 
-                  element.attr('data-product-images');
-
-      if (data) {
-        try {
-          const galleryImages = JSON.parse(data);
-          if (Array.isArray(galleryImages)) {
-            galleryImages.forEach(img => {
-              if (typeof img === 'string') {
-                images.add(getHighResImageUrl(img));
-              }
-            });
-          }
-        } catch (error) {
-          debug(`Gallery data parse hatası (${selector}):`, error);
-        }
-      }
     });
 
     debug(`Toplam ${images.size} benzersiz görsel bulundu`);
@@ -302,7 +286,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       videoUrl = videoElement.attr('src') || null;
     }
 
-    // Ürün açıklamasını çek
+    // Açıklama içeriğini çek
     const description = $('.product-description-text').text().trim() || 
                        $('.detail-desc-content').text().trim() || 
                        $('.description-text').text().trim();
