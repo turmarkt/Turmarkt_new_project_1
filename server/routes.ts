@@ -8,8 +8,7 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
-import { Builder, By, until } from 'selenium-webdriver';
-import firefox from 'selenium-webdriver/firefox';
+import fetch from "node-fetch";
 
 // Debug loglama
 function debug(message: string, data?: any) {
@@ -21,51 +20,22 @@ function cleanPrice(price: string): number {
   return parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.'));
 }
 
-// Kategori yolu işleme fonksiyonu
-function processCategories($: cheerio.CheerioAPI): string[] {
-  const categories: string[] = [];
-
-  // Breadcrumb kategorilerini çek
-  $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
-    const category = $(el).text().trim();
-    // Sadece anlamlı kategori isimlerini al ('>' gibi ayraçları atlayarak)
-    if (category && !category.includes('>') && category !== '') {
-      categories.push(category);
-    }
-  });
-
-  debug("Çekilen kategori yolu:", categories);
-
-  // Eğer kategori bulunamadıysa varsayılan kategori yapısını kullan
-  if (categories.length === 0) {
-    return ['Trendyol', 'Giyim'];
-  }
-
-  return categories;
-}
-
-// Selenium ile veri çekme fonksiyonu
+// Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
-  let driver;
   try {
-    const options = new firefox.Options();
-    options.addArguments('--headless');
-    options.setBinary(process.env.FIREFOX_BIN);
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7'
+      }
+    });
 
-    driver = await new Builder()
-      .forBrowser('firefox')
-      .setFirefoxOptions(options)
-      .build();
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
 
-    await driver.get(url);
-
-    // Sayfa yüklenene kadar bekle
-    await driver.wait(until.elementLocated(By.css('.product-price-container')), 15000);
-
-    // Fiyat elementinin görünür olmasını bekle
-    await driver.wait(until.elementLocated(By.css('.prc-box-dscntd, .prc-box-sllng')), 15000);
-
-    const html = await driver.getPageSource();
+    const html = await response.text();
     debug("HTML içeriği başarıyla alındı, uzunluk:", html.length);
     return cheerio.load(html);
 
@@ -76,10 +46,6 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
       statusText: "Fetch Error",
       details: error.message
     });
-  } finally {
-    if (driver) {
-      await driver.quit();
-    }
   }
 }
 
@@ -129,7 +95,16 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     // Kategorileri çek
-    const categories = processCategories($);
+    const categories: string[] = [];
+    $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
+      const category = $(el).text().trim();
+      // Sadece anlamlı kategori isimlerini al ('>' gibi ayraçları atlayarak)
+      if (category && !category.includes('>') && category !== '') {
+        categories.push(category);
+      }
+    });
+
+    debug("Çekilen kategori yolu:", categories);
 
     // Varyantları çek
     const variants = {
