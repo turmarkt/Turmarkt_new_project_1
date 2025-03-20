@@ -10,17 +10,29 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Package, ArrowRight, FileText, ChevronDown } from "lucide-react";
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+  Loader2,
+  Package,
+  ArrowRight,
+  FileText,
+  AlertTriangle,
+  XCircle,
+  AlertCircle
+} from "lucide-react";
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+} from "@/components/ui/alert";
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{
+    message: string;
+    status?: number;
+    details?: string;
+  } | null>(null);
+
   const { toast } = useToast();
 
   const form = useForm({
@@ -43,7 +55,7 @@ export default function Home() {
     mutationFn: async (url: string) => {
       const res = await apiRequest("POST", "/api/scrape", { url });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.message);
+      if (!res.ok) throw { ...data, status: res.status };
       return data;
     },
     onSuccess: (data) => {
@@ -54,8 +66,12 @@ export default function Home() {
         description: "Ürün verileri başarıyla çekildi"
       });
     },
-    onError: (error: Error) => {
-      setError(error.message);
+    onError: (error: any) => {
+      setError({
+        message: error.message,
+        status: error.status,
+        details: error.details
+      });
       toast({
         title: "Hata",
         description: error.message,
@@ -112,6 +128,35 @@ export default function Home() {
             <p className="text-sm text-gray-400">Ürün verilerini Shopify'a uyumlu formata dönüştürün</p>
           </div>
 
+          <AnimatePresence>
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="mb-4"
+              >
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>
+                    {error.status === 403 ? "Erişim Engellendi" :
+                     error.status === 404 ? "Ürün Bulunamadı" :
+                     error.status === 504 ? "Zaman Aşımı" :
+                     "Hata Oluştu"}
+                  </AlertTitle>
+                  <AlertDescription className="mt-2">
+                    <p>{error.message}</p>
+                    {error.details && (
+                      <p className="text-xs mt-1 text-gray-400">
+                        Teknik detay: {error.details}
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="relative">
               <Input
@@ -143,12 +188,10 @@ export default function Home() {
             >
               <Card className="bg-gray-900 border-gray-800">
                 <CardContent className="p-4 space-y-4">
-                  {/* Kategori Yolu */}
                   <div className="text-xs text-gray-400 mb-2">
                     {["Trendyol", ...product.categories].join(" / ")}
                   </div>
 
-                  {/* Başlık ve Fiyat */}
                   <div className="space-y-3 border-b border-gray-800 pb-4">
                     <h2 className="text-lg font-semibold">{product.title}</h2>
                     <div className="flex items-baseline gap-2">
@@ -157,7 +200,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Ürün Özellikleri */}
                   <Accordion type="single" collapsible className="w-full">
                     <AccordionItem value="features">
                       <AccordionTrigger className="text-sm hover:no-underline">
@@ -181,7 +223,6 @@ export default function Home() {
                     </AccordionItem>
                   </Accordion>
 
-                  {/* Ürün Görselleri */}
                   <div className="space-y-2">
                     <h3 className="text-xs font-semibold text-gray-400">Ürün Görselleri</h3>
                     <div className="flex gap-2 overflow-x-auto pb-2">
@@ -196,7 +237,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Varyantlar */}
                   <div className="space-y-3">
                     {product.variants.sizes.length > 0 && (
                       <div className="space-y-2">
@@ -225,7 +265,6 @@ export default function Home() {
                     )}
                   </div>
 
-                  {/* Export Button */}
                   <Button
                     onClick={() => exportMutation.mutate()}
                     disabled={exportMutation.isPending}
