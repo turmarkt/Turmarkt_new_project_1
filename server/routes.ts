@@ -1,79 +1,45 @@
+import { chromium } from "playwright";
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
 import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct, type Product } from "@shared/schema";
-import { ZodError } from "zod";
-import fetch from "node-fetch";
-import { TrendyolScrapingError, URLValidationError, ProductDataError, handleError } from "./errors";
+import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
 
 // HTML veri çekme fonksiyonu
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   console.log("Trendyol'dan veri çekiliyor:", url);
 
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-    'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-    'Accept-Encoding': 'gzip, deflate, br',
-    'Cache-Control': 'no-cache',
-    'Cookie': '', // Will be populated from response
-    'Pragma': 'no-cache',
-    'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-    'Sec-Ch-Ua-Mobile': '?0',
-    'Sec-Ch-Ua-Platform': '"Windows"',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-    'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1',
-    'Connection': 'keep-alive'
-  };
-
   try {
-    // First request to get cookies
-    const initialResponse = await fetch(url, { 
-      headers,
-      redirect: 'follow'
+    // Tarayıcıyı başlat
+    const browser = await chromium.launch({
+      headless: true // Arka planda çalıştır
     });
 
-    // Get cookies from response
-    const cookies = initialResponse.headers.get('set-cookie');
-    if (cookies) {
-      headers.Cookie = cookies;
-    }
-
-    // Wait a bit before second request
-    await new Promise(resolve => setTimeout(resolve, 2000));
-
-    // Second request with cookies
-    const response = await fetch(url, { 
-      headers,
-      redirect: 'follow'
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
     });
 
-    if (!response.ok) {
-      if (response.status === 403) {
-        console.error("403 Forbidden - Cloudflare blocked access");
-        throw new TrendyolScrapingError("Trendyol erişimi engelledi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
-          status: response.status,
-          statusText: response.statusText
-        });
-      }
+    const page = await context.newPage();
 
-      throw new TrendyolScrapingError("Ürün sayfası yüklenemedi", {
-        status: response.status,
-        statusText: response.statusText
-      });
-    }
+    // Sayfayı yükle
+    console.log("Sayfa yükleniyor...");
+    await page.goto(url, { waitUntil: 'networkidle' });
 
-    const html = await response.text();
+    // Cloudflare korumasını geçmek için biraz bekle
+    await page.waitForTimeout(5000);
 
-    // Verify we got a valid response
+    // Sayfanın HTML içeriğini al
+    const html = await page.content();
+
+    // Tarayıcıyı kapat
+    await browser.close();
+
+    // HTML içeriğini kontrol et
     if (!html.includes('trendyol.com') || html.includes('Attention Required! | Cloudflare')) {
       throw new TrendyolScrapingError("Geçersiz sayfa yanıtı alındı", {
-        status: response.status,
+        status: 403,
         statusText: "Invalid Response"
       });
     }
