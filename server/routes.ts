@@ -120,9 +120,13 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // data-gallery-images özelliğinden görselleri çek
     const galleryData = $('[data-gallery-images]').first().attr('data-gallery-images');
+    debug("Gallery Data raw:", galleryData);
+
     if (galleryData) {
       try {
         const galleryImages = JSON.parse(galleryData);
+        debug("Parsed gallery images:", galleryImages);
+
         if (Array.isArray(galleryImages)) {
           galleryImages.forEach(img => {
             if (typeof img === 'string') {
@@ -162,6 +166,31 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         }
       }
     });
+
+    // data-gallery-list özelliğinden görselleri çek
+    const galleryListData = $('[data-gallery-list]').first().attr('data-gallery-list');
+    debug("Gallery List Data raw:", galleryListData);
+
+    if (galleryListData) {
+      try {
+        const galleryList = JSON.parse(galleryListData);
+        debug("Parsed gallery list:", galleryList);
+
+        if (Array.isArray(galleryList)) {
+          galleryList.forEach(item => {
+            if (typeof item === 'string' && item.includes('ty')) {
+              const highResUrl = getHighResImageUrl(item);
+              if (!images.includes(highResUrl)) {
+                images.push(highResUrl);
+                debug(`Gallery List'den görsel eklendi: ${highResUrl}`);
+              }
+            }
+          });
+        }
+      } catch (error) {
+        debug("Gallery List parse hatası:", error);
+      }
+    }
 
     debug(`Toplam ${images.length} görsel bulundu:`, images);
 
