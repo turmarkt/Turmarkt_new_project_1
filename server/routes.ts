@@ -115,8 +115,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const images: string[] = [];
 
     // Ana ürün görsellerini çek
-    $('.gallery-modal-content img, .product-img img, .product-slide img, .gallery-modal-content picture source').each((_, element) => {
-      let src = $(element).attr('src') || $(element).attr('data-src') || $(element).attr('srcset');
+    $('.gallery-modal-content img, .product-img img, .gallery-modal-content picture source, [data-src*="ty"], [data-original*="ty"]').each((_, element) => {
+      let src = $(element).attr('src') || $(element).attr('data-src') || $(element).attr('data-original') || $(element).attr('srcset');
 
       if (src) {
         // Virgülle ayrılmış srcset değerlerini işle
@@ -124,11 +124,13 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           src = src.split(',')[0].trim().split(' ')[0];
         }
 
-        // Thumbnail URL'lerini yüksek çözünürlüklü versiyonlara dönüştür
+        // Tüm olası boyut dönüşümlerini uygula
         const highResSrc = src
           .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
           .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
-          .replace('/mnresize/500/750/', '/mnresize/1200/1800/');
+          .replace('/mnresize/500/750/', '/mnresize/1200/1800/')
+          .replace('/mnresize/600/900/', '/mnresize/1200/1800/')
+          .replace('/mnresize/800/1200/', '/mnresize/1200/1800/');
 
         if (!images.includes(highResSrc)) {
           images.push(highResSrc);
@@ -137,18 +139,26 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Ek görsel kaynaklarını kontrol et
+    // Ek görsel elementlerini kontrol et
     const additionalSelectors = [
       '.product-container img',
       '.image-container img',
       '.product-stamp img',
       'picture[data-original] source',
-      '[data-gallery-images] img'
+      '[data-gallery-images] img',
+      '.owl-lazy',
+      '.js-image',
+      '.slick-slide img',
+      '[data-lazy]'
     ];
 
     for (const selector of additionalSelectors) {
       $(selector).each((_, element) => {
-        let src = $(element).attr('src') || $(element).attr('data-src') || $(element).attr('srcset');
+        let src = $(element).attr('src') || 
+                  $(element).attr('data-src') || 
+                  $(element).attr('data-original') || 
+                  $(element).attr('data-lazy') || 
+                  $(element).attr('srcset');
 
         if (src) {
           if (src.includes(',')) {
@@ -158,7 +168,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           const highResSrc = src
             .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
             .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
-            .replace('/mnresize/500/750/', '/mnresize/1200/1800/');
+            .replace('/mnresize/500/750/', '/mnresize/1200/1800/')
+            .replace('/mnresize/600/900/', '/mnresize/1200/1800/')
+            .replace('/mnresize/800/1200/', '/mnresize/1200/1800/');
 
           if (!images.includes(highResSrc)) {
             images.push(highResSrc);
@@ -167,6 +179,33 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         }
       });
     }
+
+    // data-gallery-images özelliğindeki JSON'u parse et
+    $('[data-gallery-images]').each((_, element) => {
+      try {
+        const galleryData = $(element).attr('data-gallery-images');
+        if (galleryData) {
+          const galleryImages = JSON.parse(galleryData);
+          if (Array.isArray(galleryImages)) {
+            galleryImages.forEach(img => {
+              if (typeof img === 'string' && !images.includes(img)) {
+                const highResSrc = img
+                  .replace('/mnresize/128/192/', '/mnresize/1200/1800/')
+                  .replace('/mnresize/256/384/', '/mnresize/1200/1800/')
+                  .replace('/mnresize/500/750/', '/mnresize/1200/1800/')
+                  .replace('/mnresize/600/900/', '/mnresize/1200/1800/')
+                  .replace('/mnresize/800/1200/', '/mnresize/1200/1800/');
+
+                images.push(highResSrc);
+                debug(`Gallery JSON'dan görsel eklendi: ${highResSrc}`);
+              }
+            });
+          }
+        }
+      } catch (error) {
+        debug("Gallery JSON parse hatası:", error);
+      }
+    });
 
     debug(`Toplam ${images.length} görsel bulundu:`, images);
 
