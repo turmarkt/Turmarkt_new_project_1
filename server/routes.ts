@@ -5,59 +5,38 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
+import { SeleniumManager } from './selenium-manager';
+import { getNextProxy, checkProxyStatus } from './proxy';
 import fetch from "node-fetch";
+
 
 // Debug loglama fonksiyonu
 function debug(message: string, data?: any) {
   console.log(`[DEBUG] ${message}`, data ? JSON.stringify(data, null, 2) : '');
 }
 
-// Temel veri çekme fonksiyonu
+// Gelişmiş veri çekme fonksiyonu
 async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.CheerioAPI> {
   debug(`Veri çekme denemesi ${retryCount + 1}/5 başlatıldı:`, { url });
 
+  let seleniumManager: SeleniumManager | null = null;
+
   try {
-    // Random delay
-    const delay = Math.floor(Math.random() * 2000) + 1000;
-    await new Promise(resolve => setTimeout(resolve, delay));
+    // Proxy seç ve kontrol et
+    const proxy = getNextProxy();
+    const proxyStatus = await checkProxyStatus(proxy);
 
-    // Request headers
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-      'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Accept-Encoding': 'gzip, deflate, br',
-      'Cache-Control': 'max-age=0',
-      'Connection': 'keep-alive',
-      'DNT': '1',
-      'Referer': 'https://www.google.com/',
-      'Sec-Fetch-Dest': 'document',
-      'Sec-Fetch-Mode': 'navigate',
-      'Sec-Fetch-Site': 'cross-site',
-      'Sec-Fetch-User': '?1',
-      'Upgrade-Insecure-Requests': '1'
-    };
-
-    // HTTP isteği
-    debug("HTTP isteği yapılıyor...");
-    const response = await fetch(url, { 
-      headers,
-      redirect: 'follow',
-      follow: 5
-    });
-
-    debug("Yanıt alındı:", {
-      status: response.status,
-      statusText: response.statusText,
-      headers: response.headers.raw()
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    if (!proxyStatus) {
+      throw new Error('Selected proxy is not working');
     }
 
-    const html = await response.text();
-    debug("HTML içeriği alındı, uzunluk:", html.length);
+    // Selenium manager oluştur
+    seleniumManager = new SeleniumManager(proxy);
+    await seleniumManager.initDriver();
+
+    // Sayfayı yükle
+    debug("Sayfa yükleniyor...");
+    const html = await seleniumManager.loadPage(url);
 
     // HTML içeriğini kontrol et
     if (!html.includes('trendyol.com')) {
@@ -65,25 +44,7 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
       throw new Error('Invalid response - trendyol.com not found in content');
     }
 
-    // Bot koruması kontrolü
-    if (html.includes('Checking if the site connection is secure') || 
-        html.includes('Attention Required! | Cloudflare') ||
-        html.includes('Please Wait... | Cloudflare')) {
-      debug("Bot koruması tespit edildi");
-      throw new Error('Bot protection detected');
-    }
-
-    // Ürün sayfası kontrolü
-    const $ = cheerio.load(html);
-    const isProductPage = $('.product-detail-container').length > 0;
-
-    if (!isProductPage) {
-      debug("Ürün sayfası bulunamadı");
-      throw new Error('Product page not found');
-    }
-
-    debug("Sayfa başarıyla yüklendi");
-    return $;
+    return cheerio.load(html);
 
   } catch (error: any) {
     debug("Veri çekme hatası:", { 
@@ -92,7 +53,6 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
       retryCount 
     });
 
-    // Retry mekanizması
     if (retryCount < 4) {
       const waitTime = Math.min(1000 * Math.pow(2, retryCount), 8000);
       debug(`${waitTime}ms bekledikten sonra yeniden denenecek`);
@@ -110,6 +70,11 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
         details: error.message
       }
     );
+
+  } finally {
+    if (seleniumManager) {
+      await seleniumManager.cleanup();
+    }
   }
 }
 

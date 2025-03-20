@@ -1,16 +1,21 @@
-import type { ProxyConfig } from 'playwright';
-import fetch from 'node-fetch';
-import HttpsProxyAgent from 'https-proxy-agent';
+export interface ProxyConfig {
+  host: string;
+  port: number;
+  username?: string;
+  password?: string;
+}
 
-// Proxy yapılandırması
+// Proxy listesi
 const proxyList: ProxyConfig[] = [
   {
-    server: 'http://proxy1.example.com:8080',
+    host: 'proxy1.example.com',
+    port: 8080,
     username: process.env.PROXY_USER,
     password: process.env.PROXY_PASS
   },
   {
-    server: 'http://proxy2.example.com:8080',
+    host: 'proxy2.example.com',
+    port: 8080,
     username: process.env.PROXY_USER,
     password: process.env.PROXY_PASS
   }
@@ -28,10 +33,7 @@ export function getNextProxy(): ProxyConfig {
 // Proxy durumunu kontrol et
 export async function checkProxyStatus(proxy: ProxyConfig): Promise<boolean> {
   try {
-    const proxyAgent = new HttpsProxyAgent(proxy.server);
     const response = await fetch('https://api.ipify.org?format=json', {
-      // @ts-ignore
-      agent: proxyAgent,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
       },
@@ -40,7 +42,7 @@ export async function checkProxyStatus(proxy: ProxyConfig): Promise<boolean> {
 
     return response.ok;
   } catch (error) {
-    console.error(`Proxy kontrolü başarısız: ${proxy.server}`, error);
+    console.error(`Proxy kontrolü başarısız: ${proxy.host}:${proxy.port}`, error);
     return false;
   }
 }
