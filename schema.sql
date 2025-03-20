@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS products (
   price TEXT NOT NULL,
   base_price TEXT NOT NULL,
   images TEXT[] NOT NULL,
+  video TEXT,
   variants JSONB NOT NULL,
   attributes JSONB NOT NULL,
   categories TEXT[] NOT NULL,

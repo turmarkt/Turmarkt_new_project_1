@@ -62,6 +62,21 @@ function processVariants(variants: any[]): { sizes: string[], colors: string[] }
   return result;
 }
 
+// Kategori yolu işleme fonksiyonu
+function processCategories($: cheerio.CheerioAPI): string[] {
+  const categories: string[] = [];
+
+  // Breadcrumb kategorilerini çek
+  $('.product-path span').each((_, el) => {
+    const category = $(el).text().trim();
+    if (category) {
+      categories.push(category);
+    }
+  });
+
+  return categories.length > 0 ? categories : ['Giyim'];
+}
+
 // Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
@@ -89,7 +104,7 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   }
 }
 
-// Ana veri çekme ve işleme fonksiyonu
+// Ana scraping fonksiyonu
 async function scrapeProduct(url: string): Promise<InsertProduct> {
   debug("Scraping başlatıldı:", url);
 
@@ -114,6 +129,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const price = (basePrice * 1.15).toFixed(2); // %15 kar ekle
     debug("Fiyat hesaplandı:", { basePrice, calculatedPrice: price });
 
+    // Video URL'sini çek
+    let videoUrl = '';
+    if (schema.video) {
+      videoUrl = schema.video.contentUrl || schema.video.url || '';
+    }
+
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
@@ -122,9 +143,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       price: price.toString(),
       basePrice: basePrice.toString(),
       images: schema.image?.contentUrl || [],
+      video: videoUrl,
       variants: processVariants(schema.hasVariant),
       attributes: {},
-      categories: ['Giyim'],
+      categories: processCategories($),
       tags: []
     };
 
