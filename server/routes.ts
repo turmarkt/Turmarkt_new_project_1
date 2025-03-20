@@ -16,6 +16,11 @@ function debug(message: string, data?: any) {
   console.log(`[DEBUG] ${message}`, data ? JSON.stringify(data, null, 2) : '');
 }
 
+// Fiyat temizleme yardımcı fonksiyonu
+function cleanPrice(price: string): number {
+  return parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.'));
+}
+
 // Temel veri çekme fonksiyonu
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
@@ -56,16 +61,29 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
-    const price = $('.prc-box-dscntd').first().text().trim() || $('.prc-box-sllng').first().text().trim();
-    const basePrice = $('.prc-box-orgnl').first().text().trim() || price;
+    // Fiyat bilgilerini çek ve kar oranını uygula
+    const rawPrice = $('.prc-box-dscntd').first().text().trim() || $('.prc-box-sllng').first().text().trim();
+    const rawBasePrice = $('.prc-box-orgnl').first().text().trim() || rawPrice;
+
+    if (!rawPrice) {
+      throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
+    }
+
+    // Fiyatları temizle ve hesapla
+    const basePrice = cleanPrice(rawBasePrice);
+    const price = (basePrice * 1.15).toFixed(2); // %15 kar ekle
+
+    debug("Fiyat hesaplandı:", { rawPrice, rawBasePrice, basePrice, calculatedPrice: price });
 
     const description = $('.product-description-text').text().trim();
 
     // Görselleri çek
     const images: string[] = [];
-    $('.gallery-modal-content img').each((_, img) => {
+    $('.gallery-modal-content img, .product-img img').each((_, img) => {
       const src = $(img).attr('src');
-      if (src) images.push(src);
+      if (src && !images.includes(src)) {
+        images.push(src);
+      }
     });
 
     // Varyantları çek
@@ -75,18 +93,24 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     };
 
     // Bedenleri çek
-    $('.sp-itm:not(.so)').each((_, size) => {
-      variants.sizes.push($(size).text().trim());
+    $('.sp-itm:not(.so), .variant-list-item:not(.disabled)').each((_, size) => {
+      const sizeText = $(size).text().trim();
+      if (sizeText && !variants.sizes.includes(sizeText)) {
+        variants.sizes.push(sizeText);
+      }
     });
 
     // Renkleri çek
-    $('.slc-txt').each((_, color) => {
-      variants.colors.push($(color).text().trim());
+    $('.slc-txt, .color-list li span').each((_, color) => {
+      const colorText = $(color).text().trim();
+      if (colorText && !variants.colors.includes(colorText)) {
+        variants.colors.push(colorText);
+      }
     });
 
     // Özellikleri çek
     const attributes: Record<string, string> = {};
-    $('.detail-attr-container tr').each((_, row) => {
+    $('.detail-attr-container tr, .product-feature-details tr').each((_, row) => {
       const label = $(row).find('th').text().trim();
       const value = $(row).find('td').text().trim();
       if (label && value) {
@@ -104,8 +128,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       url,
       title,
       description,
-      price: price.replace(/[^\d,]/g, ''),
-      basePrice: basePrice.replace(/[^\d,]/g, ''),
+      price: price.toString(),
+      basePrice: basePrice.toString(),
       images,
       variants,
       attributes,
