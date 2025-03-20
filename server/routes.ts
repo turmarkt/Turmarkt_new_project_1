@@ -49,6 +49,12 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
 
     // Cluster task tanımla
     const html = await cluster.execute(async ({ page, data: pageUrl }) => {
+      // Stealth teknikleri uygula
+      await applyStealthTechniques(page);
+
+      // Bot koruması bypass
+      await detectAndBypassProtection(page);
+
       // Gelişmiş browser fingerprint gizleme
       await page.evaluateOnNewDocument(() => {
         // WebGL fingerprint gizleme
@@ -166,36 +172,48 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
       // Gelişmiş insan davranışı simülasyonu
       await simulateAdvancedHumanBehavior(page);
 
-      // Sayfa yükleme
-      console.log("Sayfa yükleniyor...");
-      await page.goto(pageUrl, { 
-        waitUntil: 'networkidle0',
-        timeout: 30000 
-      });
-
-      // Sayfanın tam olarak yüklenmesini bekle
-      await page.waitForFunction(() => {
-        const readyState = document.readyState;
-        return readyState === 'complete';
-      });
-
-      // Cloudflare kontrolü
-      const cloudflareDetected = await page.evaluate(() => {
-        return document.title.includes('Attention Required') || 
-               document.body.textContent.includes('Checking your browser') ||
-               document.querySelector('*:contains("Attention Required")') !== null;
-      });
-
-      if (cloudflareDetected) {
-        throw new TrendyolScrapingError("Güvenlik kontrolü nedeniyle erişim engellendi", {
-          status: 403,
-          statusText: "Cloudflare Protection",
-          details: "Cloudflare güvenlik kontrolü aşılamadı"
+      try {
+        // Sayfa yükleme
+        console.log("Sayfa yükleniyor...");
+        await page.goto(pageUrl, { 
+          waitUntil: 'networkidle0',
+          timeout: 30000 
         });
-      }
 
-      // Ürün detay kontrolü
-      await page.waitForSelector('.product-detail-container', { timeout: 10000 });
+        // Sayfanın tam olarak yüklenmesini bekle
+        await page.waitForFunction(() => {
+          const readyState = document.readyState;
+          return readyState === 'complete';
+        });
+
+        // Cloudflare kontrolü
+        const cloudflareDetected = await page.evaluate(() => {
+          return document.title.includes('Attention Required') || 
+                 document.body.textContent.includes('Checking your browser') ||
+                 document.querySelector('*:contains("Attention Required")') !== null;
+        });
+
+        if (cloudflareDetected) {
+          throw new TrendyolScrapingError("Güvenlik kontrolü nedeniyle erişim engellendi", {
+            status: 403,
+            statusText: "Cloudflare Protection",
+            details: "Cloudflare güvenlik kontrolü aşılamadı"
+          });
+        }
+
+        // Ürün detay kontrolü
+        await page.waitForSelector('.product-detail-container', { timeout: 10000 });
+
+      } catch (error) {
+        if (error.message.includes('timeout')) {
+          throw new TrendyolScrapingError("Sayfa yüklenemedi, zaman aşımı", {
+            status: 504,
+            statusText: "Timeout",
+            details: error.message
+          });
+        }
+        throw error;
+      }
 
       // Son kontroller ve insan davranışı
       await simulateAdvancedHumanBehavior(page);
@@ -660,11 +678,12 @@ export async function registerRoutes(app: Express) {
         return res.json(existing);
       }
 
+      console.log("Ürün verileri çekiliyor:", url);
       const product = await scrapeProduct(url);
 
-      console.log("Ürün veritabanına kaydediliyor");
+      console.log("Ürün başarıyla çekildi, kaydediliyor");
       const saved = await storage.saveProduct(product);
-      console.log("Ürün başarıyla kaydedildi:", saved.id);
+      console.log("Ürün kaydedildi:", saved.id);
 
       res.json(saved);
 
@@ -830,7 +849,7 @@ export async function registerRoutes(app: Express) {
           {id: 'Weight unit', title: 'Weight unit'},
           {id: 'Image Src', title: 'Image Src'},
           {id: 'Image Position', title: 'Image Position'},
-          {id: 'Image alt text', title: 'Image alt text'},
+          {id: 'Image alt text', title: 'Imagealt text'},
           {id: 'Variant Image', title: 'Variant Image'},
           {id: 'SEO Title', title: 'SEO Title'},
           {id: 'SEO Description', title: 'SEO Description'}
@@ -848,4 +867,15 @@ export async function registerRoutes(app: Express) {
   });
 
   return httpServer;
+}
+
+// Placeholder functions -  Replace with actual implementations
+async function applyStealthTechniques(page: any) {
+  // Add your stealth techniques here
+  console.log('Applying stealth techniques...');
+}
+
+async function detectAndBypassProtection(page: any) {
+  // Add your bot protection bypass logic here
+  console.log('Detecting and bypassing protection...');
 }
