@@ -113,12 +113,34 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Görselleri çek
     const images: string[] = [];
-    $('.gallery-modal-content img, .product-img img').each((_, img) => {
-      const src = $(img).attr('src');
-      if (src && !images.includes(src)) {
-        images.push(src);
+    $('.gallery-modal-content img, .product-img img, .product-slide img, .product-stamp img').each((_, img) => {
+      const src = $(img).attr('src') || $(img).attr('data-src');
+      if (src) {
+        // URL'yi yüksek çözünürlüklü versiyona dönüştür
+        const highResSrc = src.replace('/mnresize/128/192/', '/mnresize/1200/1800/');
+        if (!images.includes(highResSrc)) {
+          images.push(highResSrc);
+          debug(`Görsel eklendi: ${highResSrc}`);
+        }
       }
     });
+
+    // Eğer hala görsel bulunamadıysa alternatif seçicileri dene
+    if (images.length === 0) {
+      $('.product-container img, .image-container img').each((_, img) => {
+        const src = $(img).attr('src') || $(img).attr('data-src');
+        if (src) {
+          const highResSrc = src.replace('/mnresize/128/192/', '/mnresize/1200/1800/');
+          if (!images.includes(highResSrc)) {
+            images.push(highResSrc);
+            debug(`Alternatif görsel eklendi: ${highResSrc}`);
+          }
+        }
+      });
+    }
+
+    debug(`Toplam ${images.length} görsel bulundu`);
+
 
     // Video URL'sini çek
     let videoUrl = null;
