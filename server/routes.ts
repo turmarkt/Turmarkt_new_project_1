@@ -25,9 +25,11 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
     const response = await fetch(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
+        'Cache-Control': 'no-cache',
+        'Pragma': 'no-cache'
       }
     });
 
@@ -62,11 +64,29 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
+    // Tüm olası fiyat seçicileri
+    const priceSelectors = [
+      '.prc-box-dscntd',
+      '.prc-box-sllng',
+      '.product-price-container .prc-dsc',
+      '.product-price-container .prc',
+      '.pr-bx-pr-dsc',
+      '.pr-bx-pr-sv'
+    ];
+
     // Fiyat bilgilerini çek
-    const priceSelector = '.product-price-container .prc-box-dscntd, .product-price-container .prc-box-sllng';
-    const rawPrice = $(priceSelector).first().text().trim();
+    let rawPrice = '';
+    for (const selector of priceSelectors) {
+      const priceElement = $(selector).first();
+      if (priceElement.length > 0) {
+        rawPrice = priceElement.text().trim();
+        debug(`Fiyat bulundu (${selector}):`, rawPrice);
+        break;
+      }
+    }
 
     if (!rawPrice) {
+      debug("Fiyat elementleri bulunamadı. DOM yapısı:", $('.product-price-container').html());
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
 
@@ -98,13 +118,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const categories: string[] = [];
     $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
       const category = $(el).text().trim();
-      // Sadece anlamlı kategori isimlerini al ('>' gibi ayraçları atlayarak)
       if (category && !category.includes('>') && category !== '') {
         categories.push(category);
       }
     });
-
-    debug("Çekilen kategori yolu:", categories);
 
     // Varyantları çek
     const variants = {
