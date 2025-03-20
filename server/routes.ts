@@ -8,17 +8,8 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import { createObjectCsvWriter } from "csv-writer";
-import axios from "axios";
-import axiosRetry from "axios-retry";
-
-// Axios retry konfigürasyonu
-axiosRetry(axios, { 
-  retries: 3,
-  retryDelay: (retryCount) => retryCount * 1000,
-  retryCondition: (error) => {
-    return axiosRetry.isNetworkOrIdempotentRequestError(error) || error.response?.status === 500;
-  }
-});
+import { Builder, By, until } from 'selenium-webdriver';
+import firefox from 'selenium-webdriver/firefox';
 
 // Debug loglama
 function debug(message: string, data?: any) {
@@ -28,47 +19,6 @@ function debug(message: string, data?: any) {
 // Fiyat temizleme yardımcı fonksiyonu
 function cleanPrice(price: string): number {
   return parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.'));
-}
-
-// Varyant işleme fonksiyonu
-function processVariants(variants: any[]): { sizes: string[], colors: string[] } {
-  const result = {
-    sizes: [] as string[],
-    colors: [] as string[]
-  };
-
-  if (Array.isArray(variants)) {
-    // Tüm bedenleri topla ve düzleştir
-    const allSizes = variants.reduce((sizes, variant) => {
-      if (variant.size) {
-        // Eğer size bir array ise düzleştir, değilse tek eleman olarak al
-        const sizeArray = Array.isArray(variant.size) ? variant.size : [variant.size];
-        return [...sizes, ...sizeArray];
-      }
-      return sizes;
-    }, [] as string[]);
-
-    // Benzersiz bedenleri filtrele
-    result.sizes = [...new Set(allSizes)].sort((a, b) => {
-      // Numerik sıralama yap
-      const numA = parseInt(a);
-      const numB = parseInt(b);
-      return numA - numB;
-    });
-
-    // Renkleri ekle (tekrarsız)
-    const allColors = variants.reduce((colors, variant) => {
-      if (variant.color && !colors.includes(variant.color)) {
-        colors.push(variant.color);
-      }
-      return colors;
-    }, [] as string[]);
-
-    result.colors = [...new Set(allColors)];
-  }
-
-  debug("İşlenmiş varyantlar:", result);
-  return result;
 }
 
 // Kategori yolu işleme fonksiyonu
@@ -94,48 +44,42 @@ function processCategories($: cheerio.CheerioAPI): string[] {
   return categories;
 }
 
-// Temel veri çekme fonksiyonu
+// Selenium ile veri çekme fonksiyonu
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
+  let driver;
   try {
-    const response = await axios.get(url, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-        'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
-        'Cache-Control': 'no-cache',
-        'Pragma': 'no-cache',
-        'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
-        'Sec-Ch-Ua-Mobile': '?0',
-        'Sec-Ch-Ua-Platform': '"Windows"',
-        'Sec-Fetch-Dest': 'document',
-        'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
-        'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
-      },
-      maxRedirects: 5,
-      timeout: 10000
-    });
+    const options = new firefox.Options();
+    options.addArguments('--headless');
+    options.setBinary(process.env.FIREFOX_BIN);
 
-    if (response.status !== 200) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
+    driver = await new Builder()
+      .forBrowser('firefox')
+      .setFirefoxOptions(options)
+      .build();
 
-    const html = response.data;
-    if (!html.includes('trendyol.com')) {
-      throw new Error('Invalid response - trendyol.com not found in content');
-    }
+    await driver.get(url);
 
+    // Sayfa yüklenene kadar bekle
+    await driver.wait(until.elementLocated(By.css('.product-price-container')), 15000);
+
+    // Fiyat elementinin görünür olmasını bekle
+    await driver.wait(until.elementLocated(By.css('.prc-box-dscntd, .prc-box-sllng')), 15000);
+
+    const html = await driver.getPageSource();
     debug("HTML içeriği başarıyla alındı, uzunluk:", html.length);
     return cheerio.load(html);
 
   } catch (error: any) {
     debug("Veri çekme hatası:", error);
     throw new TrendyolScrapingError("Sayfa yüklenemedi", {
-      status: error.response?.status || 500,
+      status: 500,
       statusText: "Fetch Error",
       details: error.message
     });
+  } finally {
+    if (driver) {
+      await driver.quit();
+    }
   }
 }
 
@@ -186,7 +130,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Kategorileri çek
     const categories = processCategories($);
-
 
     // Varyantları çek
     const variants = {
@@ -278,92 +221,6 @@ export async function registerRoutes(app: Express) {
 
     } catch (error) {
       debug("API hatası:", error);
-      const { status, message, details } = handleError(error);
-      res.status(status).json({ message, details });
-    }
-  });
-
-  // CSV export endpoint'i
-  app.post("/api/export", async (req, res) => {
-    try {
-      const { product } = req.body;
-      if (!product) {
-        throw new ProductDataError("Ürün verisi bulunamadı", "export");
-      }
-
-      const csvWriter = createObjectCsvWriter({
-        path: 'products.csv',
-        header: [
-          { id: 'Handle', title: 'Handle' },
-          { id: 'Title', title: 'Title' },
-          { id: 'Body', title: 'Body (HTML)' },
-          { id: 'Vendor', title: 'Vendor' },
-          { id: 'Product Category', title: 'Product Category' },
-          { id: 'Type', title: 'Type' },
-          { id: 'Tags', title: 'Tags' },
-          { id: 'Published', title: 'Published' },
-          { id: 'Option1 Name', title: 'Option1 Name' },
-          { id: 'Option1 Value', title: 'Option1 Value' },
-          { id: 'Option2 Name', title: 'Option2 Name' },
-          { id: 'Option2 Value', title: 'Option2 Value' },
-          { id: 'Variant SKU', title: 'Variant SKU' },
-          { id: 'Variant Price', title: 'Variant Price' },
-          { id: 'Variant Compare At Price', title: 'Variant Compare At Price' },
-          { id: 'Image Src', title: 'Image Src' },
-          { id: 'Image Alt Text', title: 'Image Alt Text' }
-        ]
-      });
-
-      // Ürün handle'ı oluştur
-      const handle = product.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/-+/g, '-')
-        .replace(/^-|-$/g, '');
-
-      // CSV kaydı oluştur
-      const records = [];
-
-      // Her beden için tek bir varyant oluştur
-      const uniqueSizes = [...new Set(product.variants.sizes)].sort((a, b) => parseInt(a) - parseInt(b));
-      uniqueSizes.forEach((size: string) => {
-        records.push({
-          Handle: handle,
-          Title: product.title,
-          'Body': product.description,
-          'Vendor': product.brand || 'Trendyol',
-          'Product Category': product.categories[0] || 'Giyim',
-          'Type': product.categories[0] || 'Giyim',
-          'Tags': product.tags.join(','),
-          'Published': 'TRUE',
-          'Option1 Name': 'Size',
-          'Option1 Value': size,
-          'Option2 Name': 'Color',
-          'Option2 Value': product.variants.colors[0] || 'Default',
-          'Variant SKU': `${handle}-${size}`,
-          'Variant Price': product.price,
-          'Variant Compare At Price': product.basePrice,
-          'Image Src': product.images[0] || '',
-          'Image Alt Text': product.title
-        });
-      });
-
-      // Ek görseller için kayıtlar
-      if (product.images.length > 1) {
-        product.images.slice(1).forEach((image: string) => {
-          records.push({
-            Handle: handle,
-            'Image Src': image,
-            'Image Alt Text': product.title
-          });
-        });
-      }
-
-      await csvWriter.writeRecords(records);
-      res.download('products.csv');
-
-    } catch (error) {
-      debug("CSV export hatası:", error);
       const { status, message, details } = handleError(error);
       res.status(status).json({ message, details });
     }
