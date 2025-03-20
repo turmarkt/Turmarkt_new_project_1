@@ -100,6 +100,7 @@ async function extractProductSchema($: cheerio.CheerioAPI) {
     const schema = JSON.parse(schemaScript);
     debug("Schema verisi:", schema);
 
+    // Temel şema kontrolü
     if (!schema["@type"] || !schema.name) {
       throw new Error('Invalid schema structure');
     }
@@ -126,24 +127,58 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       throw new ProductDataError("Eksik ürün bilgisi", "basic");
     }
 
+    // Özellikleri çek
+    const attributes: Record<string, string> = {};
+    if (schema.additionalProperty) {
+      schema.additionalProperty.forEach((prop: any) => {
+        if (prop.name && prop.unitText) {
+          attributes[prop.name] = prop.unitText;
+        }
+      });
+    }
+
+    // Varyantları çek
+    const variants = {
+      sizes: [] as string[],
+      colors: [] as string[]
+    };
+
+    if (schema.hasVariant) {
+      schema.hasVariant.forEach((variant: any) => {
+        if (variant.size) {
+          variants.sizes = [...new Set([...variants.sizes, ...(Array.isArray(variant.size) ? variant.size : [variant.size])])];
+        }
+        if (variant.color) {
+          variants.colors = [...new Set([...variants.colors, variant.color])];
+        }
+      });
+    }
+
+    // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
       title: schema.name,
       description: schema.description,
       price: schema.offers?.price?.toString() || "",
       basePrice: schema.offers?.price?.toString() || "",
-      images: schema.image ?
-        (Array.isArray(schema.image) ? schema.image : [schema.image]) : [],
-      variants: { sizes: [], colors: [] },
-      attributes: {},
+      images: schema.image ? 
+        (Array.isArray(schema.image.contentUrl) ? schema.image.contentUrl : [schema.image.contentUrl]) : [],
+      variants,
+      attributes,
       categories: schema.category ?
         (Array.isArray(schema.category) ? schema.category : [schema.category]) :
         ['Giyim'],
       tags: [],
+      brand: schema.brand?.name || schema.manufacturer || ""
     };
 
-    // Kategorileri tags olarak da kullan
-    product.tags = [...product.categories];
+    // Etiketleri oluştur
+    product.tags = [
+      ...product.categories,
+      product.brand,
+      ...variants.colors,
+      ...variants.sizes
+    ].filter(Boolean);
 
     debug("Ürün verisi oluşturuldu:", product);
     return product;
@@ -158,79 +193,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       statusText: "Processing Error",
       details: error.message
     });
-  }
-}
-
-// Ürün özelliklerini çekme
-async function extractAttributes($: cheerio.CheerioAPI): Promise<Record<string, string>> {
-  const attributes: Record<string, string> = {};
-
-  try {
-    // 1. Schema.org verilerinden özellikleri al
-    $('script[type="application/ld+json"]').each((_, script) => {
-      try {
-        const schema = JSON.parse($(script).html() || '{}');
-        if (schema.additionalProperty) {
-          schema.additionalProperty.forEach((prop: any) => {
-            if (prop.name && prop.unitText) {
-              attributes[prop.name] = prop.unitText;
-            }
-          });
-        }
-      } catch (e) {
-        console.error('Schema parse error:', e);
-      }
-    });
-
-    // 2. Öne Çıkan Özellikler bölümünü bul
-    $('.detail-attr-container').each((_, container) => {
-      $(container).find('tr').each((_, row) => {
-        const label = $(row).find('th').text().trim();
-        const value = $(row).find('td').text().trim();
-        if (label && value) {
-          attributes[label] = value;
-        }
-      });
-    });
-
-    // 3. Tüm olası özellik selektörleri
-    const selectors = [
-      '.product-feature-list li',
-      '.detail-attr-item',
-      '.product-properties li',
-      '.detail-border-bottom tr',
-      '.product-details tr',
-      '.featured-attributes-item'
-    ];
-
-    // Her bir selektör için kontrol
-    selectors.forEach(selector => {
-      $(selector).each((_, element) => {
-        let label, value;
-
-        // Etiket-değer çiftlerini bul
-        if ($(element).find('.detail-attr-label, .property-label').length > 0) {
-          label = $(element).find('.detail-attr-label, .property-label').text().trim();
-          value = $(element).find('.detail-attr-value, .property-value').text().trim();
-        } else if ($(element).find('th, td').length > 0) {
-          label = $(element).find('th, td:first-child').text().trim();
-          value = $(element).find('td:last-child').text().trim();
-        } else {
-          const text = $(element).text().trim();
-          [label, value] = text.split(':').map(s => s.trim());
-        }
-
-        if (label && value && !attributes[label]) {
-          attributes[label] = value;
-        }
-      });
-    });
-
-    return attributes;
-
-  } catch (error) {
-    console.error("Özellik çekme hatası:", error);
-    return {};
   }
 }
 
@@ -254,8 +216,6 @@ export async function registerRoutes(app: Express) {
 
       debug("Ürün verileri çekiliyor:", url);
       const product = await scrapeProduct(url);
-      const attributes = await extractAttributes(cheerio.load(await (await fetch(product.url)).text())); // Added attribute extraction
-      product.attributes = attributes; //Assign extracted attributes
       debug("Ürün başarıyla çekildi, kaydediliyor");
       const saved = await storage.saveProduct(product);
       debug("Ürün kaydedildi:", saved.id);
