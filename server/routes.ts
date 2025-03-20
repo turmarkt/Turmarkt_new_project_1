@@ -29,18 +29,36 @@ function processVariants(variants: any[]): { sizes: string[], colors: string[] }
   };
 
   if (Array.isArray(variants)) {
-    variants.forEach(variant => {
-      // Bedenleri ekle (tekrarsız)
-      if (variant.size && !result.sizes.includes(variant.size)) {
-        result.sizes.push(variant.size);
+    // Tüm bedenleri topla ve düzleştir
+    const allSizes = variants.reduce((sizes, variant) => {
+      if (variant.size) {
+        // Eğer size bir array ise düzleştir, değilse tek eleman olarak al
+        const sizeArray = Array.isArray(variant.size) ? variant.size : [variant.size];
+        return [...sizes, ...sizeArray];
       }
-      // Renkleri ekle (tekrarsız)
-      if (variant.color && !result.colors.includes(variant.color)) {
-        result.colors.push(variant.color);
-      }
+      return sizes;
+    }, [] as string[]);
+
+    // Benzersiz bedenleri filtrele
+    result.sizes = [...new Set(allSizes)].sort((a, b) => {
+      // Numerik sıralama yap
+      const numA = parseInt(a);
+      const numB = parseInt(b);
+      return numA - numB;
     });
+
+    // Renkleri ekle (tekrarsız)
+    const allColors = variants.reduce((colors, variant) => {
+      if (variant.color && !colors.includes(variant.color)) {
+        colors.push(variant.color);
+      }
+      return colors;
+    }, [] as string[]);
+
+    result.colors = [...new Set(allColors)];
   }
 
+  debug("İşlenmiş varyantlar:", result);
   return result;
 }
 
@@ -215,8 +233,9 @@ export async function registerRoutes(app: Express) {
       // CSV kaydı oluştur
       const records = [];
 
-      // Her bir beden için varyant oluştur
-      product.variants.sizes.forEach((size: string) => {
+      // Her beden için tek bir varyant oluştur
+      const uniqueSizes = [...new Set(product.variants.sizes)].sort((a, b) => parseInt(a) - parseInt(b));
+      uniqueSizes.forEach((size: string) => {
         records.push({
           Handle: handle,
           Title: product.title,
