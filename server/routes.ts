@@ -9,15 +9,17 @@ import fetch from "node-fetch";
 
 // HTTP veri çekme fonksiyonu
 async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.CheerioAPI> {
-  console.log("Trendyol'dan veri çekiliyor:", url);
+  console.log(`Veri çekme denemesi ${retryCount + 1}/5 başlatıldı:`, url);
 
-  const headers = {
+  const browserHeaders = {
     'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
     'Accept-Language': 'tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7',
     'Accept-Encoding': 'gzip, deflate, br',
     'Cache-Control': 'no-cache',
     'Pragma': 'no-cache',
+    'DNT': '1',
+    'Upgrade-Insecure-Requests': '1',
     'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
     'Sec-Ch-Ua-Mobile': '?0',
     'Sec-Ch-Ua-Platform': '"Windows"',
@@ -25,33 +27,54 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
     'Sec-Fetch-Mode': 'navigate',
     'Sec-Fetch-Site': 'none',
     'Sec-Fetch-User': '?1',
-    'Upgrade-Insecure-Requests': '1',
     'Connection': 'keep-alive'
   };
 
   try {
-    // İlk istek
+    // Exponential backoff ile bekleme süresi
+    const waitTime = Math.min(1000 * Math.pow(2, retryCount), 30000);
+    if (retryCount > 0) {
+      console.log(`${waitTime/1000} saniye bekleniyor...`);
+      await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+
+    // HTTP isteği
     console.log("HTTP isteği yapılıyor...");
-    const response = await fetch(url, { 
-      headers,
-      redirect: 'follow'
+    const response = await fetch(url, {
+      headers: browserHeaders,
+      redirect: 'follow',
+      timeout: 30000,
+      compress: true,
+      follow: 5
     });
+
+    console.log(`HTTP yanıt durumu: ${response.status}`);
 
     if (!response.ok) {
       if (response.status === 403) {
-        console.error("403 Forbidden - Erişim engellendi");
+        console.error(`403 Forbidden - Detaylar: ${await response.text()}`);
 
-        // Yeniden deneme mekanizması
-        if (retryCount < 3) {
-          console.log(`Yeniden deneniyor (${retryCount + 1}/3)...`);
-          await new Promise(resolve => setTimeout(resolve, 5000)); // 5 saniye bekle
+        if (retryCount < 4) {
+          console.log(`Erişim engellendi, yeniden deneniyor (${retryCount + 1}/5)...`);
           return fetchProductPage(url, retryCount + 1);
         }
 
-        throw new TrendyolScrapingError("Trendyol erişimi engelledi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
+        throw new TrendyolScrapingError("Bot koruması nedeniyle erişim engellendi. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
           status: response.status,
           statusText: response.statusText,
           details: "Maksimum yeniden deneme sayısına ulaşıldı"
+        });
+      }
+
+      if (response.status === 429) {
+        console.error("Rate limit aşıldı");
+        if (retryCount < 4) {
+          return fetchProductPage(url, retryCount + 1);
+        }
+        throw new TrendyolScrapingError("Çok fazla istek yapıldı. Lütfen birkaç dakika bekleyip tekrar deneyin.", {
+          status: 429,
+          statusText: "Too Many Requests",
+          details: "Rate limit aşıldı"
         });
       }
 
@@ -62,22 +85,44 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
     }
 
     const html = await response.text();
+    console.log("HTML içeriği alındı, doğrulanıyor...");
 
     // HTML içeriğini kontrol et
-    if (!html.includes('trendyol.com') || html.includes('Attention Required! | Cloudflare')) {
-      if (retryCount < 3) {
-        console.log(`Geçersiz yanıt, yeniden deneniyor (${retryCount + 1}/3)...`);
-        await new Promise(resolve => setTimeout(resolve, 5000));
+    if (!html.includes('trendyol.com')) {
+      console.error("Geçersiz sayfa yanıtı");
+      if (retryCount < 4) {
         return fetchProductPage(url, retryCount + 1);
       }
-
       throw new TrendyolScrapingError("Geçersiz sayfa yanıtı alındı", {
         status: response.status,
         statusText: "Invalid Response",
-        details: "Sayfa içeriği doğrulanamadı"
+        details: "Sayfa HTML içeriği doğrulanamadı"
       });
     }
 
+    if (html.includes('Attention Required! | Cloudflare')) {
+      console.error("Cloudflare challenge sayfası alındı");
+      if (retryCount < 4) {
+        return fetchProductPage(url, retryCount + 1);
+      }
+      throw new TrendyolScrapingError("Güvenlik doğrulaması gerekiyor", {
+        status: 403,
+        statusText: "Cloudflare Challenge",
+        details: "Cloudflare güvenlik kontrolü gerekiyor"
+      });
+    }
+
+    // Ürün detay kontrolü
+    if (!html.includes('product-detail-container')) {
+      console.error("Ürün detay sayfası bulunamadı");
+      throw new TrendyolScrapingError("Ürün detayları bulunamadı", {
+        status: 404,
+        statusText: "Product Not Found",
+        details: "Geçerli bir ürün sayfası değil"
+      });
+    }
+
+    console.log("Sayfa başarıyla yüklendi");
     return cheerio.load(html);
 
   } catch (error) {
@@ -89,6 +134,10 @@ async function fetchProductPage(url: string, retryCount = 0): Promise<cheerio.Ch
 
     // Ağ hatalarını yakala
     if (error.code === 'ETIMEDOUT' || error.code === 'ECONNRESET') {
+      if (retryCount < 4) {
+        console.log("Bağlantı hatası, yeniden deneniyor...");
+        return fetchProductPage(url, retryCount + 1);
+      }
       throw new TrendyolScrapingError("Bağlantı hatası oluştu. Lütfen internet bağlantınızı kontrol edin.", {
         status: 503,
         statusText: "Connection Error",
