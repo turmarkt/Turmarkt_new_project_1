@@ -26,16 +26,28 @@ function extractJSONFromScript(content: string): string[] {
   const images: string[] = [];
 
   try {
-    // productDetailModel'den görselleri çek
+    // window.__PRODUCT_DETAIL_APP_INITIAL_STATE__ kontrolü
+    const initialStateMatch = content.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+    if (initialStateMatch) {
+      const data = JSON.parse(initialStateMatch[1]);
+      if (data?.product?.images) {
+        images.push(...data.product.images);
+      }
+    }
+
+    // productDetailModel kontrolü
     const modelMatch = content.match(/window\.productDetailModel\s*=\s*({.*?});/s);
     if (modelMatch) {
       const data = JSON.parse(modelMatch[1]);
       if (data?.images) {
         images.push(...data.images);
       }
+      if (data?.productImages) {
+        images.push(...data.productImages);
+      }
     }
 
-    // TYPageName.product'dan görselleri çek
+    // TYPageName.product kontrolü
     const pageMatch = content.match(/TYPageName\.product\s*=\s*({.*?});/s);
     if (pageMatch) {
       const data = JSON.parse(pageMatch[1]);
@@ -44,7 +56,7 @@ function extractJSONFromScript(content: string): string[] {
       }
     }
 
-    // productImages değişkeninden görselleri çek
+    // productImages array kontrolü
     const imagesMatch = content.match(/var\s+productImages\s*=\s*(\[.*?\])/s);
     if (imagesMatch) {
       const data = JSON.parse(imagesMatch[1]);
@@ -53,12 +65,24 @@ function extractJSONFromScript(content: string): string[] {
       }
     }
 
-    // productDetail.images'dan görselleri çek
+    // productDetail kontrolü
     const detailMatch = content.match(/var\s+productDetail\s*=\s*({.*?});/s);
     if (detailMatch) {
       const data = JSON.parse(detailMatch[1]);
       if (data?.images) {
         images.push(...data.images);
+      }
+      if (data?.productImages) {
+        images.push(...data.productImages);
+      }
+    }
+
+    // window.PRODUCT_DETAIL_MODULE_DATA kontrolü
+    const moduleDataMatch = content.match(/window\.PRODUCT_DETAIL_MODULE_DATA\s*=\s*({.*?});/s);
+    if (moduleDataMatch) {
+      const data = JSON.parse(moduleDataMatch[1]);
+      if (data?.product?.images) {
+        images.push(...data.product.images);
       }
     }
   } catch (error) {
@@ -75,8 +99,13 @@ function getHighResImageUrl(url: string): string {
   // URL'yi düzelt
   let imageUrl = url.startsWith('http') ? url : `https:${url}`;
 
-  // Boyut parametrelerini ekle
-  return imageUrl.replace(/\/mnresize\/\d+\/\d+\//, '/mnresize/1200/1800/');
+  // Tüm boyut dönüşümlerini uygula
+  return imageUrl
+    .replace(/\/mnresize\/128\/192\//, '/mnresize/1200/1800/')
+    .replace(/\/mnresize\/256\/384\//, '/mnresize/1200/1800/')
+    .replace(/\/mnresize\/500\/750\//, '/mnresize/1200/1800/')
+    .replace(/\/mnresize\/600\/900\//, '/mnresize/1200/1800/')
+    .replace(/\/mnresize\/800\/1200\//, '/mnresize/1200/1800/');
 }
 
 async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
@@ -167,27 +196,39 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       });
     });
 
-    // data-gallery-images özelliğinden görselleri çek
-    const galleryElements = $('[data-gallery-images], [data-images], [data-product-images]');
-    galleryElements.each((_, element) => {
-      const data = $(element).attr('data-gallery-images') || 
-                  $(element).attr('data-images') || 
-                  $(element).attr('data-product-images');
+    // Data özelliklerinden görselleri çek
+    const dataSelectors = [
+      '[data-gallery-images]',
+      '[data-images]',
+      '[data-product-images]',
+      '[data-gallery-list]',
+      '[data-media-gallery]'
+    ];
 
-      if (data) {
-        try {
-          const galleryImages = JSON.parse(data);
-          if (Array.isArray(galleryImages)) {
-            galleryImages.forEach(img => {
-              if (typeof img === 'string') {
-                images.add(getHighResImageUrl(img));
-              }
-            });
+    dataSelectors.forEach(selector => {
+      const elements = $(selector);
+      elements.each((_, element) => {
+        const data = $(element).attr('data-gallery-images') || 
+                    $(element).attr('data-images') || 
+                    $(element).attr('data-product-images') ||
+                    $(element).attr('data-gallery-list') ||
+                    $(element).attr('data-media-gallery');
+
+        if (data) {
+          try {
+            const parsedData = JSON.parse(data);
+            if (Array.isArray(parsedData)) {
+              parsedData.forEach(img => {
+                if (typeof img === 'string') {
+                  images.add(getHighResImageUrl(img));
+                }
+              });
+            }
+          } catch (error) {
+            debug(`Data özelliği parse hatası (${selector}):`, error);
           }
-        } catch (error) {
-          debug("Gallery data parse hatası:", error);
         }
-      }
+      });
     });
 
     // DOM'dan görselleri çek
@@ -197,26 +238,32 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       '.image-container img',
       '.product-slide img',
       '.slick-slide img',
+      '.product-stamp img',
+      '.gallery-modal img',
       '[data-src*="ty"]',
       '[data-original*="ty"]',
       'picture source[srcset*="ty"]',
-      '.product-stamp img'
+      '.swiper-slide img'
     ];
 
     imageSelectors.forEach(selector => {
       $(selector).each((_, element) => {
-        const src = $(element).attr('src') || 
-                   $(element).attr('data-src') || 
-                   $(element).attr('data-original') ||
-                   $(element).attr('srcset');
+        const sources = [
+          $(element).attr('src'),
+          $(element).attr('data-src'),
+          $(element).attr('data-original'),
+          $(element).attr('srcset')
+        ].filter(Boolean);
 
-        if (src) {
-          const urls = src.split(',')
-            .map(s => s.trim().split(' ')[0])
-            .filter(url => url.includes('ty'));
+        sources.forEach(src => {
+          if (src) {
+            const urls = src.split(',')
+              .map(s => s.trim().split(' ')[0])
+              .filter(url => url.includes('ty'));
 
-          urls.forEach(url => images.add(getHighResImageUrl(url)));
-        }
+            urls.forEach(url => images.add(getHighResImageUrl(url)));
+          }
+        });
       });
     });
 
