@@ -368,7 +368,6 @@ export default function Home() {
                           </div>
                         </AccordionContent>
                       </AccordionItem>
-
                       <AccordionItem value="csv-preview" className="border-gray-800">
                         <AccordionTrigger className="text-sm hover:no-underline py-3">
                           <div className="flex items-center gap-2">

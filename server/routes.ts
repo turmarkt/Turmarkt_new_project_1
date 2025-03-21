@@ -243,27 +243,32 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Ürün özelliklerini çek
     const attributes: Record<string, string> = {};
 
-    // Trendyol'un ürün detay tablosundan özellikleri çek
+    // JSON-LD'den özellikleri çek
+    $('script[type="application/ld+json"]').each((_, element) => {
+      try {
+        const data = JSON.parse($(element).html() || '');
+        if (data.additionalProperty) {
+          data.additionalProperty.forEach((prop: any) => {
+            if (prop.name && prop.unitText) {
+              attributes[prop.name] = prop.unitText;
+              debug(`JSON-LD'den özellik bulundu: ${prop.name} = ${prop.unitText}`);
+            }
+          });
+        }
+      } catch (error) {
+        debug(`JSON parse hatası: ${error}`);
+      }
+    });
+
+    // Ayrıca HTML'den de özellikleri çek (yedek olarak)
     $('.detail-attr-container, .detail-border').each((_, container) => {
       const rows = $(container).find('tr, .prop-item');
       rows.each((_, row) => {
         const key = $(row).find('th, .prop-key').text().trim();
         const value = $(row).find('td, .prop-value').text().trim();
-        if (key && value) {
+        if (key && value && !attributes[key]) {
           attributes[key] = value;
-          debug(`Özellik bulundu: ${key} = ${value}`);
-        }
-      });
-    });
-
-    // Type 1 ve diğer ek özellikleri çek
-    $('.product-information-wrapper').each((_, wrapper) => {
-      $(wrapper).find('.information-wrapper').each((_, info) => {
-        const type = $(info).find('.information-type').text().trim();
-        const value = $(info).find('.information-content').text().trim();
-        if (type && value) {
-          attributes[type] = value;
-          debug(`Ek özellik bulundu: ${type} = ${value}`);
+          debug(`HTML'den özellik bulundu: ${key} = ${value}`);
         }
       });
     });
