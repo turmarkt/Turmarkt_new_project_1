@@ -1,4 +1,5 @@
 import { ProductAttribute, type ProductAttributes } from "@shared/schema";
+import { z } from "zod";
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
@@ -72,7 +73,6 @@ function normalizeImageUrl(url: string): string {
     return url;
   }
 }
-
 
 async function scrapeProduct(url: string): Promise<InsertProduct> {
   debug("Scraping başlatıldı");
