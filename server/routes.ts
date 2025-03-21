@@ -260,19 +260,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Ayrıca HTML'den de özellikleri çek (yedek olarak)
-    $('.detail-attr-container, .detail-border').each((_, container) => {
-      const rows = $(container).find('tr, .prop-item');
-      rows.each((_, row) => {
-        const key = $(row).find('th, .prop-key').text().trim();
-        const value = $(row).find('td, .prop-value').text().trim();
-        if (key && value && !attributes[key]) {
-          attributes[key] = value;
-          debug(`HTML'den özellik bulundu: ${key} = ${value}`);
-        }
-      });
-    });
-
     if (Object.keys(attributes).length === 0) {
       debug("Hiç özellik bulunamadı!");
     } else {
