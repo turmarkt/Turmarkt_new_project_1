@@ -187,45 +187,42 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               });
             }
 
-            // Renk varyantını kontrol et
-            if (data.product?.color) {
-              // Rengi temizle ve düzgün formata getir
-              const color = data.product.color.split('-')[0].trim();
-              if (color) {
-                variants.colors.add(color);
-                debug(`Renk varyantı bulundu: ${color}`);
-              }
-            }
-
-            // Alternatif renk varyantını kontrol et
-            if (data.product?.attributes) {
-              data.product.attributes.forEach((attr: any) => {
-                if (attr.name === "Renk") {
-                  // Rengi temizle ve düzgün formata getir
-                  const colors = attr.value.split(',').map((c: string) => c.trim());
-                  colors.forEach((color: string) => {
-                    if (color) {
-                      variants.colors.add(color);
-                      debug(`Özelliklerden renk varyantı bulundu: ${color}`);
-                    }
-                  });
-                }
-              });
-            }
-
             // DOM'dan numara/beden seçeneklerini kontrol et
             $('.sp-itm').each((_, element) => {
               const label = $(element).find('.sp-itm-title').text().trim();
               if (label.includes('Numara') || label.includes('Beden')) {
-                $(element).find('.sp-itm-content .v-v:not(.disabled)').each((_, option) => {
+                $(element).find('.v-v').each((_, option) => {
                   const value = $(option).text().trim();
-                  if (value) {
+                  const isDisabled = $(option).hasClass('disabled');
+                  if (value && !isDisabled) {
                     variants.sizes.add(value);
                     debug(`DOM'dan stokta olan ${label} seçeneği bulundu: ${value}`);
                   }
                 });
               }
             });
+
+            // HTML'den stok varyantlarını kontrol et
+            $('div[data-pk]').each((_, element) => {
+              const $el = $(element);
+              const isStocked = !$el.hasClass('disabled');
+              if (isStocked) {
+                const value = $el.text().trim();
+                if (value && /^\d+$/.test(value)) {
+                  variants.sizes.add(value);
+                  debug(`HTML data-pk'dan stokta olan numara bulundu: ${value}`);
+                }
+              }
+            });
+
+            // Renk varyantını kontrol et
+            if (data.product?.color) {
+              const color = data.product.color.split('-')[0].trim();
+              if (color) {
+                variants.colors.add(color);
+                debug(`Renk varyantı bulundu: ${color}`);
+              }
+            }
 
             // Debug varyant verilerini
             if (data.product) {
