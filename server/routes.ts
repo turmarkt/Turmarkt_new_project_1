@@ -176,7 +176,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 if (attr.name === "Numara" || attr.name === "Beden") {
                   attr.attributes.forEach((item: any) => {
                     if (item.inStock) {
-                      const value = item.value.trim();
+                      const value = item.value.toString().trim();
                       if (value) {
                         variants.sizes.add(value);
                         debug(`Stokta olan ${attr.name} seçeneği bulundu: ${value}`);
@@ -189,26 +189,32 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
             // Renk varyantını kontrol et
             if (data.product?.color) {
-              variants.colors.add(data.product.color);
-              debug(`Renk varyantı bulundu: ${data.product.color}`);
+              // Rengi temizle ve düzgün formata getir
+              const color = data.product.color.split('-')[0].trim();
+              if (color) {
+                variants.colors.add(color);
+                debug(`Renk varyantı bulundu: ${color}`);
+              }
             }
 
             // Alternatif renk varyantını kontrol et
             if (data.product?.attributes) {
               data.product.attributes.forEach((attr: any) => {
                 if (attr.name === "Renk") {
-                  const color = attr.value.trim();
-                  if (color) {
-                    variants.colors.add(color);
-                    debug(`Özelliklerden renk varyantı bulundu: ${color}`);
-                  }
+                  // Rengi temizle ve düzgün formata getir
+                  const colors = attr.value.split(',').map((c: string) => c.trim());
+                  colors.forEach((color: string) => {
+                    if (color) {
+                      variants.colors.add(color);
+                      debug(`Özelliklerden renk varyantı bulundu: ${color}`);
+                    }
+                  });
                 }
               });
             }
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
-          // Hata detayını yazdır
           if (error instanceof Error) {
             debug(`Hata detayı: ${error.message}`);
             debug(`Hata stack: ${error.stack}`);
