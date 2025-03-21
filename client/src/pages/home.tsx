@@ -267,8 +267,8 @@ export default function Home() {
                       <ImageIcon className="w-4 h-4" />
                       <span>Ürün Görselleri ({product.images.length})</span>
                     </div>
-                    <ScrollArea className="h-[300px] rounded-md border border-gray-800 p-4">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <ScrollArea className="h-[200px] rounded-md border border-gray-800 p-2">
+                      <div className="grid grid-cols-4 md:grid-cols-6 gap-2">
                         {product.images.map((image: string, index: number) => (
                           <div key={index} className="relative aspect-square group">
                             <img
@@ -276,7 +276,7 @@ export default function Home() {
                               alt={`${product.title} - Görsel ${index + 1}`}
                               className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
                             />
-                            <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                            <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
                               {index + 1}
                             </div>
                             <a 
@@ -285,7 +285,7 @@ export default function Home() {
                               rel="noopener noreferrer"
                               className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
                             >
-                              <span className="text-white text-xs">Orijinal Boyut</span>
+                              <span className="text-white text-[10px]">Orijinal</span>
                             </a>
                           </div>
                         ))}

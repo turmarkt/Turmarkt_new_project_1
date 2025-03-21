@@ -88,8 +88,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           if (match) {
             const data = JSON.parse(match[1]);
             const productImages = data?.product?.images || [];
+            debug(`JSON'dan ${productImages.length} adet görsel bulundu`);
             productImages.forEach((img: any) => {
-              if (img.url) {
+              if (typeof img === 'string') {
+                images.add(img);
+              } else if (img.url) {
                 images.add(img.url);
               }
             });
@@ -104,20 +107,17 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const imageSelectors = [
       '.gallery-modal-content img[src]',
       '.gallery-modal-content img[data-src]',
-      'div[data-productid] img[src]',
-      'div[data-productid] img[data-src]',
+      '.product-detail-wrapper img[src]',
+      '.product-detail-wrapper img[data-src]',
+      '.slick-slider img[src]',
+      '.slick-slider img[data-src]',
       '.product-slide img[src]',
       '.product-slide img[data-src]',
-      '.img-loader img[src]',
-      '.img-loader img[data-src]',
-      'picture source[srcset]',
-      'picture source[data-srcset]',
       '.image-container img[src]',
       '.image-container img[data-src]',
-      '.slick-slide img[src]',
-      '.slick-slide img[data-src]',
       '.product-box img[src]',
-      '.product-box img[data-src]'
+      '.product-box img[data-src]',
+      'picture source[srcset]'
     ];
 
     debug(`${imageSelectors.length} adet görsel selektörü kontrol ediliyor`);
