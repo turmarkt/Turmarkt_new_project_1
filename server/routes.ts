@@ -77,10 +77,38 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Görselleri çek
     const images: Set<string> = new Set();
-    $('.gallery-modal-content img').each((_, img) => {
-      const src = $(img).attr('src');
-      if (src) images.add(src);
-    });
+
+    // Tüm olası görsel selektörleri
+    const imageSelectors = [
+      '.gallery-modal-content img',
+      '.product-slide img',
+      '.product-images img',
+      '.product-stamp img',
+      'picture source',
+      '.product-container img'
+    ];
+
+    // Her selektör için görselleri topla
+    for (const selector of imageSelectors) {
+      $(selector).each((_, img) => {
+        let src = $(img).attr('src') || $(img).attr('data-src');
+
+        if (src) {
+          // Küçük resimleri büyük versiyonlarıyla değiştir
+          src = src.replace('/mnresize/128/192/', '/');
+          src = src.replace('/mnresize/600/900/', '/');
+
+          // En yüksek kaliteli versiyonu al
+          if (src.includes('_org_zoom')) {
+            images.add(src);
+          } else {
+            // Zoom versiyonu yoksa orijinal versiyonu kullan
+            const orgSrc = src.replace(/\.(jpg|jpeg|png)$/, '_org_zoom.$1');
+            images.add(orgSrc);
+          }
+        }
+      });
+    }
 
     // Video URL'sini çek
     let videoUrl = null;
