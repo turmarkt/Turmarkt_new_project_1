@@ -277,7 +277,12 @@ export default function Home() {
                               className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
+                                // Zoom versiyonu yüklenmezse normal versiyonu dene
                                 img.src = image.replace('_org_zoom', '');
+                                // Normal versiyon da yüklenmezse farklı bir format dene
+                                img.onerror = () => {
+                                  img.src = image.replace(/\.(jpg|jpeg|png|webp)$/, '.jpg');
+                                };
                               }}
                             />
                             <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">

@@ -91,9 +91,13 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             debug(`JSON'dan ${productImages.length} adet görsel bulundu`);
             productImages.forEach((img: any) => {
               if (typeof img === 'string') {
-                images.add(img);
+                const imgUrl = img.startsWith('http') ? img : `https:${img}`;
+                images.add(imgUrl);
+                debug(`JSON'dan görsel eklendi: ${imgUrl}`);
               } else if (img.url) {
-                images.add(img.url);
+                const imgUrl = img.url.startsWith('http') ? img.url : `https:${img.url}`;
+                images.add(imgUrl);
+                debug(`JSON'dan görsel eklendi: ${imgUrl}`);
               }
             });
           }
@@ -164,7 +168,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             }
 
             images.add(src);
-            debug(`Görsel eklendi: ${src}`);
+            debug(`DOM'dan görsel eklendi: ${src}`);
           } catch (error: any) {
             debug(`Görsel işlenirken hata: ${error.message}`);
           }
