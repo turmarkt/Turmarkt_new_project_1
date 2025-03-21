@@ -268,67 +268,56 @@ export default function Home() {
                     </div>
                   </div>
 
-                  <Accordion type="single" collapsible className="w-full mt-4">
-                    <AccordionItem value="features">
-                      <AccordionTrigger className="text-sm hover:no-underline">
-                        <div className="flex items-center gap-2">
-                          <FileText className="w-4 h-4 text-gray-400" />
-                          <span className="font-semibold text-gray-400">Ürün Özellikleri</span>
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent>
-                        <div className="bg-gray-800/50 rounded p-3">
-                          <div className="grid grid-cols-1 gap-2">
-                            {Object.entries(product.attributes).map(([key, value]) => (
-                              <div key={key} className="flex items-center py-2 border-b border-gray-700/50 last:border-0">
-                                <span className="text-xs text-gray-400 w-1/3 font-medium">{key}</span>
-                                <span className="text-xs text-gray-300 w-2/3">{value as string}</span>
-                              </div>
-                            ))}
+                  <div className="space-y-2">
+                    <Accordion type="single" collapsible className="w-full mt-4">
+                      <AccordionItem value="csv-preview">
+                        <AccordionTrigger className="text-sm hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-gray-400" />
+                            <span className="font-semibold text-gray-400">CSV Önizleme</span>
                           </div>
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="bg-gray-800/50 rounded p-3 overflow-x-auto">
+                            <table className="min-w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-gray-700">
+                                  <th className="text-left p-2">Handle</th>
+                                  <th className="text-left p-2">Title</th>
+                                  <th className="text-left p-2">Description</th>
+                                  <th className="text-left p-2">Vendor</th>
+                                  <th className="text-left p-2">Price</th>
+                                  <th className="text-left p-2">Compare Price</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="p-2">{product?.title?.toLowerCase().replace(/\s+/g, '-')}</td>
+                                  <td className="p-2">{product?.title}</td>
+                                  <td className="p-2">{product?.description || '-'}</td>
+                                  <td className="p-2">{product?.categories[0] || 'Trendyol'}</td>
+                                  <td className="p-2">{product?.price} TL</td>
+                                  <td className="p-2">{product?.basePrice} TL</td>
+                                </tr>
+                              </tbody>
+                            </table>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+                    </Accordion>
 
-                  <div className="space-y-3 mt-4">
-                    {product.variants.sizes.length > 0 && (
-                      <div className="space-y-2">
-                        <h3 className="text-xs font-semibold text-gray-400">Bedenler</h3>
-                        <div className="flex flex-wrap gap-1">
-                          {product.variants.sizes.map((size: string, i: number) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-gray-800">
-                              {size}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {product.variants.colors.length > 0 && (
-                      <div className="space-y-2">
-                        <h3 className="text-xs font-semibold text-gray-400">Renkler</h3>
-                        <div className="flex flex-wrap gap-1">
-                          {product.variants.colors.map((color: string, i: number) => (
-                            <Badge key={i} variant="outline" className="text-xs bg-gray-800">
-                              {color}
-                            </Badge>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <Button
+                      onClick={() => exportMutation.mutate()}
+                      disabled={exportMutation.isPending}
+                      className="w-full py-2 text-sm mt-4"
+                    >
+                      {exportMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : null}
+                      Shopify CSV'sine Aktar
+                    </Button>
                   </div>
 
-                  <Button
-                    onClick={() => exportMutation.mutate()}
-                    disabled={exportMutation.isPending}
-                    className="w-full py-2 text-sm mt-4"
-                  >
-                    {exportMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Shopify CSV'sine Aktar
-                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
