@@ -326,7 +326,7 @@ export default function Home() {
                     </ScrollArea>
                   </div>
 
-                  {/* Ürün Özellikleri Bölümü */}
+                  {/* Ürün Özellikleri ve CSV Önizleme Bölümü */}
                   <div className="space-y-2">
                     <Accordion type="single" collapsible className="w-full">
                       <AccordionItem value="features" className="border-gray-800">
@@ -346,6 +346,48 @@ export default function Home() {
                                 </div>
                               ))}
                             </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+
+                      <AccordionItem value="csv-preview" className="border-gray-800">
+                        <AccordionTrigger className="text-sm hover:no-underline py-3">
+                          <div className="flex items-center gap-2">
+                            <FileText className="w-4 h-4 text-primary" />
+                            <span className="font-medium">CSV Önizleme</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="bg-gray-900/50 rounded-lg p-4 overflow-x-auto">
+                            <table className="min-w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-gray-700">
+                                  <th className="text-left p-2">Handle</th>
+                                  <th className="text-left p-2">Title</th>
+                                  <th className="text-left p-2">Description</th>
+                                  <th className="text-left p-2">Vendor</th>
+                                  <th className="text-left p-2">Price</th>
+                                  <th className="text-left p-2">Images</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                <tr>
+                                  <td className="p-2">{product?.title?.toLowerCase().replace(/\s+/g, '-')}</td>
+                                  <td className="p-2">{product?.title}</td>
+                                  <td className="p-2">{product?.description || '-'}</td>
+                                  <td className="p-2">{product?.categories[0] || 'Trendyol'}</td>
+                                  <td className="p-2">{product?.price} TL</td>
+                                  <td className="p-2">
+                                    {product?.images?.length || 0} görsel
+                                    <div className="text-xs text-gray-500">
+                                      {product?.images?.map((url: string) => (
+                                        <div key={url} className="truncate max-w-[200px]">{url}</div>
+                                      ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              </tbody>
+                            </table>
                           </div>
                         </AccordionContent>
                       </AccordionItem>
