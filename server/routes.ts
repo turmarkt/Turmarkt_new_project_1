@@ -7,15 +7,10 @@ import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import fetch from "node-fetch";
 
-// Firefox binary path'ini belirle
-process.env.FIREFOX_BIN = '/nix/store/firefox-esr/bin/firefox-esr';
-
-// Debug loglama
 function debug(message: string) {
   console.log(`[DEBUG] ${message}`);
 }
 
-// Fiyat temizleme yardımcı fonksiyonu
 function cleanPrice(price: string): number {
   return parseFloat(price.replace(/[^\d,]/g, '').replace(',', '.'));
 }
@@ -48,33 +43,6 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
       details: error.message
     });
   }
-}
-
-// Açıklamaları çek fonksiyonu
-function extractDescription($: cheerio.CheerioAPI): string {
-  const descriptions: string[] = [];
-
-  // Ana ürün açıklaması
-  const mainDesc = $('.product-description-text').text().trim() ||
-                  $('.detail-desc-content').text().trim() ||
-                  $('.description-text').text().trim();
-  if (mainDesc) {
-    descriptions.push(mainDesc);
-  }
-
-  // Marka açıklaması
-  const brandDesc = $('.brand-description').text().trim();
-  if (brandDesc) {
-    descriptions.push(brandDesc);
-  }
-
-  // Detaylı açıklama
-  const detailDesc = $('.detail-description').text().trim();
-  if (detailDesc) {
-    descriptions.push(detailDesc);
-  }
-
-  return descriptions.join('\n\n').trim();
 }
 
 async function scrapeProduct(url: string): Promise<InsertProduct> {
@@ -116,21 +84,26 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     const basePrice = cleanPrice(rawPrice);
-    const price = (basePrice * 1.15).toFixed(2); // %15 kar ekle
+    const price = (basePrice * 1.15).toFixed(2);
 
     // Görselleri çek
     const images: Set<string> = new Set();
-
-    // Ürün görsellerini çek
     $('.gallery-modal-content img').each((_, img) => {
       const src = $(img).attr('src');
       if (src) images.add(src);
     });
 
+    // Video URL'sini çek
+    let videoUrl = null;
+    const videoElement = $('.gallery-modal-content video source').first();
+    if (videoElement.length > 0) {
+      videoUrl = videoElement.attr('src') || null;
+    }
+
     // Varyantları çek
     const variants = {
       sizes: [] as string[],
-      colors: []
+      colors: [] as string[]
     };
 
     // Bedenleri çek
@@ -150,39 +123,27 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Video URL'sini çek
-    let videoUrl = null;
-    const videoElement = $('.gallery-modal-content video source').first();
-    if (videoElement.length > 0) {
-      videoUrl = videoElement.attr('src') || null;
-    }
-
-    // Açıklamayı çek
-    const description = extractDescription($);
-
-    // Sabit özellikler - ProductAttributes tipini kullan
-    const attributes: ProductAttributes = {
-      "Hacim": ProductAttribute.Hacim,
-      "Mensei": ProductAttribute.Mensei,
-      "Paket İçeriği": ProductAttribute.PaketIcerigi
-    };
-
-    // Ürün nesnesi oluştur
+    // Ürün nesnesi oluştur - Sabit özelliklerle
     const product: InsertProduct = {
       url,
       title,
-      description,
+      description: "", // HTML'den açıklama almıyoruz
       price: price.toString(),
       basePrice: basePrice.toString(),
       images: Array.from(images),
       video: videoUrl,
       variants,
-      attributes, // Sadece sabit özellikleri kullan
+      // Sadece ProductAttribute enum'undan gelen sabit özellikleri kullan
+      attributes: {
+        "Hacim": ProductAttribute.Hacim,
+        "Menşei": ProductAttribute.Mensei,
+        "Paket İçeriği": ProductAttribute.PaketIcerigi
+      },
       categories: categories.length > 0 ? categories : ['Trendyol'],
-      tags: [...categories, ...variants.colors, ...variants.sizes].filter(Boolean)
+      tags: [...categories, ...variants.sizes].filter(Boolean)
     };
 
-    debug("Ürün oluşturuldu");
+    debug("Ürün başarıyla oluşturuldu");
     return product;
 
   } catch (error: any) {
@@ -197,7 +158,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
   }
 }
 
-// Ana route'lar
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
@@ -207,12 +167,8 @@ export async function registerRoutes(app: Express) {
       debug("Scrape isteği alındı");
       const { url } = urlSchema.parse(req.body);
 
-      // Cache kontrolü
-      const existing = await storage.getProduct(url);
-      if (existing) {
-        debug("Ürün cache'den alındı");
-        return res.json(existing);
-      }
+      // Her istek öncesi cache'i temizle
+      storage.reset();
 
       debug("Ürün verileri çekiliyor");
       const product = await scrapeProduct(url);
