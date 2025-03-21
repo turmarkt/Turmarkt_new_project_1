@@ -406,7 +406,7 @@ export default function Home() {
                                   {product.variants.sizes.map((size: string, index: number) => (
                                     <span 
                                       key={index} 
-                                      className="px-4 py-2 bg-gray-800 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
+                                      className="w-12 h-12 flex items-center justify-center bg-gray-800 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
                                     >
                                       {size}
                                     </span>
