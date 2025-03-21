@@ -75,54 +75,64 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const basePrice = cleanPrice(rawPrice);
     const price = (basePrice * 1.15).toFixed(2);
 
-    // Görselleri çek
+    // Görselleri çek - Geliştirilmiş versiyon
     const images: Set<string> = new Set();
     debug("Görsel yakalama başlatıldı");
 
-    // Tüm olası görsel selektörleri - Detaylı liste
+    // Script içindeki JSON verilerini kontrol et
+    $('script').each((_, element) => {
+      const scriptContent = $(element).html() || '';
+      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+        try {
+          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+          if (match) {
+            const data = JSON.parse(match[1]);
+            const productImages = data?.product?.images || [];
+            productImages.forEach((img: any) => {
+              if (img.url) {
+                images.add(img.url);
+              }
+            });
+          }
+        } catch (error) {
+          debug(`JSON parse hatası: ${error.message}`);
+        }
+      }
+    });
+
+    // DOM'dan görselleri topla
     const imageSelectors = [
-      // Ana ürün görselleri
-      '.gallery-modal-content img',
-      '.product-slide img',
-      '.product-images img',
-      '.image-container img',
-      '.ph-image img',
-      '.a-image img',
-
-      // Slider ve galeri görselleri
-      '.slick-slide img',
-      '.gallery-preview img',
-      '.gallery-modal img',
-
-      // Detay görselleri
-      '.detail-section-img img',
-      '.detail-imgs-wrapper img',
-      '.detail-images-container img',
-
-      // Responsive ve lazy-load görseller
+      '.gallery-modal-content img[src]',
+      '.gallery-modal-content img[data-src]',
+      'div[data-productid] img[src]',
+      'div[data-productid] img[data-src]',
+      '.product-slide img[src]',
+      '.product-slide img[data-src]',
+      '.img-loader img[src]',
+      '.img-loader img[data-src]',
       'picture source[srcset]',
       'picture source[data-srcset]',
-      'img[data-src]',
-      'img[data-lazy]'
+      '.image-container img[src]',
+      '.image-container img[data-src]',
+      '.slick-slide img[src]',
+      '.slick-slide img[data-src]',
+      '.product-box img[src]',
+      '.product-box img[data-src]'
     ];
 
     debug(`${imageSelectors.length} adet görsel selektörü kontrol ediliyor`);
 
-    // Her selektör için görselleri topla
     for (const selector of imageSelectors) {
       const elements = $(selector);
       debug(`'${selector}' için ${elements.length} element bulundu`);
 
       elements.each((_, el) => {
-        // Tüm olası görsel kaynaklarını kontrol et
         const srcAttr = $(el).attr('src');
         const dataSrc = $(el).attr('data-src');
-        const dataLazy = $(el).attr('data-lazy');
         const srcset = $(el).attr('srcset') || $(el).attr('data-srcset');
 
-        let sources = [srcAttr, dataSrc, dataLazy];
+        let sources = [srcAttr, dataSrc].filter(Boolean);
 
-        // Srcset varsa parse et
         if (srcset) {
           const srcsetUrls = srcset.split(',')
             .map(s => s.trim().split(' ')[0])
@@ -130,13 +140,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           sources = [...sources, ...srcsetUrls];
         }
 
-        // Her kaynağı işle
-        sources.filter(Boolean).forEach(src => {
+        sources.forEach(src => {
           if (!src) return;
 
           try {
             // URL'yi temizle ve normalize et
-            src = src.split('?')[0]; // Query parametrelerini kaldır
+            src = src.split('?')[0];
 
             // Göreceli URL'leri mutlak URL'lere çevir
             if (src.startsWith('//')) {
@@ -166,27 +175,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const uniqueImages = Array.from(images);
     debug(`Toplam ${uniqueImages.length} benzersiz görsel bulundu`);
 
-    // Video URL'sini çek
-    let videoUrl = null;
-    const videoElement = $('.gallery-modal-content video source').first();
-    if (videoElement.length > 0) {
-      videoUrl = videoElement.attr('src') || null;
-    }
-
-    // Varyantları çek
-    const variants = {
-      sizes: [] as string[],
-      colors: [] as string[]
-    };
-
-    // Bedenleri çek
-    $('.variant-list-item:not(.disabled), .sp-itm:not(.so)').each((_, el) => {
-      const size = $(el).text().trim();
-      if (size && !variants.sizes.includes(size)) {
-        variants.sizes.push(size);
-      }
-    });
-
     // Kategorileri çek
     const categories: string[] = [];
     $('.breadcrumb li').each((_, el) => {
@@ -196,7 +184,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Ürün nesnesi oluştur - Sadece sabit özelliklerle
+    // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
       title,
@@ -204,16 +192,18 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       price: price.toString(),
       basePrice: basePrice.toString(),
       images: uniqueImages,
-      video: videoUrl,
-      variants,
-      // Sadece enum'dan gelen sabit özellikleri kullan
+      video: null,
+      variants: {
+        sizes: [],
+        colors: []
+      },
       attributes: {
         "Hacim": ProductAttribute.Hacim,
         "Menşei": ProductAttribute.Mensei,
         "Paket İçeriği": ProductAttribute.PaketIcerigi
       },
       categories: categories.length > 0 ? categories : ['Giyim'],
-      tags: [...categories, ...variants.sizes].filter(Boolean)
+      tags: categories
     };
 
     return product;

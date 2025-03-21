@@ -9,7 +9,6 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Accordion,
   AccordionContent,
@@ -24,13 +23,16 @@ import {
   AlertTriangle,
   XCircle,
   AlertCircle,
-  RefreshCcw
+  RefreshCcw,
+  Image as ImageIcon
 } from "lucide-react";
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { UrlHistory } from "@/components/UrlHistory";
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
@@ -230,6 +232,11 @@ export default function Home() {
                 )}
               </Button>
             </div>
+
+            <UrlHistory onSelect={(url) => {
+              form.setValue("url", url);
+              setError(null);
+            }} />
           </form>
         </motion.div>
 
@@ -252,6 +259,38 @@ export default function Home() {
                       <span className="text-base font-bold">{product.price} TL</span>
                       <span className="text-xs text-gray-400 line-through">{product.basePrice} TL</span>
                     </div>
+                  </div>
+
+                  {/* Ürün Görselleri Bölümü */}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-sm text-gray-400">
+                      <ImageIcon className="w-4 h-4" />
+                      <span>Ürün Görselleri ({product.images.length})</span>
+                    </div>
+                    <ScrollArea className="h-[300px] rounded-md border border-gray-800 p-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                        {product.images.map((image: string, index: number) => (
+                          <div key={index} className="relative aspect-square group">
+                            <img
+                              src={image}
+                              alt={`${product.title} - Görsel ${index + 1}`}
+                              className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
+                            />
+                            <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                              {index + 1}
+                            </div>
+                            <a 
+                              href={image}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                              <span className="text-white text-xs">Orijinal Boyut</span>
+                            </a>
+                          </div>
+                        ))}
+                      </div>
+                    </ScrollArea>
                   </div>
 
                   <div className="space-y-2">
@@ -295,6 +334,7 @@ export default function Home() {
                                   <th className="text-left p-2">Vendor</th>
                                   <th className="text-left p-2">Price</th>
                                   <th className="text-left p-2">Compare Price</th>
+                                  <th className="text-left p-2">Images</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -305,6 +345,14 @@ export default function Home() {
                                   <td className="p-2">{product?.categories[0] || 'Trendyol'}</td>
                                   <td className="p-2">{product?.price} TL</td>
                                   <td className="p-2">{product?.basePrice} TL</td>
+                                  <td className="p-2">
+                                    {product?.images?.length || 0} görsel
+                                    <div className="text-xs text-gray-500">
+                                      {product?.images?.map((url: string) => (
+                                        <div key={url} className="truncate max-w-[200px]">{url}</div>
+                                      ))}
+                                    </div>
+                                  </td>
                                 </tr>
                               </tbody>
                             </table>
@@ -324,7 +372,6 @@ export default function Home() {
                       Shopify CSV'sine Aktar
                     </Button>
                   </div>
-
                 </CardContent>
               </Card>
             </motion.div>
