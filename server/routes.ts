@@ -359,6 +359,30 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // Açıklama içeriğini özelliklere ekle
+    const description = $('.product-description-text').text().trim() ||
+                       $('.detail-desc-content').text().trim() ||
+                       $('.description-text').text().trim();
+
+    if (description) {
+      attributes['Ürün Açıklaması'] = description;
+      debug(`Açıklama eklendi: ${description}`);
+    }
+
+    // Marka açıklamasını özelliklere ekle
+    const brandDescription = $('.brand-description').text().trim();
+    if (brandDescription) {
+      attributes['Marka Açıklaması'] = brandDescription;
+      debug(`Marka açıklaması eklendi: ${brandDescription}`);
+    }
+
+    // Ürün detay açıklamasını özelliklere ekle
+    const detailDescription = $('.detail-description').text().trim();
+    if (detailDescription) {
+      attributes['Detaylı Açıklama'] = detailDescription;
+      debug(`Detaylı açıklama eklendi: ${detailDescription}`);
+    }
+
     debug("Toplam özellik sayısı:", Object.keys(attributes).length);
 
     // Kategorileri çek
@@ -378,10 +402,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       videoUrl = videoElement.attr('src') || null;
     }
 
-    // Açıklama içeriğini çek
-    const description = $('.product-description-text').text().trim() ||
-                       $('.detail-desc-content').text().trim() ||
-                       $('.description-text').text().trim();
 
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
