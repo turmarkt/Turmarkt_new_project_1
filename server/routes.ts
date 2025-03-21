@@ -80,26 +80,16 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
   try {
     const $ = await fetchProductPage(url);
 
-    // Marka ve ürün adını ayrı ayrı al ve birleştir
     const brand = $('.pr-new-br span').first().text().trim();
     debug(`Marka: ${brand}`);
 
     const productName = $('.prdct-desc-cntnr-name').text().trim();
     debug(`Ürün adı: ${productName}`);
 
-    // Birleştirilmiş başlığı oluştur ve fiyat bilgisini temizle
     let title = brand && productName ? `${brand} ${productName}` : (
-      $('.pr-in-w').first().text().trim() || // Alternatif başlık seçicisi
-      $('.prdct-desc-cntnr h1').first().text().trim() || // İkinci alternatif
-      productName // Son seçenek
+      productName 
     );
 
-    // Fiyat bilgisini başlıktan temizle
-    title = title.replace(/\d+(\.\d+)?\s*TL\s*$/, '').trim();
-    title = title.replace(/\s+\d+(\.\d+)?\s*TL/, '').trim(); // Ortadaki fiyat bilgisini temizle
-    title = title.replace(/\s+\d+(\.\d+)?/, '').trim(); // Sadece rakamları temizle
-    title = title.replace(/Tükeniyor!?/g, '').trim();
-    title = title.replace(/^\s+|\s+$/g, '').trim(); // Başlangıç ve sondaki boşlukları temizle
     debug(`Birleştirilmiş başlık: ${title}`);
 
     if (!title) {
@@ -126,7 +116,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const images: Set<string> = new Set();
     debug("Görsel yakalama başlatıldı");
 
-    // JSON verilerinden görselleri al
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
