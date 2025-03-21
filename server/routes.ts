@@ -144,6 +144,16 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       colors: new Set<string>()
     };
 
+    // HTML'den doğrudan beden seçeneklerini al
+    $('.v-v').each((_, element) => {
+      const value = $(element).text().trim();
+      if (value) {
+        variants.sizes.add(value);
+        debug(`Beden seçeneği bulundu: ${value}`);
+      }
+    });
+
+
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -151,57 +161,24 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
           if (match) {
             const data = JSON.parse(match[1]);
-            debug("Product detail state bulundu");
 
-            // hasVariant yapısından bedenleri al
-            if (data.product?.hasVariant) {
-              debug("hasVariant verisi:", JSON.stringify(data.product.hasVariant, null, 2));
-              data.product.hasVariant.forEach((variant: any) => {
-                // Her bir varyantın size bilgisini kontrol et
-                if (variant.size) {
-                  const sizes = Array.isArray(variant.size) ? variant.size : [variant.size];
-                  sizes.forEach(size => {
-                    const sizeStr = size.toString().trim();
-                    if (sizeStr) {
-                      variants.sizes.add(sizeStr);
-                      debug(`hasVariant'dan beden eklendi: ${sizeStr}`);
-                    }
-                  });
-                }
-              });
-            }
-
-            // variants yapısından bedenleri al
-            if (data.product?.variants) {
-              debug("variants verisi:", JSON.stringify(data.product.variants, null, 2));
-              data.product.variants.forEach((variant: any) => {
-                const value = variant.attributeValue || variant.value;
-                if (value) {
-                  const sizeStr = value.toString().trim();
-                  variants.sizes.add(sizeStr);
-                  debug(`variants'dan beden eklendi: ${sizeStr}`);
-                }
-              });
-            }
-
-            // Renk bilgisini al
             if (data.product?.color) {
               const color = data.product.color.split('-')[0].trim();
               if (color) {
                 variants.colors.add(color);
-                debug(`Renk eklendi: ${color}`);
+                debug(`Renk bulundu: ${color}`);
               }
             }
 
-            // Debug için tüm beden ve renkleri yazdır
-            debug("Bulunan tüm bedenler:", Array.from(variants.sizes));
-            debug("Bulunan tüm renkler:", Array.from(variants.colors));
           }
         } catch (error) {
           debug(`Varyant parse hatası: ${error}`);
         }
       }
     });
+
+    debug("Bulunan tüm bedenler:", Array.from(variants.sizes));
+    debug("Bulunan tüm renkler:", Array.from(variants.colors));
 
 
     $('script').each((_, element) => {
