@@ -277,19 +277,41 @@ export default function Home() {
                               className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
                               onError={(e) => {
                                 const img = e.target as HTMLImageElement;
-                                // Zoom versiyonu yüklenmezse normal versiyonu dene
-                                if (img.src.includes('_org_zoom')) {
-                                  img.src = image.replace('_org_zoom', '');
-                                } else if (!img.src.includes('cdn.dsmcdn.com') && img.src.includes('/ty')) {
-                                  // CDN URL'sini dene
-                                  img.src = `https://cdn.dsmcdn.com${new URL(image).pathname}`;
-                                } else {
-                                  // Farklı formatları dene
+                                const originalSrc = img.src;
+
+                                // Farklı görsel formatlarını ve URL yapılarını dene
+                                const tryNextFormat = () => {
                                   const formats = ['jpg', 'jpeg', 'png', 'webp'];
-                                  const currentFormat = img.src.split('.').pop() || '';
-                                  const nextFormat = formats.find(f => f !== currentFormat) || 'jpg';
-                                  img.src = image.replace(new RegExp(`\\.${currentFormat}$`), `.${nextFormat}`);
-                                }
+                                  const currentFormat = img.src.split('.').pop()?.toLowerCase() || '';
+                                  const nextFormat = formats.find(f => f.toLowerCase() !== currentFormat) || 'jpg';
+                                  return image.replace(new RegExp(`\\.${currentFormat}$`, 'i'), `.${nextFormat}`);
+                                };
+
+                                // Görsel yükleme stratejileri
+                                const loadStrategies = [
+                                  () => image.replace('_org_zoom', ''), // Normal boyut
+                                  () => `https://cdn.dsmcdn.com${new URL(image).pathname}`, // CDN URL'si
+                                  tryNextFormat, // Farklı format
+                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'), // JPG'ye強制 dönüştür
+                                ];
+
+                                // Stratejileri sırayla dene
+                                const tryNextStrategy = (strategyIndex = 0) => {
+                                  if (strategyIndex >= loadStrategies.length) {
+                                    img.src = originalSrc; // Hiçbiri çalışmazsa orijinale dön
+                                    return;
+                                  }
+
+                                  const newSrc = loadStrategies[strategyIndex]();
+                                  if (newSrc !== img.src) {
+                                    img.onerror = () => tryNextStrategy(strategyIndex + 1);
+                                    img.src = newSrc;
+                                  } else {
+                                    tryNextStrategy(strategyIndex + 1);
+                                  }
+                                };
+
+                                tryNextStrategy();
                               }}
                             />
                             <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
