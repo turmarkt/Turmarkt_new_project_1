@@ -144,67 +144,46 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       colors: new Set<string>()
     };
 
-    // JSON-LD'den beden ve renk bilgilerini al
+    // JSON-LD'den beden bilgilerini al
+    let schemaData: any = null;
     $('script[type="application/ld+json"]').each((_, element) => {
       try {
-        const jsonLd = JSON.parse($(element).html() || '{}');
-
-        // İlk olarak hasVariant yapısını kontrol et
-        if (jsonLd.hasVariant) {
-          jsonLd.hasVariant.forEach((variant: any) => {
-            // Beden bilgilerini kontrol et ve ekle
-            if (variant.size) {
-              if (Array.isArray(variant.size)) {
-                variant.size.forEach((size: string) => {
-                  if (size) {
-                    variants.sizes.add(size.trim());
-                    debug(`JSON-LD'den beden eklendi: ${size}`);
-                  }
-                });
-              } else if (typeof variant.size === 'string') {
-                variants.sizes.add(variant.size.trim());
-                debug(`JSON-LD'den beden eklendi: ${variant.size}`);
-              }
-            }
-
-            // Renk bilgisini kontrol et ve ekle
-            if (variant.color) {
-              const color = variant.color.split('-')[0].trim();
-              if (color) {
-                variants.colors.add(color);
-                debug(`JSON-LD'den renk eklendi: ${color}`);
-              }
-            }
-          });
+        const data = JSON.parse($(element).html() || '{}');
+        if (data.hasVariant) {
+          schemaData = data;
+          return false; // jQuery each'den çık
         }
-
-        // Ayrıca normal size array'ini de kontrol et
-        if (Array.isArray(jsonLd.size)) {
-          jsonLd.size.forEach((size: string) => {
-            if (size) {
-              variants.sizes.add(size.trim());
-              debug(`JSON-LD ana yapıdan beden eklendi: ${size}`);
-            }
-          });
-        }
-
       } catch (error) {
-        debug(`JSON-LD işleme hatası: ${error}`);
+        debug(`JSON parse hatası: ${error}`);
       }
     });
 
-    // Son kontrol için HTML yapısını da incele
-    $('.v-v:not(.disabled)').each((_, element) => {
-      const size = $(element).text().trim();
-      if (size) {
-        variants.sizes.add(size);
-        debug(`HTML yapısından beden eklendi: ${size}`);
-      }
-    });
+    if (schemaData?.hasVariant) {
+      debug("Schema data bulundu:", JSON.stringify(schemaData, null, 2));
+      // Tüm varyantları döngüyle kontrol et
+      schemaData.hasVariant.forEach((variant: any) => {
+        // Her varyantın size özelliğini kontrol et
+        if (variant.size) {
+          if (Array.isArray(variant.size)) {
+            variant.size.forEach((size: string) => {
+              variants.sizes.add(size);
+              debug(`Beden eklendi (array): ${size}`);
+            });
+          } else {
+            variants.sizes.add(variant.size);
+            debug(`Beden eklendi (tekil): ${variant.size}`);
+          }
+        }
+        // Renk bilgisini al
+        if (variant.color) {
+          variants.colors.add(variant.color.split('-')[0].trim());
+          debug(`Renk eklendi: ${variant.color}`);
+        }
+      });
+    }
 
-    // Bulunan tüm bedenleri ve renkleri yazdır
-    debug("Bulunan tüm bedenler:", Array.from(variants.sizes).join(', '));
-    debug("Bulunan tüm renkler:", Array.from(variants.colors).join(', '));
+    debug("Tüm bulunan bedenler:", Array.from(variants.sizes).join(', '));
+    debug("Tüm bulunan renkler:", Array.from(variants.colors).join(', '));
 
 
     $('script').each((_, element) => {
