@@ -147,13 +147,16 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // JSON-LD'den varyant bilgilerini al
     $('script[type="application/ld+json"]').each((_, element) => {
       try {
-        const data = JSON.parse($(element).html() || '');
-        if (data.hasVariant) {
-          data.hasVariant.forEach((variant: any) => {
-            if (variant.size) {
+        const jsonLd = JSON.parse($(element).html() || '{}');
+
+        // Varyant boyutlarını kontrol et
+        if (jsonLd.hasVariant) {
+          jsonLd.hasVariant.forEach((variant: any) => {
+            // Size array'ini kontrol et
+            if (Array.isArray(variant.size)) {
               variant.size.forEach((size: string) => {
                 variants.sizes.add(size);
-                debug(`JSON-LD'den beden bulundu: ${size}`);
+                debug(`JSON-LD array'den beden: ${size}`);
               });
             }
           });
@@ -163,16 +166,39 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // HTML'den beden seçeneklerini al
-    $('.variant-list .v-v').each((_, element) => {
-      const value = $(element).text().trim();
-      if (value) {
-        variants.sizes.add(value);
-        debug(`HTML'den beden bulundu: ${value}`);
+    // HTML'den varyant seçicisini bul
+    $('.variant-list').each((_, variantList) => {
+      $(variantList).find('div[data-pk]').each((_, sizeOption) => {
+        const size = $(sizeOption).text().trim();
+        if (size) {
+          variants.sizes.add(size);
+          debug(`Variant listesinden beden: ${size}`);
+        }
+      });
+    });
+
+    // Doğrudan beden selector'ünü kontrol et
+    $('.sp-itm:contains("Beden")').each((_, bedenContainer) => {
+      $(bedenContainer).find('.v-v').each((_, option) => {
+        const size = $(option).text().trim();
+        if (size) {
+          variants.sizes.add(size);
+          debug(`Beden container'dan: ${size}`);
+        }
+      });
+    });
+
+    // HTML'deki tüm olası beden class'larını tara
+    $('.variant-list .v-v').each((_, el) => {
+      const size = $(el).text().trim();
+      if (size) {
+        variants.sizes.add(size);
+        debug(`v-v class'ından beden: ${size}`);
       }
     });
 
-    // Initial state'den renk bilgisini al
+
+    // Renk bilgisini al
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -194,6 +220,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // Debug için tüm bulunan bedenleri ve renkleri yazdır
     debug("Bulunan tüm bedenler:", Array.from(variants.sizes));
     debug("Bulunan tüm renkler:", Array.from(variants.colors));
 
