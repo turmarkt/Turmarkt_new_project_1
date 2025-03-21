@@ -144,59 +144,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       colors: new Set<string>()
     };
 
-    // JSON-LD'den varyantları çek
-    $('script[type="application/ld+json"]').each((_, element) => {
-      try {
-        const data = JSON.parse($(element).html() || '');
-        if (data.hasVariant) {
-          data.hasVariant.forEach((variant: any) => {
-            // Renk seçeneğini ekle
-            if (variant.color) {
-              variants.colors.add(variant.color);
-              debug(`Renk varyantı bulundu: ${variant.color}`);
-            }
-
-            // Beden/Numara seçeneklerini ekle
-            if (variant.size) {
-              if (typeof variant.size === 'string') {
-                // Virgülle ayrılmış beden seçeneklerini parçala
-                variant.size.split(',').forEach((size: string) => {
-                  const trimmedSize = size.trim();
-                  if (trimmedSize) {
-                    variants.sizes.add(trimmedSize);
-                    debug(`Beden varyantı bulundu: ${trimmedSize}`);
-                  }
-                });
-              } else if (Array.isArray(variant.size)) {
-                variant.size.forEach((size: string) => {
-                  const trimmedSize = size.trim();
-                  if (trimmedSize) {
-                    variants.sizes.add(trimmedSize);
-                    debug(`Beden varyantı bulundu: ${trimmedSize}`);
-                  }
-                });
-              }
-            }
-
-            // Numara seçeneğini kontrol et
-            if (variant.additionalProperty) {
-              variant.additionalProperty.forEach((prop: any) => {
-                if (prop.name === "Numara" && prop.value) {
-                  const size = prop.value.toString().trim();
-                  if (size) {
-                    variants.sizes.add(size);
-                    debug(`Numara varyantı bulundu: ${size}`);
-                  }
-                }
-              });
-            }
-          });
-        }
-      } catch (error) {
-        debug(`Varyant parse hatası: ${error}`);
-      }
-    });
-
     // Sayfa içeriğinden varyantları çek
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
@@ -212,13 +159,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               data.product.variants.forEach((variant: any) => {
                 // Stokta olan varyantları kontrol et
                 if (variant.stock > 0) {
-                  if (variant.attributeValue) {
-                    variants.sizes.add(variant.attributeValue);
-                    debug(`Stokta olan varyant bulundu: ${variant.attributeValue}`);
-                  }
-                  if (variant.attributeName === "Numara" && variant.attributeValue) {
-                    variants.sizes.add(variant.attributeValue);
-                    debug(`Stokta olan numara bulundu: ${variant.attributeValue}`);
+                  const attributeValue = variant.attributeValue || variant.value;
+                  if (attributeValue) {
+                    variants.sizes.add(attributeValue);
+                    debug(`Stokta olan varyant bulundu: ${attributeValue}`);
                   }
                 }
               });
@@ -240,23 +184,17 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 }
               });
             }
+
+            // Renk varyantlarını kontrol et
+            if (data.product?.color) {
+              variants.colors.add(data.product.color);
+              debug(`Renk varyantı bulundu: ${data.product.color}`);
+            }
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
         }
       }
-    });
-
-    // HTML'den stokta olan varyantları çek
-    $('.sp-itm:contains("Numara"), .sp-itm:contains("Beden")').each((_, item) => {
-      const options = $(item).find('.v-v:not(.disabled)');
-      options.each((_, option) => {
-        const size = $(option).text().trim();
-        if (size) {
-          variants.sizes.add(size);
-          debug(`HTML'den stokta olan varyant bulundu: ${size}`);
-        }
-      });
     });
 
     debug(`Toplam ${variants.sizes.size} adet stokta olan beden/numara varyantı bulundu`);
@@ -287,9 +225,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         }
       }
     });
-
-    // JSON-LD'den özellikleri ve varyantları çek (bu kısım yukarıda ayrıntılı olarak ele alındı)
-
 
     // Ürün özelliklerini çek
     const attributes: Record<string, string> = {};
