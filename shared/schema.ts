@@ -16,6 +16,13 @@ const attributesSchema = z.object({
   "Paket İçeriği": z.literal(ProductAttribute.PaketIcerigi)
 }).strict(); // strict() ile fazladan özellik eklenmesini engelle
 
+// Attribute tipini oluştur
+export type ProductAttributes = {
+  Hacim: ProductAttribute.Hacim;
+  Mensei: ProductAttribute.Mensei;
+  "Paket İçeriği": ProductAttribute.PaketIcerigi;
+};
+
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
   url: text("url").notNull(),
@@ -26,7 +33,7 @@ export const products = pgTable("products", {
   images: text("images").array().notNull(),
   video: text("video"),
   variants: jsonb("variants").notNull(),
-  attributes: jsonb("attributes").$type<z.infer<typeof attributesSchema>>().notNull(),
+  attributes: jsonb("attributes").$type<ProductAttributes>().notNull(),
   categories: text("categories").array().notNull(),
   tags: text("tags").array().notNull()
 });

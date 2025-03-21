@@ -1,4 +1,4 @@
-import { ProductAttribute } from "@shared/schema";
+import { ProductAttribute, type ProductAttributes } from "@shared/schema";
 import type { Express } from "express";
 import { createServer } from "http";
 import { storage } from "./storage";
@@ -160,7 +160,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Açıklamayı çek
     const description = extractDescription($);
 
-    // Ürün nesnesi oluştur - Sadece ProductAttribute değerlerini kullan
+    // Sabit özellikler - ProductAttributes tipini kullan
+    const attributes: ProductAttributes = {
+      "Hacim": ProductAttribute.Hacim,
+      "Mensei": ProductAttribute.Mensei,
+      "Paket İçeriği": ProductAttribute.PaketIcerigi
+    };
+
+    // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
       title,
@@ -170,11 +177,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       images: Array.from(images),
       video: videoUrl,
       variants,
-      attributes: {
-        Hacim: ProductAttribute.Hacim,
-        Mensei: ProductAttribute.Mensei,
-        "Paket İçeriği": ProductAttribute.PaketIcerigi
-      },
+      attributes, // Sadece sabit özellikleri kullan
       categories: categories.length > 0 ? categories : ['Trendyol'],
       tags: [...categories, ...variants.colors, ...variants.sizes].filter(Boolean)
     };

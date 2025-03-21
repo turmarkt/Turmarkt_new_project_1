@@ -1,4 +1,4 @@
-import { products, type Product, type InsertProduct } from "@shared/schema";
+import { products, type Product, type InsertProduct, ProductAttribute, type ProductAttributes } from "@shared/schema";
 
 export interface IStorage {
   saveProduct(product: InsertProduct): Promise<Product>;
@@ -16,7 +16,21 @@ export class MemStorage implements IStorage {
 
   async saveProduct(insertProduct: InsertProduct): Promise<Product> {
     const id = this.currentId++;
-    const product: Product = { ...insertProduct, id };
+
+    // Sadece ProductAttribute'da tanımlı özellikleri ekle
+    const filteredAttributes: ProductAttributes = {
+      "Hacim": ProductAttribute.Hacim,
+      "Mensei": ProductAttribute.Mensei,
+      "Paket İçeriği": ProductAttribute.PaketIcerigi
+    };
+
+    // Ürünü güncelle
+    const product: Product = { 
+      ...insertProduct, 
+      id,
+      attributes: filteredAttributes
+    };
+
     this.products.set(product.url, product);
     return product;
   }
