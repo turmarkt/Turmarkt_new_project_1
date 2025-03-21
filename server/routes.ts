@@ -77,56 +77,94 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Görselleri çek
     const images: Set<string> = new Set();
+    debug("Görsel yakalama başlatıldı");
 
-    // Tüm olası görsel selektörleri - Genişletilmiş liste
+    // Tüm olası görsel selektörleri - Detaylı liste
     const imageSelectors = [
+      // Ana ürün görselleri
       '.gallery-modal-content img',
       '.product-slide img',
       '.product-images img',
-      '.product-stamp img',
-      '.gallery-modal img',
-      '.product-box-container img',
-      '.product-gallery img',
       '.image-container img',
+      '.ph-image img',
+      '.a-image img',
+
+      // Slider ve galeri görselleri
       '.slick-slide img',
-      '.image-box img',
+      '.gallery-preview img',
+      '.gallery-modal img',
+
+      // Detay görselleri
+      '.detail-section-img img',
+      '.detail-imgs-wrapper img',
+      '.detail-images-container img',
+
+      // Responsive ve lazy-load görseller
       'picture source[srcset]',
-      'picture img'
+      'picture source[data-srcset]',
+      'img[data-src]',
+      'img[data-lazy]'
     ];
+
+    debug(`${imageSelectors.length} adet görsel selektörü kontrol ediliyor`);
 
     // Her selektör için görselleri topla
     for (const selector of imageSelectors) {
-      $(selector).each((_, el) => {
+      const elements = $(selector);
+      debug(`'${selector}' için ${elements.length} element bulundu`);
+
+      elements.each((_, el) => {
         // Tüm olası görsel kaynaklarını kontrol et
-        let src = $(el).attr('src') || 
-                 $(el).attr('data-src') || 
-                 $(el).attr('data-original') ||
-                 $(el).attr('srcset')?.split(',')[0]?.trim()?.split(' ')[0];
+        const srcAttr = $(el).attr('src');
+        const dataSrc = $(el).attr('data-src');
+        const dataLazy = $(el).attr('data-lazy');
+        const srcset = $(el).attr('srcset') || $(el).attr('data-srcset');
 
-        if (src) {
-          // URL'yi temizle ve normalize et
-          src = src.split('?')[0]; // Query parametrelerini kaldır
+        let sources = [srcAttr, dataSrc, dataLazy];
 
-          // Küçük resimleri büyük versiyonlarıyla değiştir
-          src = src.replace(/\/mnresize\/\d+\/\d+\//, '/');
-          src = src.replace(/_\d+x\d+/, '');
-
-          // En yüksek kaliteli versiyonu al
-          if (!src.includes('_org_zoom')) {
-            src = src.replace(/\.(jpg|jpeg|png)$/, '_org_zoom.$1');
-          }
-
-          // Görsel URL'sini normalize et
-          if (!src.startsWith('http')) {
-            src = `https:${src}`;
-          }
-
-          images.add(src);
+        // Srcset varsa parse et
+        if (srcset) {
+          const srcsetUrls = srcset.split(',')
+            .map(s => s.trim().split(' ')[0])
+            .filter(Boolean);
+          sources = [...sources, ...srcsetUrls];
         }
+
+        // Her kaynağı işle
+        sources.filter(Boolean).forEach(src => {
+          if (!src) return;
+
+          try {
+            // URL'yi temizle ve normalize et
+            src = src.split('?')[0]; // Query parametrelerini kaldır
+
+            // Göreceli URL'leri mutlak URL'lere çevir
+            if (src.startsWith('//')) {
+              src = 'https:' + src;
+            } else if (!src.startsWith('http')) {
+              src = 'https://' + src;
+            }
+
+            // Küçük resimleri büyük versiyonlarıyla değiştir
+            src = src.replace(/\/mnresize\/\d+\/\d+\//, '/');
+            src = src.replace(/_\d+x\d+/, '');
+
+            // En yüksek kaliteli versiyonu al
+            if (!src.includes('_org_zoom')) {
+              src = src.replace(/\.(jpg|jpeg|png|webp)$/, '_org_zoom.$1');
+            }
+
+            images.add(src);
+            debug(`Görsel eklendi: ${src}`);
+          } catch (error) {
+            debug(`Görsel işlenirken hata: ${error.message}`);
+          }
+        });
       });
     }
 
-    debug(`${images.size} adet görsel bulundu`);
+    const uniqueImages = Array.from(images);
+    debug(`Toplam ${uniqueImages.length} benzersiz görsel bulundu`);
 
     // Video URL'sini çek
     let videoUrl = null;
@@ -165,7 +203,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       description: "", // HTML'den açıklama almıyoruz
       price: price.toString(),
       basePrice: basePrice.toString(),
-      images: Array.from(images),
+      images: uniqueImages,
       video: videoUrl,
       variants,
       // Sadece enum'dan gelen sabit özellikleri kullan
