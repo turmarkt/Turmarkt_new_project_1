@@ -48,12 +48,15 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
 
 function normalizeImageUrl(url: string): string {
   try {
+    // İlk olarak URL'yi parçala ve query parametrelerini temizle
     url = url.split('?')[0];
 
+    // CDN URL'sini düzgün şekilde oluştur
     if (url.includes('/ty')) {
       url = `https://cdn.dsmcdn.com${url}`;
     }
 
+    // Protokol ekle
     if (url.startsWith('//')) {
       url = 'https:' + url;
     } else if (!url.startsWith('http')) {
