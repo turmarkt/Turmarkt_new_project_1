@@ -21,7 +21,7 @@ export function UrlHistory({ onSelect }: Props) {
           <Button
             key={url}
             variant="ghost"
-            className="text-left justify-start h-auto py-1 px-2"
+            className="text-left justify-start h-auto py-1 px-2 text-xs truncate"
             onClick={() => onSelect(url)}
           >
             {url}

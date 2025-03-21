@@ -216,7 +216,7 @@ export default function Home() {
               <Input
                 placeholder="Trendyol ürün URL'sini girin..."
                 {...form.register("url")}
-                className="text-sm p-4 bg-gray-900 border-gray-800 rounded-lg"
+                className="text-xs p-4 bg-gray-900 border-gray-800 rounded-lg w-full truncate"
               />
               <Button
                 type="submit"
