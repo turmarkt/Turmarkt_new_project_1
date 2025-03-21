@@ -181,7 +181,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               debug(`Renk varyantı bulundu: ${variant.color}`);
             }
 
-            // Beden seçeneklerini ekle
+            // Beden/Numara seçeneklerini ekle
             if (variant.size) {
               if (typeof variant.size === 'string') {
                 // Virgülle ayrılmış beden seçeneklerini parçala
@@ -202,11 +202,36 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 });
               }
             }
+
+            // Numara seçeneğini kontrol et
+            if (variant.additionalProperty) {
+              variant.additionalProperty.forEach((prop: any) => {
+                if (prop.name === "Numara" && prop.value) {
+                  const size = prop.value.toString().trim();
+                  if (size) {
+                    variants.sizes.add(size);
+                    debug(`Numara varyantı bulundu: ${size}`);
+                  }
+                }
+              });
+            }
           });
         }
       } catch (error) {
         debug(`Varyant parse hatası: ${error}`);
       }
+    });
+
+    // Alternatif olarak sayfadaki beden/numara seçeneklerini kontrol et
+    $('.sp-itm:contains("Numara"), .sp-itm:contains("Beden")').each((_, item) => {
+      const options = $(item).find('.v-v');
+      options.each((_, option) => {
+        const size = $(option).text().trim();
+        if (size) {
+          variants.sizes.add(size);
+          debug(`Alternatif yoldan varyant bulundu: ${size}`);
+        }
+      });
     });
 
     // Ürün özelliklerini çek

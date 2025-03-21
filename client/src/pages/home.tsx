@@ -392,7 +392,13 @@ export default function Home() {
 
                             {product.variants.sizes.length > 0 && (
                               <div>
-                                <h3 className="text-sm font-medium mb-2">Beden Seçenekleri</h3>
+                                <h3 className="text-sm font-medium mb-2">
+                                  {product.categories.some(cat => 
+                                    cat.toLowerCase().includes('ayakkabı') || 
+                                    cat.toLowerCase().includes('bot') || 
+                                    cat.toLowerCase().includes('çizme')
+                                  ) ? 'Numara Seçenekleri' : 'Beden Seçenekleri'}
+                                </h3>
                                 <div className="flex flex-wrap gap-2">
                                   {product.variants.sizes.map((size, index) => (
                                     <span 
