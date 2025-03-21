@@ -141,7 +141,6 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   }
 }
 
-// Özellikleri çek fonksiyonu
 // Fixed attributes
 const defaultAttributes = {
   'Hacim': '15 ml',
@@ -149,6 +148,7 @@ const defaultAttributes = {
   'Paket İçeriği': 'Tekli'
 };
 
+// Özellikleri çek fonksiyonu
 function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
   // Initialize with default attributes
   let attributes: Record<string, string> = { ...defaultAttributes };
@@ -156,6 +156,18 @@ function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
 
   // Dinamik özellikleri çek
   const dynamicAttrs: Record<string, string> = {};
+
+  // Özellik listelerini tara
+  $('.detail-attr-item, .detail-desc-list li, .feature-list li, .product-info-list li').each((_, element) => {
+    const text = $(element).text().trim();
+    if (text.includes(':')) {
+      const [label, value] = text.split(':').map(s => s.trim());
+      if (label && value) {
+        dynamicAttrs[label] = value;
+        debug(`Liste özelliği eklendi: ${label} = ${value}`);
+      }
+    }
+  });
 
   // Script taglerinden ürün verilerini çek
   $('script').each((_, element) => {
@@ -180,29 +192,7 @@ function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
     }
   });
 
-  // Özellik listelerini tara
-  $('.detail-attr-item, .detail-desc-list li, .feature-list li, .product-info-list li').each((_, element) => {
-    const text = $(element).text().trim();
-    if (text.includes(':')) {
-      const [label, value] = text.split(':').map(s => s.trim());
-      if (label && value) {
-        dynamicAttrs[label] = value;
-        debug(`Liste özelliği eklendi: ${label} = ${value}`);
-      }
-    }
-  });
-
-  // Özellik tablolarını tara
-  $('.detail-attr-container table tr, .product-feature-table tr').each((_, row) => {
-    const label = $(row).find('th, td:first-child').text().trim();
-    const value = $(row).find('td:last-child').text().trim();
-    if (label && value) {
-      dynamicAttrs[label] = value;
-      debug(`Tablo özelliği eklendi: ${label} = ${value}`);
-    }
-  });
-
-  // Dinamik özellikleri defaultAttributes ile birleştir
+  // Dinamik özellikleri varsayılan özelliklerle birleştir
   attributes = { ...attributes, ...dynamicAttrs };
 
   debug("Son özellikler durumu:", attributes);
@@ -248,7 +238,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
-    // Fiyat bilgilerini çek
+    // Fiyat çek
     const priceSelectors = [
       '.prc-box-dscntd',
       '.prc-box-sllng',
@@ -278,8 +268,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const basePrice = cleanPrice(rawPrice);
     const price = (basePrice * 1.15).toFixed(2); // %15 kar ekle
 
-    debug("Fiyat hesaplandı:", { rawPrice, basePrice, calculatedPrice: price });
-
     // Görselleri çek
     const images: Set<string> = new Set();
 
@@ -290,41 +278,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       scriptImages.forEach(img => {
         if (typeof img === 'string') {
           images.add(getHighResImageUrl(img));
-        }
-      });
-    });
-
-    // Data özelliklerinden görselleri çek
-    const dataSelectors = [
-      '[data-gallery-images]',
-      '[data-images]',
-      '[data-product-images]',
-      '[data-gallery-list]',
-      '[data-media-gallery]'
-    ];
-
-    dataSelectors.forEach(selector => {
-      const elements = $(selector);
-      elements.each((_, element) => {
-        const data = $(element).attr('data-gallery-images') ||
-                    $(element).attr('data-images') ||
-                    $(element).attr('data-product-images') ||
-                    $(element).attr('data-gallery-list') ||
-                    $(element).attr('data-media-gallery');
-
-        if (data) {
-          try {
-            const parsedData = JSON.parse(data);
-            if (Array.isArray(parsedData)) {
-              parsedData.forEach(img => {
-                if (typeof img === 'string') {
-                  images.add(getHighResImageUrl(img));
-                }
-              });
-            }
-          } catch (error) {
-            debug(`Data özelliği parse hatası (${selector}):`, error);
-          }
         }
       });
     });
@@ -365,8 +318,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       });
     });
 
-    debug(`Toplam ${images.size} benzersiz görsel bulundu`);
-
     // Varyantları çek
     const variants = {
       sizes: [] as string[],
@@ -378,7 +329,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       const size = $(el).text().trim();
       if (size && !variants.sizes.includes(size)) {
         variants.sizes.push(size);
-        debug(`Beden eklendi: ${size}`);
       }
     });
 
@@ -387,18 +337,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       const color = $(el).text().trim();
       if (color && !variants.colors.includes(color)) {
         variants.colors.push(color);
-        debug(`Renk eklendi: ${color}`);
       }
     });
-
-    // Özellikleri çek
-    const attributes = extractAttributes($);
-    debug("Toplam özellik sayısı:", Object.keys(attributes).length);
-
-    // Açıklamayı çek
-    const description = extractDescription($);
-    debug("Açıklama uzunluğu:", description.length);
-
 
     // Kategorileri çek
     const categories: string[] = [];
@@ -406,7 +346,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       const category = $(el).text().trim();
       if (category && !category.includes('>') && category !== '') {
         categories.push(category);
-        debug(`Kategori eklendi: ${category}`);
       }
     });
 
@@ -417,8 +356,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       videoUrl = videoElement.attr('src') || null;
     }
 
+    // Açıklamayı çek
+    const description = extractDescription($);
 
-    // Ürün nesnesi oluştur
+    // Özellikleri çek
+    const attributes = extractAttributes($);
+    debug("Özellikler:", attributes);
+
+    // Ürün nesnesi oluştur - varsayılan özellikleri doğrudan ekle
     const product: InsertProduct = {
       url,
       title,
