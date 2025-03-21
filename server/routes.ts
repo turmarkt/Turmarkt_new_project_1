@@ -141,19 +141,31 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   }
 }
 
-// Fixed attributes - Sabit özellikler
-const defaultAttributes = {
-  'Hacim': '15 ml',
-  'Menşei': 'CN',
-  'Paket İçeriği': 'Tekli'
-};
-
 // Özellikleri çek fonksiyonu
 function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
-  // Sadece dinamik özellikleri topla
-  const dynamicAttributes: Record<string, string> = {};
+  // Sabit özellikler - her üründe olması gereken özellikler
+  const staticAttributes = {
+    'Hacim': '15 ml',
+    'Menşei': 'CN',
+    'Paket İçeriği': 'Tekli'
+  };
 
-  // Script içeriğinden özellikleri çek
+  // Geçici özellikler - dinamik olarak değişebilen özellikler
+  let tempAttributes: Record<string, string> = {};
+
+  // HTML'den özellikleri çek
+  $('.detail-attr-item, .detail-desc-list li, .feature-list li, .product-info-list li').each((_, element) => {
+    const text = $(element).text().trim();
+    if (text.includes(':')) {
+      const [label, value] = text.split(':').map(s => s.trim());
+      // "TRENDYOL PAZARYERİ" içeren özellikleri filtrele
+      if (label && value && !label.toLowerCase().includes('trendyol') && !label.toLowerCase().includes('pazaryeri')) {
+        tempAttributes[label] = value;
+      }
+    }
+  });
+
+  // Script taglerinden özellikleri çek
   $('script').each((_, element) => {
     const scriptContent = $(element).html() || '';
     if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -163,9 +175,11 @@ function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
           const data = JSON.parse(match[1]);
           if (data?.product?.attributes) {
             Object.entries(data.product.attributes).forEach(([key, value]) => {
-              if (value && typeof value === 'string') {
-                dynamicAttributes[key] = value;
-                debug(`Script'ten özellik eklendi: ${key} = ${value}`);
+              // "TRENDYOL PAZARYERİ" içeren özellikleri filtrele
+              if (value && typeof value === 'string' && 
+                  !key.toLowerCase().includes('trendyol') && 
+                  !key.toLowerCase().includes('pazaryeri')) {
+                tempAttributes[key] = value;
               }
             });
           }
@@ -176,7 +190,26 @@ function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
     }
   });
 
-  return dynamicAttributes;
+  // Son özellikleri oluştur - önce sabit özellikleri ekle
+  const finalAttributes = { ...staticAttributes };
+  debug("1. Sabit özellikler:", finalAttributes);
+
+  // Sonra filtrelenmiş dinamik özellikleri ekle
+  Object.entries(tempAttributes).forEach(([key, value]) => {
+    // Sabit özelliklerin üzerine yazılmasını önle
+    if (!Object.keys(staticAttributes).includes(key)) {
+      finalAttributes[key] = value;
+    }
+  });
+  debug("2. Dinamik özellikler eklendi:", finalAttributes);
+
+  // Son kontrol - sabit özelliklerin hepsinin olduğundan emin ol
+  Object.entries(staticAttributes).forEach(([key, value]) => {
+    finalAttributes[key] = value;
+  });
+  debug("3. Son kontrol - tüm özellikler:", finalAttributes);
+
+  return finalAttributes;
 }
 
 // Açıklamaları çek fonksiyonu
@@ -340,8 +373,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const description = extractDescription($);
 
     // Dinamik özellikleri çek
-    const dynamicAttributes = extractAttributes($);
-    debug("Dinamik özellikler:", dynamicAttributes);
 
     // Ürün nesnesi oluştur
     const product: InsertProduct = {
@@ -353,10 +384,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       images: Array.from(images),
       video: videoUrl,
       variants,
-      attributes: {
-        ...defaultAttributes,  // Önce sabit özellikleri ekle
-        ...dynamicAttributes  // Sonra dinamik özellikleri ekle
-      },
+      attributes: extractAttributes($),  // Artık sadece fonksiyonu çağırıyoruz
       categories: categories.length > 0 ? categories : ['Trendyol'],
       tags: [...categories, ...variants.colors, ...variants.sizes].filter(Boolean)
     };
