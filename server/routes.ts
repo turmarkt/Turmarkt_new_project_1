@@ -88,7 +88,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     debug(`Ürün adı: ${productName}`);
 
     // Başlığı düzgün formatta oluştur
-    const title = brand && productName ? `${brand} ${productName}` : productName;
+    const title = brand && productName ? `${brand} ${productName}` : (
+      $('.pr-in-w').first().text().trim() || // Alternatif başlık seçicisi
+      $('.prdct-desc-cntnr h1').first().text().trim() || // İkinci alternatif
+      productName // Son seçenek
+    );
+
     debug(`Birleştirilmiş başlık: ${title}`);
 
     if (!title) {
