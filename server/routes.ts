@@ -208,12 +208,19 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
+          // Hata detayını yazdır
+          if (error instanceof Error) {
+            debug(`Hata detayı: ${error.message}`);
+            debug(`Hata stack: ${error.stack}`);
+          }
         }
       }
     });
 
     debug(`Toplam ${variants.sizes.size} adet stokta olan beden/numara varyantı bulundu`);
+    debug(`Varyant listesi: ${Array.from(variants.sizes).join(', ')}`);
     debug(`Toplam ${variants.colors.size} adet renk varyantı bulundu`);
+    debug(`Renk listesi: ${Array.from(variants.colors).join(', ')}`);
 
 
     $('script').each((_, element) => {
