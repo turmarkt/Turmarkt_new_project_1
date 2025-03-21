@@ -149,6 +149,16 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
+  app.get("/api/history", async (req, res) => {
+    try {
+      const history = storage.getHistory();
+      res.json(history);
+    } catch (error) {
+      const { status, message, details } = handleError(error);
+      res.status(status).json({ message, details });
+    }
+  });
+
   app.post("/api/scrape", async (req, res) => {
     try {
       debug("Scrape isteği alındı");
