@@ -80,7 +80,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
   try {
     const $ = await fetchProductPage(url);
 
-    const title = $('.pr-new-br span').first().text().trim() || $('.prdct-desc-cntnr-ttl').first().text().trim();
+    // Marka ve ürün adını ayrı ayrı al ve birleştir
+    const brand = $('.pr-new-br span').first().text().trim();
+    const productName = $('.prdct-desc-cntnr-ttl').first().text().trim();
+    const title = brand ? `${brand} ${productName}` : productName;
+
     if (!title) {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
@@ -195,7 +199,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const product: InsertProduct = {
       url,
       title,
-      description: "", 
+      description: "",
       price: price.toString(),
       basePrice: basePrice.toString(),
       images: uniqueImages,
