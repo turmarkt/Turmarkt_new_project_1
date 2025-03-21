@@ -244,11 +244,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const attributes: Record<string, string> = {};
 
     // Trendyol'un ürün detay tablosundan özellikleri çek
-    $('.detail-attr-container').each((_, container) => {
-      const rows = $(container).find('tr');
+    $('.detail-attr-container, .detail-border').each((_, container) => {
+      const rows = $(container).find('tr, .prop-item');
       rows.each((_, row) => {
-        const key = $(row).find('th').text().trim();
-        const value = $(row).find('td').text().trim();
+        const key = $(row).find('th, .prop-key').text().trim();
+        const value = $(row).find('td, .prop-value').text().trim();
         if (key && value) {
           attributes[key] = value;
           debug(`Özellik bulundu: ${key} = ${value}`);
@@ -256,30 +256,45 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       });
     });
 
-    // Alternatif özellik selektörleri
+    // Type 1 ve diğer ek özellikleri çek
+    $('.product-information-wrapper').each((_, wrapper) => {
+      $(wrapper).find('.information-wrapper').each((_, info) => {
+        const type = $(info).find('.information-type').text().trim();
+        const value = $(info).find('.information-content').text().trim();
+        if (type && value) {
+          attributes[type] = value;
+          debug(`Ek özellik bulundu: ${type} = ${value}`);
+        }
+      });
+    });
+
+    // Ürün detaylarından özellikleri çek
     $('.product-feature-details table tr').each((_, row) => {
       const key = $(row).find('td:first-child').text().trim();
       const value = $(row).find('td:last-child').text().trim();
       if (key && value && !attributes[key]) {
         attributes[key] = value;
-        debug(`Alternatif özellik bulundu: ${key} = ${value}`);
+        debug(`Özellik detayı bulundu: ${key} = ${value}`);
       }
     });
 
-    // Ürün detaylarından özellikleri çek
-    $('.product-details-container .item-wrapper').each((_, item) => {
-      const key = $(item).find('.item-key').text().trim();
-      const value = $(item).find('.item-value').text().trim();
-      if (key && value && !attributes[key]) {
-        attributes[key] = value;
-        debug(`Detay özelliği bulundu: ${key} = ${value}`);
+    // Materyal bileşeni gibi tekrarlanan özellikleri düzelt
+    if (attributes["Materyal Bileşeni"] === "Materyal Bileşeni") {
+      const nextKey = Object.keys(attributes).find(k => k.startsWith("Materyal Bileşeni") && k !== "Materyal Bileşeni");
+      if (nextKey && attributes[nextKey]) {
+        attributes["Materyal Bileşeni"] = attributes[nextKey];
+        delete attributes[nextKey];
       }
-    });
+    }
 
     if (Object.keys(attributes).length === 0) {
       debug("Hiç özellik bulunamadı!");
     } else {
       debug(`Toplam ${Object.keys(attributes).length} özellik bulundu`);
+      debug("Bulunan özellikler:");
+      Object.entries(attributes).forEach(([key, value]) => {
+        debug(`${key}: ${value}`);
+      });
     }
 
 
