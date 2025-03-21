@@ -60,9 +60,11 @@ function normalizeImageUrl(url: string): string {
       url = 'https://' + url;
     }
 
+    // Boyutlandırma parametrelerini kaldır
     url = url.replace(/\/mnresize\/\d+\/\d+\//, '/');
     url = url.replace(/_\d+x\d+/, '');
 
+    // _org_zoom eklemesi
     if (!url.includes('_org_zoom')) {
       url = url.replace(/\.(jpg|jpeg|png|webp)$/, '_org_zoom.$1');
     }
@@ -80,7 +82,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
   try {
     const $ = await fetchProductPage(url);
 
-    const brand = $('.pr-new-br span').first().text().trim() || 
+    const brand = $('.pr-new-br span').first().text().trim() ||
                      $('h1.pr-new-br').first().text().trim();
     debug(`Marka: ${brand}`);
 
