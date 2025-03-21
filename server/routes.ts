@@ -96,6 +96,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Fiyat bilgisini başlıktan temizle
     title = title.replace(/\d+(\.\d+)?\s*TL\s*$/, '').trim();
+    title = title.replace(/Tükeniyor!?/g, '').trim();
     debug(`Birleştirilmiş başlık: ${title}`);
 
     if (!title) {
