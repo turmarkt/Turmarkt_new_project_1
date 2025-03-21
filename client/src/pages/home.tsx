@@ -275,6 +275,10 @@ export default function Home() {
                               src={image}
                               alt={`${product.title} - Görsel ${index + 1}`}
                               className="w-full h-full object-cover rounded-md transition-transform group-hover:scale-105"
+                              onError={(e) => {
+                                const img = e.target as HTMLImageElement;
+                                img.src = image.replace('_org_zoom', '');
+                              }}
                             />
                             <div className="absolute bottom-1 right-1 bg-black/70 text-white text-[10px] px-1.5 py-0.5 rounded">
                               {index + 1}

@@ -97,7 +97,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             });
           }
-        } catch (error) {
+        } catch (error: any) {
           debug(`JSON parse hatası: ${error.message}`);
         }
       }
@@ -165,7 +165,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
             images.add(src);
             debug(`Görsel eklendi: ${src}`);
-          } catch (error) {
+          } catch (error: any) {
             debug(`Görsel işlenirken hata: ${error.message}`);
           }
         });
