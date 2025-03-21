@@ -280,18 +280,34 @@ export default function Home() {
                                 const img = e.target as HTMLImageElement;
                                 const originalSrc = img.src;
 
+                                // CDN URL'sini düzgün şekilde oluştur
+                                const getCdnUrl = (url: string) => {
+                                  try {
+                                    const urlObj = new URL(url);
+                                    if (urlObj.pathname.startsWith('/ty')) {
+                                      return `https://cdn.dsmcdn.com${urlObj.pathname}`;
+                                    }
+                                    return url;
+                                  } catch {
+                                    return url;
+                                  }
+                                };
+
                                 // Görsel yükleme stratejileri
                                 const loadStrategies = [
-                                  () => image.replace('_org_zoom', ''), // Normal boyut
-                                  () => `https://cdn.dsmcdn.com${new URL(image).pathname}`, // CDN URL'si
-                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'), // JPG'ye dönüştür
-                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.webp'), // WEBP'ye dönüştür
+                                  () => getCdnUrl(image), // Önce CDN URL'sini dene
+                                  () => image.replace('_org_zoom', ''), // Zoom'suz versiyon
+                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'), // JPG formatı
+                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.webp'), // WEBP formatı
+                                  () => image.replace(/\/mnresize\/[^/]+\//, '/'), // Boyutlandırma parametrelerini kaldır
                                 ];
 
                                 // Stratejileri sırayla dene
                                 const tryNextStrategy = (strategyIndex = 0) => {
                                   if (strategyIndex >= loadStrategies.length) {
-                                    img.src = originalSrc;
+                                    console.warn(`Görsel yüklenemedi: ${originalSrc}`);
+                                    // Varsayılan bir hata görseli göster
+                                    img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E";
                                     return;
                                   }
 
