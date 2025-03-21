@@ -51,6 +51,18 @@ function normalizeImageUrl(url: string): string {
     // İlk olarak URL'yi parçala ve query parametrelerini temizle
     url = url.split('?')[0];
 
+    // Video uzantılarını kontrol et ve filtrele
+    if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
+      debug(`Video dosyası filtrelendi: ${url}`);
+      return '';
+    }
+
+    // Resim uzantılarını kontrol et
+    if (!url.match(/\.(jpg|jpeg|png|webp)$/i)) {
+      debug(`Desteklenmeyen dosya formatı: ${url}`);
+      return '';
+    }
+
     // CDN URL'sini düzgün şekilde oluştur
     if (url.includes('/ty')) {
       url = `https://cdn.dsmcdn.com${url}`;
@@ -72,10 +84,11 @@ function normalizeImageUrl(url: string): string {
       url = url.replace(/\.(jpg|jpeg|png|webp)$/, '_org_zoom.$1');
     }
 
+    debug(`Normalize edilmiş görsel URL: ${url}`);
     return url;
   } catch (error: any) {
     debug(`URL normalizasyon hatası: ${error.message}`);
-    return url;
+    return '';
   }
 }
 
@@ -145,12 +158,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             productImages.forEach((img: any) => {
               if (typeof img === 'string') {
                 const imgUrl = normalizeImageUrl(img);
-                images.add(imgUrl);
-                debug(`JSON'dan görsel eklendi: ${imgUrl}`);
+                if (imgUrl) images.add(imgUrl);
               } else if (img.url) {
                 const imgUrl = normalizeImageUrl(img.url);
-                images.add(imgUrl);
-                debug(`JSON'dan görsel eklendi: ${imgUrl}`);
+                if (imgUrl) images.add(imgUrl);
               }
             });
           }
@@ -200,7 +211,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           if (!src) return;
           try {
             const normalizedUrl = normalizeImageUrl(src);
-            images.add(normalizedUrl);
+            if (normalizedUrl) images.add(normalizedUrl);
             debug(`DOM'dan görsel eklendi: ${normalizedUrl}`);
           } catch (error: any) {
             debug(`Görsel işlenirken hata: ${error.message}`);
