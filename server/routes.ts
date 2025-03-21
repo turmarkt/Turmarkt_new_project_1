@@ -141,7 +141,7 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   }
 }
 
-// Fixed attributes
+// Fixed attributes - Sabit özellikler
 const defaultAttributes = {
   'Hacim': '15 ml',
   'Menşei': 'CN',
@@ -150,26 +150,10 @@ const defaultAttributes = {
 
 // Özellikleri çek fonksiyonu
 function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
-  // Initialize with default attributes
-  let attributes: Record<string, string> = { ...defaultAttributes };
-  debug("Başlangıç özellikleri:", attributes);
+  // Sadece dinamik özellikleri topla
+  const dynamicAttributes: Record<string, string> = {};
 
-  // Dinamik özellikleri çek
-  const dynamicAttrs: Record<string, string> = {};
-
-  // Özellik listelerini tara
-  $('.detail-attr-item, .detail-desc-list li, .feature-list li, .product-info-list li').each((_, element) => {
-    const text = $(element).text().trim();
-    if (text.includes(':')) {
-      const [label, value] = text.split(':').map(s => s.trim());
-      if (label && value) {
-        dynamicAttrs[label] = value;
-        debug(`Liste özelliği eklendi: ${label} = ${value}`);
-      }
-    }
-  });
-
-  // Script taglerinden ürün verilerini çek
+  // Script içeriğinden özellikleri çek
   $('script').each((_, element) => {
     const scriptContent = $(element).html() || '';
     if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -180,7 +164,7 @@ function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
           if (data?.product?.attributes) {
             Object.entries(data.product.attributes).forEach(([key, value]) => {
               if (value && typeof value === 'string') {
-                dynamicAttrs[key] = value;
+                dynamicAttributes[key] = value;
                 debug(`Script'ten özellik eklendi: ${key} = ${value}`);
               }
             });
@@ -192,11 +176,7 @@ function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
     }
   });
 
-  // Dinamik özellikleri varsayılan özelliklerle birleştir
-  attributes = { ...attributes, ...dynamicAttrs };
-
-  debug("Son özellikler durumu:", attributes);
-  return attributes;
+  return dynamicAttributes;
 }
 
 // Açıklamaları çek fonksiyonu
@@ -271,7 +251,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Görselleri çek
     const images: Set<string> = new Set();
 
-    // Script kaynaklarından görselleri çek
+    // Script taglerinden görselleri çek
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       const scriptImages = extractJSONFromScript(scriptContent);
@@ -359,11 +339,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Açıklamayı çek
     const description = extractDescription($);
 
-    // Özellikleri çek
-    const attributes = extractAttributes($);
-    debug("Özellikler:", attributes);
+    // Dinamik özellikleri çek
+    const dynamicAttributes = extractAttributes($);
+    debug("Dinamik özellikler:", dynamicAttributes);
 
-    // Ürün nesnesi oluştur - varsayılan özellikleri doğrudan ekle
+    // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
       title,
@@ -373,12 +353,15 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       images: Array.from(images),
       video: videoUrl,
       variants,
-      attributes,
+      attributes: {
+        ...defaultAttributes,  // Önce sabit özellikleri ekle
+        ...dynamicAttributes  // Sonra dinamik özellikleri ekle
+      },
       categories: categories.length > 0 ? categories : ['Trendyol'],
       tags: [...categories, ...variants.colors, ...variants.sizes].filter(Boolean)
     };
 
-    debug("Ürün verisi oluşturuldu:", product);
+    debug("Oluşturulan ürün:", product);
     return product;
 
   } catch (error: any) {
