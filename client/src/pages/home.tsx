@@ -300,14 +300,17 @@ export default function Home() {
                                   () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'), // JPG formatı
                                   () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.webp'), // WEBP formatı
                                   () => image.replace(/\/mnresize\/[^/]+\//, '/'), // Boyutlandırma parametrelerini kaldır
+                                  () => image.replace(/_org_zoom/, '').replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'), // Kombinasyon
                                 ];
 
                                 // Stratejileri sırayla dene
                                 const tryNextStrategy = (strategyIndex = 0) => {
                                   if (strategyIndex >= loadStrategies.length) {
                                     console.warn(`Görsel yüklenemedi: ${originalSrc}`);
-                                    // Varsayılan bir hata görseli göster
-                                    img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3C/svg%3E";
+                                    // Daha büyük ve estetik bir hata görseli
+                                    img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2' fill='%23222'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3Ctext x='12' y='12' text-anchor='middle' fill='%23666' font-size='2'%3EGörsel Yüklenemedi%3C/text%3E%3C/svg%3E`;
+                                    img.style.objectFit = 'contain';
+                                    img.style.padding = '1rem';
                                     return;
                                   }
 
