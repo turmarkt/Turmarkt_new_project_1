@@ -240,10 +240,53 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // Ürün özelliklerini çek
+    const attributes: Record<string, string> = {};
+
+    // Trendyol'un ürün detay tablosundan özellikleri çek
+    $('.detail-attr-container').each((_, container) => {
+      const rows = $(container).find('tr');
+      rows.each((_, row) => {
+        const key = $(row).find('th').text().trim();
+        const value = $(row).find('td').text().trim();
+        if (key && value) {
+          attributes[key] = value;
+          debug(`Özellik bulundu: ${key} = ${value}`);
+        }
+      });
+    });
+
+    // Alternatif özellik selektörleri
+    $('.product-feature-details table tr').each((_, row) => {
+      const key = $(row).find('td:first-child').text().trim();
+      const value = $(row).find('td:last-child').text().trim();
+      if (key && value && !attributes[key]) {
+        attributes[key] = value;
+        debug(`Alternatif özellik bulundu: ${key} = ${value}`);
+      }
+    });
+
+    // Ürün detaylarından özellikleri çek
+    $('.product-details-container .item-wrapper').each((_, item) => {
+      const key = $(item).find('.item-key').text().trim();
+      const value = $(item).find('.item-value').text().trim();
+      if (key && value && !attributes[key]) {
+        attributes[key] = value;
+        debug(`Detay özelliği bulundu: ${key} = ${value}`);
+      }
+    });
+
+    if (Object.keys(attributes).length === 0) {
+      debug("Hiç özellik bulunamadı!");
+    } else {
+      debug(`Toplam ${Object.keys(attributes).length} özellik bulundu`);
+    }
+
+
     const product: InsertProduct = {
       url,
       title,
-      description: "",
+      description: $('.product-description').text().trim() || "",
       price: price.toString(),
       basePrice: basePrice.toString(),
       images: uniqueImages,
@@ -252,11 +295,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         sizes: [],
         colors: []
       },
-      attributes: {
-        "Hacim": ProductAttribute.Hacim,
-        "Menşei": ProductAttribute.Mensei,
-        "Paket İçeriği": ProductAttribute.PaketIcerigi
-      },
+      attributes,
       categories: categories.length > 0 ? categories : ['Giyim'],
       tags: categories
     };

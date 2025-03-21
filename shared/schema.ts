@@ -2,22 +2,8 @@ import { pgTable, text, serial, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// Sabit özellikleri enum olarak tanımla
-export enum ProductAttribute {
-  Hacim = "15 ml",
-  Mensei = "CN",
-  PaketIcerigi = "Tekli"
-}
-
-// Özellik şemasını kesin olarak tanımla
-const attributesSchema = z.object({
-  "Hacim": z.literal(ProductAttribute.Hacim),
-  "Menşei": z.literal(ProductAttribute.Mensei),
-  "Paket İçeriği": z.literal(ProductAttribute.PaketIcerigi)
-}).strict(); // strict() ile fazladan özellik eklenmesini engelle
-
-// Özellik tipini oluştur
-export type ProductAttributes = z.infer<typeof attributesSchema>;
+// Ürün özellikleri için dinamik şema
+export const attributeSchema = z.record(z.string());
 
 export const products = pgTable("products", {
   id: serial("id").primaryKey(),
@@ -29,14 +15,14 @@ export const products = pgTable("products", {
   images: text("images").array().notNull(),
   video: text("video"),
   variants: jsonb("variants").notNull(),
-  attributes: jsonb("attributes").$type<ProductAttributes>().notNull(),
+  attributes: jsonb("attributes").$type<Record<string, string>>().notNull(),
   categories: text("categories").array().notNull(),
   tags: text("tags").array().notNull()
 });
 
-// Ürün ekleme şeması - attributes için attributesSchema kullan
+// Ürün ekleme şeması
 export const insertProductSchema = createInsertSchema(products).extend({
-  attributes: attributesSchema
+  attributes: attributeSchema
 });
 
 export type InsertProduct = z.infer<typeof insertProductSchema>;
