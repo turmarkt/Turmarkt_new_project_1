@@ -268,25 +268,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       });
     });
 
-    // Ürün detaylarından özellikleri çek
-    $('.product-feature-details table tr').each((_, row) => {
-      const key = $(row).find('td:first-child').text().trim();
-      const value = $(row).find('td:last-child').text().trim();
-      if (key && value && !attributes[key]) {
-        attributes[key] = value;
-        debug(`Özellik detayı bulundu: ${key} = ${value}`);
-      }
-    });
-
-    // Materyal bileşeni gibi tekrarlanan özellikleri düzelt
-    if (attributes["Materyal Bileşeni"] === "Materyal Bileşeni") {
-      const nextKey = Object.keys(attributes).find(k => k.startsWith("Materyal Bileşeni") && k !== "Materyal Bileşeni");
-      if (nextKey && attributes[nextKey]) {
-        attributes["Materyal Bileşeni"] = attributes[nextKey];
-        delete attributes[nextKey];
-      }
-    }
-
     if (Object.keys(attributes).length === 0) {
       debug("Hiç özellik bulunamadı!");
     } else {
