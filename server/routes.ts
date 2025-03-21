@@ -159,12 +159,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               data.product.variants.forEach((variant: any) => {
                 // Stokta olan varyantları kontrol et
                 if (variant.stock > 0) {
-                  if (variant.attributeName === "Numara" || variant.attributeName === "Beden") {
-                    const value = variant.attributeValue || variant.value;
-                    if (value) {
-                      variants.sizes.add(value);
-                      debug(`Stokta olan ${variant.attributeName} varyantı bulundu: ${value}`);
-                    }
+                  const value = variant.attributeValue || variant.value;
+                  if (value) {
+                    variants.sizes.add(value);
+                    debug(`Stokta olan varyant bulundu: ${value}`);
                   }
                 }
               });
@@ -194,7 +192,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 $(element).find('.v-v').each((_, option) => {
                   const value = $(option).text().trim();
                   const isDisabled = $(option).hasClass('disabled');
-                  if (value && !isDisabled) {
+                  if (!isDisabled && value) {
                     variants.sizes.add(value);
                     debug(`DOM'dan stokta olan ${label} seçeneği bulundu: ${value}`);
                   }
@@ -203,14 +201,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             });
 
             // HTML'den stok varyantlarını kontrol et
-            $('div[data-pk]').each((_, element) => {
+            $('.variant-list li').each((_, element) => {
               const $el = $(element);
-              const isStocked = !$el.hasClass('disabled');
-              if (isStocked) {
+              const isDisabled = $el.hasClass('disabled') || $el.hasClass('passive');
+              if (!isDisabled) {
                 const value = $el.text().trim();
-                if (value && /^\d+$/.test(value)) {
+                if (value) {
                   variants.sizes.add(value);
-                  debug(`HTML data-pk'dan stokta olan numara bulundu: ${value}`);
+                  debug(`Varyant listesinden stokta olan seçenek bulundu: ${value}`);
                 }
               }
             });
@@ -224,16 +222,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            // Debug varyant verilerini
-            if (data.product) {
-              debug('Product data yapısı:');
-              debug(JSON.stringify({
-                variants: data.product.variants,
-                slicedAttributes: data.product.slicedAttributes,
-                color: data.product.color,
-                attributes: data.product.attributes
-              }, null, 2));
-            }
+            // Debug çıktıları
+            debug('Product data yapısı:');
+            debug(JSON.stringify({
+              variants: data.product.variants,
+              slicedAttributes: data.product.slicedAttributes,
+              color: data.product.color,
+              attributes: data.product.attributes
+            }, null, 2));
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
