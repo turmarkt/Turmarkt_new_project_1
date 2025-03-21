@@ -257,7 +257,7 @@ export default function Home() {
                     <h2 className="text-lg font-semibold">{product.title}</h2>
                     <div className="flex items-baseline gap-2">
                       <span className="text-base font-bold">{product.price} TL</span>
-                      <span className="text-xs text-gray-400 line-through">{product.basePrice} TL</span>
+                      {/*<span className="text-xs text-gray-400 line-through">{product.basePrice} TL</span>*/}
                     </div>
                   </div>
 
@@ -349,7 +349,6 @@ export default function Home() {
                                   <th className="text-left p-2">Description</th>
                                   <th className="text-left p-2">Vendor</th>
                                   <th className="text-left p-2">Price</th>
-                                  <th className="text-left p-2">Compare Price</th>
                                   <th className="text-left p-2">Images</th>
                                 </tr>
                               </thead>
@@ -360,7 +359,6 @@ export default function Home() {
                                   <td className="p-2">{product?.description || '-'}</td>
                                   <td className="p-2">{product?.categories[0] || 'Trendyol'}</td>
                                   <td className="p-2">{product?.price} TL</td>
-                                  <td className="p-2">{product?.basePrice} TL</td>
                                   <td className="p-2">
                                     {product?.images?.length || 0} görsel
                                     <div className="text-xs text-gray-500">
