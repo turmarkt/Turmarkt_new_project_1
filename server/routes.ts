@@ -78,37 +78,55 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Görselleri çek
     const images: Set<string> = new Set();
 
-    // Tüm olası görsel selektörleri
+    // Tüm olası görsel selektörleri - Genişletilmiş liste
     const imageSelectors = [
       '.gallery-modal-content img',
       '.product-slide img',
       '.product-images img',
       '.product-stamp img',
-      'picture source',
-      '.product-container img'
+      '.gallery-modal img',
+      '.product-box-container img',
+      '.product-gallery img',
+      '.image-container img',
+      '.slick-slide img',
+      '.image-box img',
+      'picture source[srcset]',
+      'picture img'
     ];
 
     // Her selektör için görselleri topla
     for (const selector of imageSelectors) {
-      $(selector).each((_, img) => {
-        let src = $(img).attr('src') || $(img).attr('data-src');
+      $(selector).each((_, el) => {
+        // Tüm olası görsel kaynaklarını kontrol et
+        let src = $(el).attr('src') || 
+                 $(el).attr('data-src') || 
+                 $(el).attr('data-original') ||
+                 $(el).attr('srcset')?.split(',')[0]?.trim()?.split(' ')[0];
 
         if (src) {
+          // URL'yi temizle ve normalize et
+          src = src.split('?')[0]; // Query parametrelerini kaldır
+
           // Küçük resimleri büyük versiyonlarıyla değiştir
-          src = src.replace('/mnresize/128/192/', '/');
-          src = src.replace('/mnresize/600/900/', '/');
+          src = src.replace(/\/mnresize\/\d+\/\d+\//, '/');
+          src = src.replace(/_\d+x\d+/, '');
 
           // En yüksek kaliteli versiyonu al
-          if (src.includes('_org_zoom')) {
-            images.add(src);
-          } else {
-            // Zoom versiyonu yoksa orijinal versiyonu kullan
-            const orgSrc = src.replace(/\.(jpg|jpeg|png)$/, '_org_zoom.$1');
-            images.add(orgSrc);
+          if (!src.includes('_org_zoom')) {
+            src = src.replace(/\.(jpg|jpeg|png)$/, '_org_zoom.$1');
           }
+
+          // Görsel URL'sini normalize et
+          if (!src.startsWith('http')) {
+            src = `https:${src}`;
+          }
+
+          images.add(src);
         }
       });
     }
+
+    debug(`${images.size} adet görsel bulundu`);
 
     // Video URL'sini çek
     let videoUrl = null;
