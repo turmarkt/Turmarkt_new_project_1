@@ -213,6 +213,20 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               });
             }
 
+            // DOM'dan numara/beden seçeneklerini kontrol et
+            $('.sp-itm').each((_, element) => {
+              const label = $(element).find('.sp-itm-title').text().trim();
+              if (label.includes('Numara') || label.includes('Beden')) {
+                $(element).find('.sp-itm-content .v-v:not(.disabled)').each((_, option) => {
+                  const value = $(option).text().trim();
+                  if (value) {
+                    variants.sizes.add(value);
+                    debug(`DOM'dan stokta olan ${label} seçeneği bulundu: ${value}`);
+                  }
+                });
+              }
+            });
+
             // Debug varyant verilerini
             if (data.product) {
               debug('Product data yapısı:');
