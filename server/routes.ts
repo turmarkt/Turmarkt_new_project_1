@@ -144,32 +144,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       colors: new Set<string>()
     };
 
-    $('script').each((_, element) => {
-      const scriptContent = $(element).html() || '';
-      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
-        try {
-          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
-          if (match) {
-            const data = JSON.parse(match[1]);
-            const productImages = data?.product?.images || [];
-            debug(`JSON'dan ${productImages.length} adet görsel bulundu`);
-            productImages.forEach((img: any) => {
-              if (typeof img === 'string') {
-                const imgUrl = normalizeImageUrl(img);
-                if (imgUrl) images.add(imgUrl);
-              } else if (img.url) {
-                const imgUrl = normalizeImageUrl(img.url);
-                if (imgUrl) images.add(imgUrl);
-              }
-            });
-          }
-        } catch (error: any) {
-          debug(`JSON parse hatası: ${error.message}`);
-        }
-      }
-    });
-
-    // JSON-LD'den özellikleri ve varyantları çek
+    // JSON-LD'den varyantları çek
     $('script[type="application/ld+json"]').each((_, element) => {
       try {
         const data = JSON.parse($(element).html() || '');
@@ -222,17 +197,94 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Alternatif olarak sayfadaki beden/numara seçeneklerini kontrol et
+    // Sayfa içeriğinden varyantları çek
+    $('script').each((_, element) => {
+      const scriptContent = $(element).html() || '';
+      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+        try {
+          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+          if (match) {
+            const data = JSON.parse(match[1]);
+            debug("Product detail state bulundu");
+
+            // Varyantları kontrol et
+            if (data.product?.variants) {
+              data.product.variants.forEach((variant: any) => {
+                if (variant.attributeValue) {
+                  variants.sizes.add(variant.attributeValue);
+                  debug(`State'den varyant bulundu: ${variant.attributeValue}`);
+                }
+                if (variant.attributeName === "Numara" && variant.attributeValue) {
+                  variants.sizes.add(variant.attributeValue);
+                  debug(`State'den numara bulundu: ${variant.attributeValue}`);
+                }
+              });
+            }
+
+            // Alternatif varyant yapısını kontrol et
+            if (data.product?.attributes) {
+              data.product.attributes.forEach((attr: any) => {
+                if (attr.name === "Numara" || attr.name === "Beden") {
+                  attr.value.split(',').forEach((val: string) => {
+                    const trimmed = val.trim();
+                    if (trimmed) {
+                      variants.sizes.add(trimmed);
+                      debug(`Attribute'den varyant bulundu: ${trimmed}`);
+                    }
+                  });
+                }
+              });
+            }
+          }
+        } catch (error) {
+          debug(`State parse hatası: ${error}`);
+        }
+      }
+    });
+
+    // HTML'den varyantları çek
     $('.sp-itm:contains("Numara"), .sp-itm:contains("Beden")').each((_, item) => {
       const options = $(item).find('.v-v');
       options.each((_, option) => {
         const size = $(option).text().trim();
         if (size) {
           variants.sizes.add(size);
-          debug(`Alternatif yoldan varyant bulundu: ${size}`);
+          debug(`HTML'den varyant bulundu: ${size}`);
         }
       });
     });
+
+    debug(`Toplam ${variants.sizes.size} adet beden/numara varyantı bulundu`);
+    debug(`Toplam ${variants.colors.size} adet renk varyantı bulundu`);
+
+
+    $('script').each((_, element) => {
+      const scriptContent = $(element).html() || '';
+      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+        try {
+          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+          if (match) {
+            const data = JSON.parse(match[1]);
+            const productImages = data?.product?.images || [];
+            debug(`JSON'dan ${productImages.length} adet görsel bulundu`);
+            productImages.forEach((img: any) => {
+              if (typeof img === 'string') {
+                const imgUrl = normalizeImageUrl(img);
+                if (imgUrl) images.add(imgUrl);
+              } else if (img.url) {
+                const imgUrl = normalizeImageUrl(img.url);
+                if (imgUrl) images.add(imgUrl);
+              }
+            });
+          }
+        } catch (error: any) {
+          debug(`JSON parse hatası: ${error.message}`);
+        }
+      }
+    });
+
+    // JSON-LD'den özellikleri ve varyantları çek (bu kısım yukarıda ayrıntılı olarak ele alındı)
+
 
     // Ürün özelliklerini çek
     const attributes: Record<string, string> = {};
