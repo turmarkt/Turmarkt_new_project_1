@@ -212,6 +212,17 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 }
               });
             }
+
+            // Debug varyant verilerini
+            if (data.product) {
+              debug('Product data yapısı:');
+              debug(JSON.stringify({
+                variants: data.product.variants,
+                slicedAttributes: data.product.slicedAttributes,
+                color: data.product.color,
+                attributes: data.product.attributes
+              }, null, 2));
+            }
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
