@@ -144,16 +144,35 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       colors: new Set<string>()
     };
 
-    // HTML'den doğrudan beden seçeneklerini al
-    $('.v-v').each((_, element) => {
-      const value = $(element).text().trim();
-      if (value) {
-        variants.sizes.add(value);
-        debug(`Beden seçeneği bulundu: ${value}`);
+    // JSON-LD'den varyant bilgilerini al
+    $('script[type="application/ld+json"]').each((_, element) => {
+      try {
+        const data = JSON.parse($(element).html() || '');
+        if (data.hasVariant) {
+          data.hasVariant.forEach((variant: any) => {
+            if (variant.size) {
+              variant.size.forEach((size: string) => {
+                variants.sizes.add(size);
+                debug(`JSON-LD'den beden bulundu: ${size}`);
+              });
+            }
+          });
+        }
+      } catch (error) {
+        debug(`JSON-LD parse hatası: ${error}`);
       }
     });
 
+    // HTML'den beden seçeneklerini al
+    $('.variant-list .v-v').each((_, element) => {
+      const value = $(element).text().trim();
+      if (value) {
+        variants.sizes.add(value);
+        debug(`HTML'den beden bulundu: ${value}`);
+      }
+    });
 
+    // Initial state'den renk bilgisini al
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -161,7 +180,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
           if (match) {
             const data = JSON.parse(match[1]);
-
             if (data.product?.color) {
               const color = data.product.color.split('-')[0].trim();
               if (color) {
@@ -169,10 +187,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 debug(`Renk bulundu: ${color}`);
               }
             }
-
           }
         } catch (error) {
-          debug(`Varyant parse hatası: ${error}`);
+          debug(`State parse hatası: ${error}`);
         }
       }
     });
