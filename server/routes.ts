@@ -97,6 +97,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Fiyat bilgisini başlıktan temizle
     title = title.replace(/\d+(\.\d+)?\s*TL\s*$/, '').trim();
     title = title.replace(/\s+\d+(\.\d+)?\s*TL/, '').trim(); // Ortadaki fiyat bilgisini temizle
+    title = title.replace(/\s+\d+(\.\d+)?/, '').trim(); // Sadece rakamları temizle
     title = title.replace(/Tükeniyor!?/g, '').trim();
     title = title.replace(/^\s+|\s+$/g, '').trim(); // Başlangıç ve sondaki boşlukları temizle
     debug(`Birleştirilmiş başlık: ${title}`);
