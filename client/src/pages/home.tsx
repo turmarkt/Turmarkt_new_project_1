@@ -255,21 +255,28 @@ export default function Home() {
                   </div>
 
                   <div className="space-y-2">
-                    <h3 className="text-xs font-semibold text-gray-400">Ürün Görselleri</h3>
-                    <div className="flex gap-2 overflow-x-auto pb-2">
-                      {product.images.map((image: string, index: number) => (
-                        <img
-                          key={index}
-                          src={image}
-                          alt={`${product.title} - Görsel ${index + 1}`}
-                          className="w-20 h-20 object-cover rounded-md flex-shrink-0"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
                     <Accordion type="single" collapsible className="w-full mt-4">
+                      <AccordionItem value="features">
+                        <AccordionTrigger className="text-sm hover:no-underline">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-gray-400" />
+                            <span className="font-semibold text-gray-400">Ürün Özellikleri</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="bg-gray-800/50 rounded p-3">
+                            <div className="grid grid-cols-1 gap-2">
+                              {Object.entries(product.attributes).map(([key, value]) => (
+                                <div key={key} className="flex items-center py-2 border-b border-gray-700/50 last:border-0">
+                                  <span className="text-xs text-gray-400 w-1/3 font-medium">{key}</span>
+                                  <span className="text-xs text-gray-300 w-2/3">{value as string}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
+
                       <AccordionItem value="csv-preview">
                         <AccordionTrigger className="text-sm hover:no-underline">
                           <div className="flex items-center gap-2">
