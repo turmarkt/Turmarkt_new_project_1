@@ -255,8 +255,31 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             }
           });
         }
+        // Varyant verilerini çek
+        const variants = {
+          sizes: new Set<string>(),
+          colors: new Set<string>()
+        };
+
+        if (data.hasVariant) {
+          data.hasVariant.forEach((variant: any) => {
+            // Renk seçeneğini ekle
+            if (variant.color) {
+              variants.colors.add(variant.color);
+              debug(`Renk varyantı bulundu: ${variant.color}`);
+            }
+
+            // Beden seçeneklerini ekle
+            if (variant.size && Array.isArray(variant.size)) {
+              variant.size.forEach((size: string) => {
+                variants.sizes.add(size);
+                debug(`Beden varyantı bulundu: ${size}`);
+              });
+            }
+          });
+        }
       } catch (error) {
-        debug(`JSON parse hatası: ${error}`);
+        debug(`JSON parse hatası veya varyant parse hatası: ${error}`);
       }
     });
 
@@ -280,8 +303,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       images: uniqueImages,
       video: null,
       variants: {
-        sizes: [],
-        colors: []
+        sizes: Array.from(variants.sizes),
+        colors: Array.from(variants.colors)
       },
       attributes,
       categories: categories.length > 0 ? categories : ['Giyim'],

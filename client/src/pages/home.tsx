@@ -368,6 +368,43 @@ export default function Home() {
                           </div>
                         </AccordionContent>
                       </AccordionItem>
+                      <AccordionItem value="variants" className="border-gray-800">
+                        <AccordionTrigger className="text-sm hover:no-underline py-3">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-primary" />
+                            <span className="font-medium">Varyant Seçenekleri</span>
+                          </div>
+                        </AccordionTrigger>
+                        <AccordionContent>
+                          <div className="bg-gray-900/50 rounded-lg p-4">
+                            {product.variants.colors.length > 0 && (
+                              <div className="mb-4">
+                                <h3 className="text-sm font-medium mb-2">Renk Seçenekleri</h3>
+                                <div className="flex flex-wrap gap-2">
+                                  {product.variants.colors.map((color, index) => (
+                                    <span key={index} className="px-3 py-1 bg-gray-800 rounded-full text-xs">
+                                      {color}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {product.variants.sizes.length > 0 && (
+                              <div>
+                                <h3 className="text-sm font-medium mb-2">Beden Seçenekleri</h3>
+                                <div className="flex flex-wrap gap-2">
+                                  {product.variants.sizes.map((size, index) => (
+                                    <span key={index} className="px-3 py-1 bg-gray-800 rounded-full text-xs">
+                                      {size}
+                                    </span>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </AccordionContent>
+                      </AccordionItem>
                       <AccordionItem value="csv-preview" className="border-gray-800">
                         <AccordionTrigger className="text-sm hover:no-underline py-3">
                           <div className="flex items-center gap-2">
