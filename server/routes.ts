@@ -143,7 +143,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // DOM'dan görselleri topla
     const imageSelectors = [
       '.gallery-modal-content img[src]',
       '.gallery-modal-content img[data-src]',
