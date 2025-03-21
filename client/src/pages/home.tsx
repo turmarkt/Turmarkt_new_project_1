@@ -50,6 +50,7 @@ export default function Home() {
     }
   });
 
+  // Watch for URL changes from history selection
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
       if (type === "change" && name === "url") {
@@ -58,6 +59,11 @@ export default function Home() {
     });
     return () => subscription.unsubscribe();
   }, [form.watch]);
+
+  // Update form when URL is selected from history
+  const updateUrl = (url: string) => {
+    form.setValue("url", url);
+  };
 
   const getErrorSolution = (status?: number, details?: string) => {
     switch (status) {
@@ -183,34 +189,27 @@ export default function Home() {
             <p className="text-sm text-gray-400">Ürün verilerini Shopify'a uyumlu formata dönüştürün</p>
           </div>
 
-          <AnimatePresence>
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="mb-4"
-              >
-                <Alert variant="destructive">
-                  {getErrorIcon(error.status)}
-                  <AlertTitle>{getErrorTitle(error.status)}</AlertTitle>
-                  <AlertDescription className="mt-2 space-y-2">
-                    <p>{error.message}</p>
-                    {error.solution && (
-                      <p className="text-sm mt-2 p-2 bg-red-900/50 rounded-md">
-                        <strong>Çözüm önerisi:</strong> {error.solution}
-                      </p>
-                    )}
-                    {error.details && (
-                      <p className="text-xs mt-1 text-gray-400">
-                        Teknik detay: {error.details}
-                      </p>
-                    )}
-                  </AlertDescription>
-                </Alert>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {error && (
+            <div className="mb-4">
+              <Alert variant="destructive">
+                {getErrorIcon(error.status)}
+                <AlertTitle>{getErrorTitle(error.status)}</AlertTitle>
+                <AlertDescription className="mt-2 space-y-2">
+                  <p>{error.message}</p>
+                  {error.solution && (
+                    <p className="text-sm mt-2 p-2 bg-red-900/50 rounded-md">
+                      <strong>Çözüm önerisi:</strong> {error.solution}
+                    </p>
+                  )}
+                  {error.details && (
+                    <p className="text-xs mt-1 text-gray-400">
+                      Teknik detay: {error.details}
+                    </p>
+                  )}
+                </AlertDescription>
+              </Alert>
+            </div>
+          )}
 
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="relative">
