@@ -82,8 +82,23 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Marka ve ürün adını ayrı ayrı al ve birleştir
     const brand = $('.pr-new-br span').first().text().trim();
-    const productName = $('.prdct-desc-cntnr-ttl').first().text().trim();
-    const title = brand ? `${brand} ${productName}` : productName;
+    debug(`Marka: ${brand}`);
+
+    const productName = $('.pr-new-br')
+      .next('.prdct-desc-cntnr-ttl')
+      .text()
+      .trim();
+    debug(`Ürün adı: ${productName}`);
+
+    // Alternatif ürün adı seçicisi
+    const altProductName = $('.prdct-desc-cntnr-name').text().trim();
+    debug(`Alternatif ürün adı: ${altProductName}`);
+
+    const title = brand 
+      ? `${brand} ${productName || altProductName}` 
+      : (productName || altProductName);
+
+    debug(`Birleştirilmiş başlık: ${title}`);
 
     if (!title) {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
