@@ -183,8 +183,24 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
             // Beden seçeneklerini ekle
             if (variant.size) {
-              variants.sizes.add(variant.size);
-              debug(`Beden varyantı bulundu: ${variant.size}`);
+              if (typeof variant.size === 'string') {
+                // Virgülle ayrılmış beden seçeneklerini parçala
+                variant.size.split(',').forEach((size: string) => {
+                  const trimmedSize = size.trim();
+                  if (trimmedSize) {
+                    variants.sizes.add(trimmedSize);
+                    debug(`Beden varyantı bulundu: ${trimmedSize}`);
+                  }
+                });
+              } else if (Array.isArray(variant.size)) {
+                variant.size.forEach((size: string) => {
+                  const trimmedSize = size.trim();
+                  if (trimmedSize) {
+                    variants.sizes.add(trimmedSize);
+                    debug(`Beden varyantı bulundu: ${trimmedSize}`);
+                  }
+                });
+              }
             }
           });
         }

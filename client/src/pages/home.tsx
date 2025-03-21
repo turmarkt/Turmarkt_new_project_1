@@ -395,7 +395,10 @@ export default function Home() {
                                 <h3 className="text-sm font-medium mb-2">Beden Seçenekleri</h3>
                                 <div className="flex flex-wrap gap-2">
                                   {product.variants.sizes.map((size, index) => (
-                                    <span key={index} className="px-3 py-1 bg-gray-800 rounded-full text-xs">
+                                    <span 
+                                      key={index} 
+                                      className="px-4 py-2 bg-gray-800 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
+                                    >
                                       {size}
                                     </span>
                                   ))}
