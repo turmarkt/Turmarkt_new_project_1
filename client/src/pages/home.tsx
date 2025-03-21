@@ -377,11 +377,11 @@ export default function Home() {
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="bg-gray-900/50 rounded-lg p-4">
-                            {product.variants.colors.length > 0 && (
+                            {product.variants?.colors?.length > 0 && (
                               <div className="mb-4">
                                 <h3 className="text-sm font-medium mb-2">Renk Seçenekleri</h3>
                                 <div className="flex flex-wrap gap-2">
-                                  {product.variants.colors.map((color, index) => (
+                                  {product.variants.colors.map((color: string, index: number) => (
                                     <span key={index} className="px-3 py-1 bg-gray-800 rounded-full text-xs">
                                       {color}
                                     </span>
@@ -390,17 +390,17 @@ export default function Home() {
                               </div>
                             )}
 
-                            {product.variants.sizes.length > 0 && (
+                            {product.variants?.sizes?.length > 0 && (
                               <div>
                                 <h3 className="text-sm font-medium mb-2">
-                                  {product.categories.some(cat => 
+                                  {product.categories?.some((cat: string) => 
                                     cat.toLowerCase().includes('ayakkabı') || 
                                     cat.toLowerCase().includes('bot') || 
                                     cat.toLowerCase().includes('çizme')
                                   ) ? 'Numara Seçenekleri' : 'Beden Seçenekleri'}
                                 </h3>
                                 <div className="flex flex-wrap gap-2">
-                                  {product.variants.sizes.map((size, index) => (
+                                  {product.variants.sizes.map((size: string, index: number) => (
                                     <span 
                                       key={index} 
                                       className="px-4 py-2 bg-gray-800 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
