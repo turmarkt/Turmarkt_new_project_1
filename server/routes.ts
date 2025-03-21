@@ -159,10 +159,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               data.product.variants.forEach((variant: any) => {
                 // Stokta olan varyantları kontrol et
                 if (variant.stock > 0) {
-                  const attributeValue = variant.attributeValue || variant.value;
-                  if (attributeValue) {
-                    variants.sizes.add(attributeValue);
-                    debug(`Stokta olan varyant bulundu: ${attributeValue}`);
+                  if (variant.attributeName === "Numara" || variant.attributeName === "Beden") {
+                    const value = variant.attributeValue || variant.value;
+                    if (value) {
+                      variants.sizes.add(value);
+                      debug(`Stokta olan ${variant.attributeName} varyantı bulundu: ${value}`);
+                    }
                   }
                 }
               });
@@ -174,10 +176,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 if (attr.name === "Numara" || attr.name === "Beden") {
                   attr.attributes.forEach((item: any) => {
                     if (item.inStock) {
-                      const trimmed = item.value.trim();
-                      if (trimmed) {
-                        variants.sizes.add(trimmed);
-                        debug(`Stokta olan özellik bulundu: ${trimmed}`);
+                      const value = item.value.trim();
+                      if (value) {
+                        variants.sizes.add(value);
+                        debug(`Stokta olan ${attr.name} seçeneği bulundu: ${value}`);
                       }
                     }
                   });
@@ -185,10 +187,23 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               });
             }
 
-            // Renk varyantlarını kontrol et
+            // Renk varyantını kontrol et
             if (data.product?.color) {
               variants.colors.add(data.product.color);
               debug(`Renk varyantı bulundu: ${data.product.color}`);
+            }
+
+            // Alternatif renk varyantını kontrol et
+            if (data.product?.attributes) {
+              data.product.attributes.forEach((attr: any) => {
+                if (attr.name === "Renk") {
+                  const color = attr.value.trim();
+                  if (color) {
+                    variants.colors.add(color);
+                    debug(`Özelliklerden renk varyantı bulundu: ${color}`);
+                  }
+                }
+              });
             }
           }
         } catch (error) {

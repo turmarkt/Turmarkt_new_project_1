@@ -382,7 +382,10 @@ export default function Home() {
                                 <h3 className="text-sm font-medium mb-2">Renk Seçenekleri</h3>
                                 <div className="flex flex-wrap gap-2">
                                   {product.variants.colors.map((color: string, index: number) => (
-                                    <span key={index} className="px-3 py-1 bg-gray-800 rounded-full text-xs">
+                                    <span 
+                                      key={index} 
+                                      className="px-3 py-1 bg-gray-800 rounded-full text-xs hover:bg-gray-700 transition-colors"
+                                    >
                                       {color}
                                     </span>
                                   ))}
