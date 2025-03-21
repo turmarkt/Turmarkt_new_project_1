@@ -58,18 +58,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     // Fiyat çek
-    const priceSelectors = [
-      '.prc-box-dscntd',
-      '.prc-box-sllng',
-      '.product-price-container .prc-dsc',
-      '.product-price-container .prc',
-      '.featured-prices .prc-dsc',
-      '.featured-prices span',
-      '.pr-bx-pr-dsc',
-      '.pr-bx-pr-sv',
-      '.prc-dsc'
-    ];
-
+    const priceSelectors = ['.prc-box-dscntd', '.prc-box-sllng', '.product-price-container .prc-dsc'];
     let rawPrice = '';
     for (const selector of priceSelectors) {
       const priceElement = $(selector).first();
@@ -107,7 +96,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     };
 
     // Bedenleri çek
-    $('.variant-list-item:not(.disabled), .sp-itm:not(.so), .size-variant-wrapper:not(.disabled)').each((_, el) => {
+    $('.variant-list-item:not(.disabled), .sp-itm:not(.so)').each((_, el) => {
       const size = $(el).text().trim();
       if (size && !variants.sizes.includes(size)) {
         variants.sizes.push(size);
@@ -116,14 +105,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     // Kategorileri çek
     const categories: string[] = [];
-    $('.breadcrumb-wrapper a, .breadcrumb-wrapper span').each((_, el) => {
+    $('.breadcrumb li').each((_, el) => {
       const category = $(el).text().trim();
-      if (category && !category.includes('>') && category !== '') {
+      if (category && !category.includes('>')) {
         categories.push(category);
       }
     });
 
-    // Ürün nesnesi oluştur - Sabit özelliklerle
+    // Ürün nesnesi oluştur - Sadece sabit özelliklerle
     const product: InsertProduct = {
       url,
       title,
@@ -133,17 +122,16 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       images: Array.from(images),
       video: videoUrl,
       variants,
-      // Sadece ProductAttribute enum'undan gelen sabit özellikleri kullan
+      // Sadece enum'dan gelen sabit özellikleri kullan
       attributes: {
         "Hacim": ProductAttribute.Hacim,
         "Menşei": ProductAttribute.Mensei,
         "Paket İçeriği": ProductAttribute.PaketIcerigi
       },
-      categories: categories.length > 0 ? categories : ['Trendyol'],
+      categories: categories.length > 0 ? categories : ['Giyim'],
       tags: [...categories, ...variants.sizes].filter(Boolean)
     };
 
-    debug("Ürün başarıyla oluşturuldu");
     return product;
 
   } catch (error: any) {
@@ -161,7 +149,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
 
-  // Scraping endpoint'i
   app.post("/api/scrape", async (req, res) => {
     try {
       debug("Scrape isteği alındı");
