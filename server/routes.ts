@@ -220,10 +220,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       });
     }
 
-    const uniqueImages = Array.from(images).filter(url => {
+    const uniqueImages = Array.from(images).filter((url, index, arr) => {
       try {
         new URL(url);
-        return true;
+        // Son görseli hariç tut
+        return index < arr.length - 1;
       } catch {
         return false;
       }
