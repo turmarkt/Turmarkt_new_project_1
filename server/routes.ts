@@ -45,19 +45,46 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   }
 }
 
+function normalizeImageUrl(url: string): string {
+  try {
+    url = url.split('?')[0];
+
+    if (url.includes('/ty')) {
+      url = `https://cdn.dsmcdn.com${url}`;
+    }
+
+    if (url.startsWith('//')) {
+      url = 'https:' + url;
+    } else if (!url.startsWith('http')) {
+      url = 'https://' + url;
+    }
+
+    url = url.replace(/\/mnresize\/\d+\/\d+\//, '/');
+    url = url.replace(/_\d+x\d+/, '');
+
+    if (!url.includes('_org_zoom')) {
+      url = url.replace(/\.(jpg|jpeg|png|webp)$/, '_org_zoom.$1');
+    }
+
+    return url;
+  } catch (error: any) {
+    debug(`URL normalizasyon hatası: ${error.message}`);
+    return url;
+  }
+}
+
+
 async function scrapeProduct(url: string): Promise<InsertProduct> {
   debug("Scraping başlatıldı");
 
   try {
     const $ = await fetchProductPage(url);
 
-    // Temel ürün bilgilerini çek
     const title = $('.pr-new-br span').first().text().trim() || $('.prdct-desc-cntnr-ttl').first().text().trim();
     if (!title) {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
-    // Fiyat çek
     const priceSelectors = ['.prc-box-dscntd', '.prc-box-sllng', '.product-price-container .prc-dsc'];
     let rawPrice = '';
     for (const selector of priceSelectors) {
@@ -75,11 +102,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const basePrice = cleanPrice(rawPrice);
     const price = (basePrice * 1.15).toFixed(2);
 
-    // Görselleri çek - Geliştirilmiş versiyon
     const images: Set<string> = new Set();
     debug("Görsel yakalama başlatıldı");
 
-    // Script içindeki JSON verilerini kontrol et
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -91,11 +116,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             debug(`JSON'dan ${productImages.length} adet görsel bulundu`);
             productImages.forEach((img: any) => {
               if (typeof img === 'string') {
-                const imgUrl = img.startsWith('http') ? img : `https:${img}`;
+                const imgUrl = normalizeImageUrl(img);
                 images.add(imgUrl);
                 debug(`JSON'dan görsel eklendi: ${imgUrl}`);
               } else if (img.url) {
-                const imgUrl = img.url.startsWith('http') ? img.url : `https:${img.url}`;
+                const imgUrl = normalizeImageUrl(img.url);
                 images.add(imgUrl);
                 debug(`JSON'dan görsel eklendi: ${imgUrl}`);
               }
@@ -107,7 +132,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // DOM'dan görselleri topla
     const imageSelectors = [
       '.gallery-modal-content img[src]',
       '.gallery-modal-content img[data-src]',
@@ -146,29 +170,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
         sources.forEach(src => {
           if (!src) return;
-
           try {
-            // URL'yi temizle ve normalize et
-            src = src.split('?')[0];
-
-            // Göreceli URL'leri mutlak URL'lere çevir
-            if (src.startsWith('//')) {
-              src = 'https:' + src;
-            } else if (!src.startsWith('http')) {
-              src = 'https://' + src;
-            }
-
-            // Küçük resimleri büyük versiyonlarıyla değiştir
-            src = src.replace(/\/mnresize\/\d+\/\d+\//, '/');
-            src = src.replace(/_\d+x\d+/, '');
-
-            // En yüksek kaliteli versiyonu al
-            if (!src.includes('_org_zoom')) {
-              src = src.replace(/\.(jpg|jpeg|png|webp)$/, '_org_zoom.$1');
-            }
-
-            images.add(src);
-            debug(`DOM'dan görsel eklendi: ${src}`);
+            const normalizedUrl = normalizeImageUrl(src);
+            images.add(normalizedUrl);
+            debug(`DOM'dan görsel eklendi: ${normalizedUrl}`);
           } catch (error: any) {
             debug(`Görsel işlenirken hata: ${error.message}`);
           }
@@ -179,7 +184,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const uniqueImages = Array.from(images);
     debug(`Toplam ${uniqueImages.length} benzersiz görsel bulundu`);
 
-    // Kategorileri çek
     const categories: string[] = [];
     $('.breadcrumb li').each((_, el) => {
       const category = $(el).text().trim();
@@ -188,11 +192,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Ürün nesnesi oluştur
     const product: InsertProduct = {
       url,
       title,
-      description: "", // HTML'den açıklama almıyoruz
+      description: "", 
       price: price.toString(),
       basePrice: basePrice.toString(),
       images: uniqueImages,
@@ -242,7 +245,6 @@ export async function registerRoutes(app: Express) {
       debug("Scrape isteği alındı");
       const { url } = urlSchema.parse(req.body);
 
-      // Her istek öncesi cache'i temizle
       storage.reset();
 
       debug("Ürün verileri çekiliyor");
