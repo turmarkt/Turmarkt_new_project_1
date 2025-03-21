@@ -88,7 +88,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     debug(`Ürün adı: ${productName}`);
 
     // Başlığı düzgün formatta oluştur
-    const title = `${brand} ${productName}`;
+    const title = brand && productName ? `${brand} ${productName}` : productName;
     debug(`Birleştirilmiş başlık: ${title}`);
 
     if (!title) {
@@ -115,6 +115,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const images: Set<string> = new Set();
     debug("Görsel yakalama başlatıldı");
 
+    // JSON verilerinden görselleri al
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -142,6 +143,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // DOM'dan görselleri topla
     const imageSelectors = [
       '.gallery-modal-content img[src]',
       '.gallery-modal-content img[data-src]',
@@ -191,7 +193,15 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       });
     }
 
-    const uniqueImages = Array.from(images);
+    const uniqueImages = Array.from(images).filter(url => {
+      try {
+        new URL(url);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+
     debug(`Toplam ${uniqueImages.length} benzersiz görsel bulundu`);
 
     const categories: string[] = [];
