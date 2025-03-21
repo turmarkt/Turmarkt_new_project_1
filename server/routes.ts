@@ -48,38 +48,31 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
 
 function normalizeImageUrl(url: string): string {
   try {
-    // İlk olarak URL'yi parçala ve query parametrelerini temizle
     url = url.split('?')[0];
 
-    // Video uzantılarını kontrol et ve filtrele
     if (url.match(/\.(mp4|webm|ogg|mov)$/i)) {
       debug(`Video dosyası filtrelendi: ${url}`);
       return '';
     }
 
-    // Resim uzantılarını kontrol et
     if (!url.match(/\.(jpg|jpeg|png|webp)$/i)) {
       debug(`Desteklenmeyen dosya formatı: ${url}`);
       return '';
     }
 
-    // CDN URL'sini düzgün şekilde oluştur
     if (url.includes('/ty')) {
       url = `https://cdn.dsmcdn.com${url}`;
     }
 
-    // Protokol ekle
     if (url.startsWith('//')) {
       url = 'https:' + url;
     } else if (!url.startsWith('http')) {
       url = 'https://' + url;
     }
 
-    // Boyutlandırma parametrelerini kaldır
     url = url.replace(/\/mnresize\/\d+\/\d+\//, '/');
     url = url.replace(/_\d+x\d+/, '');
 
-    // _org_zoom eklemesi
     if (!url.includes('_org_zoom')) {
       url = url.replace(/\.(jpg|jpeg|png|webp)$/, '_org_zoom.$1');
     }
@@ -113,10 +106,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     } else if (productName) {
       title = productName;
     } else {
-      // Alternatif başlık seçicileri
       title = $('.pr-in-w').first().text().trim()
-              .replace(/\d+(\.\d+)?\s*TL.*$/, '') // Fiyat bilgisini temizle
-              .replace(/Tükeniyor!?/g, '') // "Tükeniyor" yazısını temizle
+              .replace(/\d+(\.\d+)?\s*TL.*$/, '')
+              .replace(/Tükeniyor!?/g, '')
               .trim();
     }
 
@@ -146,6 +138,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const images: Set<string> = new Set();
     debug("Görsel yakalama başlatıldı");
 
+    // Varyant verilerini başlat
+    const variants = {
+      sizes: new Set<string>(),
+      colors: new Set<string>()
+    };
+
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -171,72 +169,27 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    const imageSelectors = [
-      '.gallery-modal-content img[src]',
-      '.gallery-modal-content img[data-src]',
-      '.product-detail-wrapper img[src]',
-      '.product-detail-wrapper img[data-src]',
-      '.slick-slider img[src]',
-      '.slick-slider img[data-src]',
-      '.product-slide img[src]',
-      '.product-slide img[data-src]',
-      '.image-container img[src]',
-      '.image-container img[data-src]',
-      '.product-box img[src]',
-      '.product-box img[data-src]',
-      'picture source[srcset]'
-    ];
-
-    debug(`${imageSelectors.length} adet görsel selektörü kontrol ediliyor`);
-
-    for (const selector of imageSelectors) {
-      const elements = $(selector);
-      debug(`'${selector}' için ${elements.length} element bulundu`);
-
-      elements.each((_, el) => {
-        const srcAttr = $(el).attr('src');
-        const dataSrc = $(el).attr('data-src');
-        const srcset = $(el).attr('srcset') || $(el).attr('data-srcset');
-
-        let sources = [srcAttr, dataSrc].filter(Boolean);
-
-        if (srcset) {
-          const srcsetUrls = srcset.split(',')
-            .map(s => s.trim().split(' ')[0])
-            .filter(Boolean);
-          sources = [...sources, ...srcsetUrls];
-        }
-
-        sources.forEach(src => {
-          if (!src) return;
-          try {
-            const normalizedUrl = normalizeImageUrl(src);
-            if (normalizedUrl) images.add(normalizedUrl);
-            debug(`DOM'dan görsel eklendi: ${normalizedUrl}`);
-          } catch (error: any) {
-            debug(`Görsel işlenirken hata: ${error.message}`);
-          }
-        });
-      });
-    }
-
-    const uniqueImages = Array.from(images).filter((url, index, arr) => {
+    // JSON-LD'den özellikleri ve varyantları çek
+    $('script[type="application/ld+json"]').each((_, element) => {
       try {
-        new URL(url);
-        // Son görseli hariç tut
-        return index < arr.length - 1;
-      } catch {
-        return false;
-      }
-    });
+        const data = JSON.parse($(element).html() || '');
+        if (data.hasVariant) {
+          data.hasVariant.forEach((variant: any) => {
+            // Renk seçeneğini ekle
+            if (variant.color) {
+              variants.colors.add(variant.color);
+              debug(`Renk varyantı bulundu: ${variant.color}`);
+            }
 
-    debug(`Toplam ${uniqueImages.length} benzersiz görsel bulundu`);
-
-    const categories: string[] = [];
-    $('.breadcrumb li').each((_, el) => {
-      const category = $(el).text().trim();
-      if (category && !category.includes('>')) {
-        categories.push(category);
+            // Beden seçeneklerini ekle
+            if (variant.size) {
+              variants.sizes.add(variant.size);
+              debug(`Beden varyantı bulundu: ${variant.size}`);
+            }
+          });
+        }
+      } catch (error) {
+        debug(`Varyant parse hatası: ${error}`);
       }
     });
 
@@ -255,31 +208,26 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             }
           });
         }
-        // Varyant verilerini çek
-        const variants = {
-          sizes: new Set<string>(),
-          colors: new Set<string>()
-        };
-
-        if (data.hasVariant) {
-          data.hasVariant.forEach((variant: any) => {
-            // Renk seçeneğini ekle
-            if (variant.color) {
-              variants.colors.add(variant.color);
-              debug(`Renk varyantı bulundu: ${variant.color}`);
-            }
-
-            // Beden seçeneklerini ekle
-            if (variant.size && Array.isArray(variant.size)) {
-              variant.size.forEach((size: string) => {
-                variants.sizes.add(size);
-                debug(`Beden varyantı bulundu: ${size}`);
-              });
-            }
-          });
-        }
       } catch (error) {
-        debug(`JSON parse hatası veya varyant parse hatası: ${error}`);
+        debug(`JSON parse hatası: ${error}`);
+      }
+    });
+
+    const uniqueImages = Array.from(images).filter((url, index, arr) => {
+      try {
+        new URL(url);
+        // Son görseli hariç tut
+        return index < arr.length - 1;
+      } catch {
+        return false;
+      }
+    });
+
+    const categories: string[] = [];
+    $('.breadcrumb li').each((_, el) => {
+      const category = $(el).text().trim();
+      if (category && !category.includes('>')) {
+        categories.push(category);
       }
     });
 
@@ -292,7 +240,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         debug(`${key}: ${value}`);
       });
     }
-
 
     const product: InsertProduct = {
       url,
