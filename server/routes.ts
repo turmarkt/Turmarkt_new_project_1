@@ -141,6 +141,101 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   }
 }
 
+// Özellikleri çek fonksiyonu
+// Fixed attributes
+const defaultAttributes = {
+  'Hacim': '15 ml',
+  'Menşei': 'CN',
+  'Paket İçeriği': 'Tekli'
+};
+
+function extractAttributes($: cheerio.CheerioAPI): Record<string, string> {
+  // Initialize with default attributes
+  let attributes: Record<string, string> = { ...defaultAttributes };
+  debug("Başlangıç özellikleri:", attributes);
+
+  // Dinamik özellikleri çek
+  const dynamicAttrs: Record<string, string> = {};
+
+  // Script taglerinden ürün verilerini çek
+  $('script').each((_, element) => {
+    const scriptContent = $(element).html() || '';
+    if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+      try {
+        const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+        if (match) {
+          const data = JSON.parse(match[1]);
+          if (data?.product?.attributes) {
+            Object.entries(data.product.attributes).forEach(([key, value]) => {
+              if (value && typeof value === 'string') {
+                dynamicAttrs[key] = value;
+                debug(`Script'ten özellik eklendi: ${key} = ${value}`);
+              }
+            });
+          }
+        }
+      } catch (error) {
+        debug("Script parse hatası:", error);
+      }
+    }
+  });
+
+  // Özellik listelerini tara
+  $('.detail-attr-item, .detail-desc-list li, .feature-list li, .product-info-list li').each((_, element) => {
+    const text = $(element).text().trim();
+    if (text.includes(':')) {
+      const [label, value] = text.split(':').map(s => s.trim());
+      if (label && value) {
+        dynamicAttrs[label] = value;
+        debug(`Liste özelliği eklendi: ${label} = ${value}`);
+      }
+    }
+  });
+
+  // Özellik tablolarını tara
+  $('.detail-attr-container table tr, .product-feature-table tr').each((_, row) => {
+    const label = $(row).find('th, td:first-child').text().trim();
+    const value = $(row).find('td:last-child').text().trim();
+    if (label && value) {
+      dynamicAttrs[label] = value;
+      debug(`Tablo özelliği eklendi: ${label} = ${value}`);
+    }
+  });
+
+  // Dinamik özellikleri defaultAttributes ile birleştir
+  attributes = { ...attributes, ...dynamicAttrs };
+
+  debug("Son özellikler durumu:", attributes);
+  return attributes;
+}
+
+// Açıklamaları çek fonksiyonu
+function extractDescription($: cheerio.CheerioAPI): string {
+  const descriptions: string[] = [];
+
+  // Ana ürün açıklaması
+  const mainDesc = $('.product-description-text').text().trim() ||
+                  $('.detail-desc-content').text().trim() ||
+                  $('.description-text').text().trim();
+  if (mainDesc) {
+    descriptions.push(mainDesc);
+  }
+
+  // Marka açıklaması
+  const brandDesc = $('.brand-description').text().trim();
+  if (brandDesc) {
+    descriptions.push(brandDesc);
+  }
+
+  // Detaylı açıklama
+  const detailDesc = $('.detail-description').text().trim();
+  if (detailDesc) {
+    descriptions.push(detailDesc);
+  }
+
+  return descriptions.join('\n\n').trim();
+}
+
 async function scrapeProduct(url: string): Promise<InsertProduct> {
   debug("Scraping başlatıldı:", url);
 
@@ -297,106 +392,13 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     });
 
     // Özellikleri çek
-    const attributes: Record<string, string> = {};
-
-    // Tüm özellik tablolarını tara
-    $('.detail-attr-container tr, .product-feature-details tr, .detail-border tr').each((_, row) => {
-      const label = $(row).find('th, .featured-title').text().trim();
-      const value = $(row).find('td, .featured-desc').text().trim();
-      if (label && value) {
-        attributes[label] = value;
-        debug(`Özellik eklendi: ${label} = ${value}`);
-      }
-    });
-
-    // Ürün bilgilerini çek
-    $('.product-information-list li').each((_, item) => {
-      const label = $(item).find('.title').text().trim();
-      const value = $(item).find('.value').text().trim();
-      if (label && value) {
-        attributes[label] = value;
-        debug(`Ek özellik eklendi: ${label} = ${value}`);
-      }
-    });
-
-    // Ürün detaylarını çek
-    $('.detail-attr-item').each((_, item) => {
-      const label = $(item).find('.attr-label').text().trim();
-      const value = $(item).find('.attr-value').text().trim();
-      if (label && value) {
-        attributes[label] = value;
-        debug(`Detay özellik eklendi: ${label} = ${value}`);
-      }
-    });
-
-    // Özellik listesini çek
-    $('.feature-list li, .detail-attr-container li').each((_, item) => {
-      const text = $(item).text().trim();
-      if (text.includes(':')) {
-        const [label, value] = text.split(':').map(s => s.trim());
-        if (label && value) {
-          attributes[label] = value;
-          debug(`Liste özellik eklendi: ${label} = ${value}`);
-        }
-      }
-    });
-
-    // Alternative özellik çekme yöntemleri
-    $('.product-stamp-text').each((_, item) => {
-      const text = $(item).text().trim();
-      if (text) {
-        attributes['Ürün Özelliği'] = text;
-        debug(`Stamp özellik eklendi: Ürün Özelliği = ${text}`);
-      }
-    });
-
-    $('.detail-desc-list li').each((_, item) => {
-      const text = $(item).text().trim();
-      if (text.includes(':')) {
-        const [label, value] = text.split(':').map(s => s.trim());
-        if (label && value) {
-          attributes[label] = value;
-          debug(`Açıklama listesi özelliği eklendi: ${label} = ${value}`);
-        }
-      }
-    });
-
-    // Tablo yapısındaki özellikleri çek
-    $('.table-container tr').each((_, row) => {
-      const label = $(row).find('td:first-child').text().trim();
-      const value = $(row).find('td:last-child').text().trim();
-      if (label && value) {
-        attributes[label] = value;
-        debug(`Tablo özelliği eklendi: ${label} = ${value}`);
-      }
-    });
-
-
-    // Açıklama içeriğini özelliklere ekle
-    const description = $('.product-description-text').text().trim() ||
-                       $('.detail-desc-content').text().trim() ||
-                       $('.description-text').text().trim();
-
-    if (description) {
-      attributes['Ürün Açıklaması'] = description;
-      debug(`Açıklama eklendi: ${description}`);
-    }
-
-    // Marka açıklamasını özelliklere ekle
-    const brandDescription = $('.brand-description').text().trim();
-    if (brandDescription) {
-      attributes['Marka Açıklaması'] = brandDescription;
-      debug(`Marka açıklaması eklendi: ${brandDescription}`);
-    }
-
-    // Ürün detay açıklamasını özelliklere ekle
-    const detailDescription = $('.detail-description').text().trim();
-    if (detailDescription) {
-      attributes['Detaylı Açıklama'] = detailDescription;
-      debug(`Detaylı açıklama eklendi: ${detailDescription}`);
-    }
-
+    const attributes = extractAttributes($);
     debug("Toplam özellik sayısı:", Object.keys(attributes).length);
+
+    // Açıklamayı çek
+    const description = extractDescription($);
+    debug("Açıklama uzunluğu:", description.length);
+
 
     // Kategorileri çek
     const categories: string[] = [];
@@ -420,7 +422,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const product: InsertProduct = {
       url,
       title,
-      description: description || '',
+      description,
       price: price.toString(),
       basePrice: basePrice.toString(),
       images: Array.from(images),
