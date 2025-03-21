@@ -309,7 +309,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    // Ek özellikleri çek
+    // Ürün bilgilerini çek
     $('.product-information-list li').each((_, item) => {
       const label = $(item).find('.title').text().trim();
       const value = $(item).find('.value').text().trim();
@@ -330,12 +330,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     });
 
     // Özellik listesini çek
-    $('.feature-list li').each((_, item) => {
+    $('.feature-list li, .detail-attr-container li').each((_, item) => {
       const text = $(item).text().trim();
-      const [label, value] = text.split(':').map(s => s.trim());
-      if (label && value) {
-        attributes[label] = value;
-        debug(`Liste özellik eklendi: ${label} = ${value}`);
+      if (text.includes(':')) {
+        const [label, value] = text.split(':').map(s => s.trim());
+        if (label && value) {
+          attributes[label] = value;
+          debug(`Liste özellik eklendi: ${label} = ${value}`);
+        }
       }
     });
 
@@ -358,6 +360,17 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         }
       }
     });
+
+    // Tablo yapısındaki özellikleri çek
+    $('.table-container tr').each((_, row) => {
+      const label = $(row).find('td:first-child').text().trim();
+      const value = $(row).find('td:last-child').text().trim();
+      if (label && value) {
+        attributes[label] = value;
+        debug(`Tablo özelliği eklendi: ${label} = ${value}`);
+      }
+    });
+
 
     // Açıklama içeriğini özelliklere ekle
     const description = $('.product-description-text').text().trim() ||
