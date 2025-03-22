@@ -154,13 +154,47 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu");
 
-            // Tüm varyantları kontrol et
+            // 1. SlicedAttributes'dan beden bilgilerini al
+            if (data.product?.slicedAttributes) {
+              data.product.slicedAttributes.forEach((attr: any) => {
+                if (attr.name === "Beden" || attr.name === "Numara") {
+                  attr.attributes.forEach((item: any) => {
+                    const value = item.value?.toString().trim();
+                    if (value) {
+                      variants.sizes.add(value);
+                      debug(`SlicedAttributes'dan beden eklendi: ${value}`);
+                    }
+                  });
+                }
+              });
+            }
+
+            // 2. ContentAttributes'dan beden bilgilerini al
+            if (data.product?.contentAttributes) {
+              data.product.contentAttributes.forEach((attr: any) => {
+                if (attr.name === "Beden" || attr.name === "Numara") {
+                  const values = attr.value?.split(',') || [];
+                  values.forEach((value: string) => {
+                    const trimmedValue = value.trim();
+                    if (trimmedValue) {
+                      variants.sizes.add(trimmedValue);
+                      debug(`ContentAttributes'dan beden eklendi: ${trimmedValue}`);
+                    }
+                  });
+                }
+              });
+            }
+
+            // 3. Variants yapısından beden bilgilerini al
             if (data.product?.variants) {
               debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
-                if (variant.attributeValue) {
-                  variants.sizes.add(variant.attributeValue);
-                  debug(`Beden seçeneği eklendi: ${variant.attributeValue}`);
+                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
+                  const value = variant.attributeValue || variant.value;
+                  if (value) {
+                    variants.sizes.add(value.toString().trim());
+                    debug(`Variants'dan beden eklendi: ${value}`);
+                  }
                 }
               });
             }
@@ -173,6 +207,13 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 debug(`Renk bulundu: ${color}`);
               }
             }
+
+            // Debug için tüm yapıyı yazdır
+            debug("Initial state yapısı:", {
+              slicedAttributes: data.product?.slicedAttributes,
+              contentAttributes: data.product?.contentAttributes,
+              variants: data.product?.variants
+            });
 
             debug("Bulunan tüm bedenler:", Array.from(variants.sizes).join(', '));
             debug("Bulunan tüm renkler:", Array.from(variants.colors).join(', '));
