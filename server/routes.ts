@@ -213,19 +213,25 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const $ = await fetchProductPage(url);
 
     const brand = $('.pr-new-br span').first().text().trim() ||
-                    $('h1.pr-new-br').first().text().trim();
+                  $('h1.pr-new-br').first().text().trim();
     debug(`Marka: ${brand}`);
 
     const productName = $('.prdct-desc-cntnr-name').text().trim() ||
-                          $('.pr-in-w').first().text().trim()
-                          .replace(/\d+(\.\d+)?\s*TL.*$/, '')
-                          .replace(/\d+,\d+.*$/, '')
-                          .trim();
+                        $('.pr-in-w').first().text().trim()
+                        .replace(/\d+(\.\d+)?\s*TL.*$/, '')
+                        .replace(/\d+,\d+.*$/, '')
+                        .replace(new RegExp(brand, 'gi'), '') 
+                        .trim();
     debug(`Ürün adı: ${productName}`);
 
     let title = '';
     if (brand && productName) {
-      title = `${brand} ${productName}`.replace(/\d+,\d+.*$/, '').trim();
+      title = `${brand} ${productName}`
+        .replace(/\d+,\d+.*$/, '') 
+        .replace(/\s+/g, ' ') 
+        .replace(new RegExp(`${brand}.*${brand}`, 'gi'), brand) 
+        .replace(/(.+?)\s+\1/gi, '$1') 
+        .trim();
     } else if (productName) {
       title = productName;
     } else {
@@ -233,6 +239,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               .replace(/\d+(\.\d+)?\s*TL.*$/, '')
               .replace(/\d+,\d+.*$/, '')
               .replace(/Tükeniyor!?/g, '')
+              .replace(/\s+/g, ' ')
               .trim();
     }
 
