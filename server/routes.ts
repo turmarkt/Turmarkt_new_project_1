@@ -188,31 +188,33 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }>()
     };
 
-    let sizeValue: any = null; 
-
-    function addSizeVariant(variant: any) {
+    function addSizeVariant(variant: any, source: string) {
       if (!variant) {
-        debug("Varyant boş");
+        debug(`${source}: Varyant boş`);
         return;
       }
 
-      debug("Varyant işleniyor:", variant);
+      debug(`${source} varyant işleniyor:`, variant);
+      let sizeValue = null;
 
-      // Stok kontrolü yap - sadece stokta olanları ekle
-      if (!variant.inStock) {
-        debug(`Stokta olmayan beden: ${variant.value}, atlanıyor`);
-        return;
-      }
-
-      // attributeValue veya value'dan değeri al
-      if (variant.attributeValue) {
-        sizeValue = variant.attributeValue;
-      } else if (variant.value) {
-        sizeValue = variant.value;
+      // Kaynak tipine göre değeri al
+      switch (source) {
+        case 'allVariants':
+          sizeValue = variant.value;
+          break;
+        case 'slicedAttributes':
+          sizeValue = variant.value;
+          break;
+        case 'variants':
+          sizeValue = variant.attributeValue || variant.value;
+          break;
+        default:
+          debug(`Bilinmeyen varyant kaynağı: ${source}`);
+          return;
       }
 
       if (!sizeValue) {
-        debug("Beden değeri bulunamadı");
+        debug(`${source}: Beden değeri bulunamadı`);
         return;
       }
 
@@ -224,16 +226,25 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         sellable: variant.sellable || false,
         barcode: variant.barcode,
         itemNumber: variant.itemNumber,
-        stock: variant.stock,
+        stock: variant.stock || 0,
         price: variant.price ? {
           discounted: variant.price.discountedPrice?.value,
           original: variant.price.sellingPrice?.value
         } : undefined
       });
 
-      // Stokta olan bedeni ekle
-      variants.sizes.add(sizeStr);
-      debug(`Stokta olan beden eklendi: ${sizeStr}, Stok: ${variant.stock || 'Belirtilmemiş'}`);
+      // Stok kontrolü - herhangi bir stok göstergesi varsa ekle
+      if (
+        variant.inStock === true || // Direkt stok durumu
+        variant.stock > 0 || // Stok sayısı
+        variant.sellable === true || // Satılabilir durumu
+        (variant.price?.discountedPrice?.value || variant.price?.sellingPrice?.value) // Fiyat varsa muhtemelen stokta var
+      ) {
+        variants.sizes.add(sizeStr);
+        debug(`${source}: Stokta olan beden eklendi: ${sizeStr}, Stok: ${variant.stock || 'Belirtilmemiş'}`);
+      } else {
+        debug(`${source}: Stokta olmayan veya belirsiz beden: ${sizeStr}`);
+      }
     }
 
     // Initial state'den varyant bilgilerini al
@@ -246,34 +257,34 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu:", JSON.stringify(data.product, null, 2));
 
-            // 1. allVariants'dan varyantları kontrol et - bu en güvenilir kaynak
+            // 1. allVariants yapısından kontrol et
             if (data.product?.allVariants) {
               debug("allVariants verisi:", JSON.stringify(data.product.allVariants, null, 2));
               data.product.allVariants.forEach((variant: any) => {
-                // Direkt olarak beden/numara kontrolü yapmıyoruz çünkü allVariants sadece beden bilgilerini içeriyor
-                if (variant.value) {
-                  addSizeVariant({
-                    value: variant.value,
-                    inStock: variant.inStock,
-                    stock: variant.stock,
-                    barcode: variant.barcode,
-                    itemNumber: variant.itemNumber,
-                    price: {
-                      discountedPrice: { value: variant.price },
-                      sellingPrice: { value: variant.price }
-                    }
-                  });
+                addSizeVariant(variant, 'allVariants');
+              });
+            }
+
+            // 2. slicedAttributes yapısından kontrol et
+            if (data.product?.slicedAttributes) {
+              debug("SlicedAttributes verisi:", JSON.stringify(data.product.slicedAttributes, null, 2));
+              data.product.slicedAttributes.forEach((attr: any) => {
+                if (attr.name === "Beden" || attr.name === "Numara") {
+                  if (attr.attributes) {
+                    attr.attributes.forEach((item: any) => {
+                      addSizeVariant(item, 'slicedAttributes');
+                    });
+                  }
                 }
               });
             }
 
-            // 2. Variants yapısını kontrol et (yedek)
+            // 3. Variants yapısından kontrol et
             if (data.product?.variants) {
               debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
                 if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  debug("Variant işleniyor:", variant);
-                  addSizeVariant(variant);
+                  addSizeVariant(variant, 'variants');
                 }
               });
             }
@@ -287,11 +298,16 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            debug("Tüm bulunan bedenler:", Array.from(variants.sizes).join(', '));
-            debug("Tüm bulunan renkler:", Array.from(variants.colors).join(', '));
+            // Bulunan varyant bilgilerini yazdır
+            debug("Bulunan bedenler:", Array.from(variants.sizes).join(', '));
+            debug("Bulunan renkler:", Array.from(variants.colors).join(', '));
             debug("Stok bilgileri:");
             variants.stockInfo.forEach((info, size) => {
-              debug(`${size}: Stok:${info.stock}, Durum:${info.inStock ? 'Var' : 'Yok'}`);
+              debug(`${size} beden bilgileri:`, {
+                stok: info.stock || 0,
+                durum: info.inStock ? "Stokta var" : "Stokta yok",
+                fiyat: info.price?.discounted
+              });
             });
           }
         } catch (error) {
@@ -402,7 +418,7 @@ export async function registerRoutes(app: Express) {
   app.get("/api/history", async (req, res) => {
     try {
       const history = storage.getHistory();
-      res.json(history);
+      res.json({...history, developer: "Erdem Çalışgan tarafından geliştirilmiştir"});
     } catch (error) {
       const { status, message, details } = handleError(error);
       res.status(status).json({ message, details });
