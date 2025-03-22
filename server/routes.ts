@@ -89,6 +89,48 @@ function normalizeImageUrl(url: string): string {
   }
 }
 
+// Kategori parse fonksiyonunu geliştir
+function extractCategories($: cheerio.CheerioAPI): { categories: string[], fullPath: string[] } {
+  const categories: string[] = [];
+  const fullPath: string[] = [];
+
+  // Breadcrumb'dan kategorileri al
+  $('.breadcrumb li').each((_, el) => {
+    const category = $(el).text().trim();
+    if (category && !category.includes('>') && category !== 'Anasayfa') {
+      categories.push(category);
+      fullPath.push(category);
+    }
+  });
+
+  // JavaScript state'den detaylı kategori yolunu al
+  $('script').each((_, element) => {
+    const scriptContent = $(element).html() || '';
+    if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+      try {
+        const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+        if (match) {
+          const data = JSON.parse(match[1]);
+          if (data.product?.category?.hierarchy) {
+            fullPath.length = 0; // Önceki verileri temizle
+            data.product.category.hierarchy.forEach((cat: any) => {
+              if (cat.name) fullPath.push(cat.name);
+            });
+            debug(`Detaylı kategori yolu bulundu: ${fullPath.join(' > ')}`);
+          }
+        }
+      } catch (error) {
+        debug(`Kategori parse hatası: ${error}`);
+      }
+    }
+  });
+
+  return {
+    categories: categories.length > 0 ? categories : ['Giyim'],
+    fullPath: fullPath.length > 0 ? fullPath : categories
+  };
+}
+
 async function scrapeProduct(url: string): Promise<InsertProduct> {
   debug("Scraping başlatıldı");
 
@@ -100,7 +142,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     debug(`Marka: ${brand}`);
 
     const productName = $('.prdct-desc-cntnr-name').text().trim() ||
-                       $('.pr-in-w').first().text().trim().replace(/\d+(\.\d+)?\s*TL.*$/, '');
+                        $('.pr-in-w').first().text().trim().replace(/\d+(\.\d+)?\s*TL.*$/, '');
     debug(`Ürün adı: ${productName}`);
 
     let title = '';
@@ -122,7 +164,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     }
 
     const priceSelectors = [
-      '.pr-in-w .prc-box-dscntd', 
+      '.pr-in-w .prc-box-dscntd',
       '.pr-in-w .prc-box-sllng',
       '.product-price-container .prc-dsc',
       '.pr-in-w .prc-dsc',
@@ -238,7 +280,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       });
 
       // Stok kontrolü - sadece stokta olan ürünleri ekle
-      const isInStock = source === 'allVariants' 
+      const isInStock = source === 'allVariants'
         ? variant.inStock === true  // allVariants için sadece inStock kontrolü
         : (variant.inStock === true || variant.sellable === true); // diğer kaynaklar için daha geniş kontrol
 
@@ -365,33 +407,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    const categories: string[] = [];
-    $('.breadcrumb li').each((_, el) => {
-      const category = $(el).text().trim();
-      if (category && !category.includes('>')) {
-        categories.push(category);
-      }
-    });
 
-    // JavaScript'ten kategori yolunu al
-    let fullCategoryPath: string[] = [];
-    $('script').each((_, element) => {
-      const scriptContent = $(element).html() || '';
-      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
-        try {
-          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
-          if (match) {
-            const data = JSON.parse(match[1]);
-            if (data.product?.category?.hierarchy) {
-              fullCategoryPath = data.product.category.hierarchy.map((cat: any) => cat.name);
-              debug(`Detaylı kategori yolu bulundu: ${fullCategoryPath.join(' > ')}`);
-            }
-          }
-        } catch (error) {
-          debug(`Kategori parse hatası: ${error}`);
-        }
-      }
-    });
+    // Kategori bilgisini güncelle
+    const categoryInfo = extractCategories($);
 
     const uniqueImages = Array.from(images).filter((url, index, arr) => {
       try {
@@ -401,7 +419,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         return false;
       }
     });
-
 
     const product: InsertProduct = {
       url,
@@ -417,9 +434,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         stockInfo: Object.fromEntries(variants.stockInfo)
       },
       attributes,
-      categories: categories.length > 0 ? categories : ['Kozmetik'],
-      fullCategoryPath: fullCategoryPath.length > 0 ? fullCategoryPath : categories,
-      tags: categories
+      categories: categoryInfo.categories,
+      fullCategoryPath: categoryInfo.fullPath,
+      tags: categoryInfo.categories
     };
 
     return product;
