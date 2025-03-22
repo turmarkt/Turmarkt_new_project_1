@@ -373,6 +373,26 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // JavaScript'ten kategori yolunu al
+    let fullCategoryPath: string[] = [];
+    $('script').each((_, element) => {
+      const scriptContent = $(element).html() || '';
+      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+        try {
+          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+          if (match) {
+            const data = JSON.parse(match[1]);
+            if (data.product?.category?.hierarchy) {
+              fullCategoryPath = data.product.category.hierarchy.map((cat: any) => cat.name);
+              debug(`Detaylı kategori yolu bulundu: ${fullCategoryPath.join(' > ')}`);
+            }
+          }
+        } catch (error) {
+          debug(`Kategori parse hatası: ${error}`);
+        }
+      }
+    });
+
     const uniqueImages = Array.from(images).filter((url, index, arr) => {
       try {
         new URL(url);
@@ -398,7 +418,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       },
       attributes,
       categories: categories.length > 0 ? categories : ['Kozmetik'],
-      fullCategoryPath: categories,
+      fullCategoryPath: fullCategoryPath.length > 0 ? fullCategoryPath : categories,
       tags: categories
     };
 

@@ -33,6 +33,16 @@ import {
 } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+const getCategoryConfig = (categories: string[] | undefined) => {
+    if (!categories || categories.length === 0) {
+        return { shopifyCategory: 'N/A' };
+    }
+    // Implement your logic to determine shopifyCategory based on categories here.
+    // This is a placeholder, replace with your actual logic.
+    return { shopifyCategory: categories[0] };
+};
+
+
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
   const [error, setError] = useState<{
@@ -93,7 +103,7 @@ export default function Home() {
     onSuccess: (data) => {
       setProduct(data);
       setError(null);
-      setCategoryConfig({ shopifyCategory: data.category || 'N/A' });
+      setCategoryConfig(getCategoryConfig(data.categories)); 
       toast({
         title: "Başarılı",
         description: "Ürün verileri başarıyla çekildi"
@@ -291,7 +301,7 @@ export default function Home() {
                                   () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'),
                                   () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.webp'),
                                   () => image.replace(/\/mnresize\/[^/]+\//, '/'),
-                                  () => image.replace(/_org_zoom/, '').replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'),
+                                  () => image.replace('_org_zoom', '').replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'),
                                 ];
 
                                 const tryNextStrategy = (strategyIndex = 0) => {
