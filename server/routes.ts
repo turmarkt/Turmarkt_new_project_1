@@ -566,6 +566,7 @@ export async function registerRoutes(app: Express) {
         variant_inventory_quantity: 0,
         variant_weight: '0.5',
         variant_weight_unit: 'kg',
+        status: 'active', // Status değerini 'active' olarak ayarla
         image_src: '',
         image_position: ''
       };
