@@ -591,37 +591,13 @@ export async function registerRoutes(app: Express) {
         throw new Error("Ürün verisi bulunamadı");
       }
 
+      // Ürün verilerini kontrol et
+      if (!product.title || !product.price) {
+        throw new Error("Gerekli ürün bilgileri eksik");
+      }
+
       const categoryConfig = getCategoryConfig(product.categories);
       const categoryPath = parseCategoryPath(product.categories);
-
-      // CSV başlıklarını güncelle ve compare_at_price'ı kaldır
-      const csvWriter = createObjectCsvWriter({
-        path: join(tmpdir(), 'shopify_products.csv'),
-        header: [
-          { id: 'handle', title: 'Handle' },
-          { id: 'title', title: 'Title' },
-          { id: 'body', title: 'Body (HTML)' },
-          { id: 'vendor', title: 'Vendor' },
-          { id: 'product_category', title: 'Product Category' },
-          { id: 'custom_category', title: 'Custom Category' },
-          { id: 'type', title: 'Type' },
-          { id: 'tags', title: 'Tags' },
-          { id: 'published', title: 'Published' },
-          { id: 'option1_name', title: 'Option1 Name' },
-          { id: 'option1_value', title: 'Option1 Value' },
-          { id: 'option2_name', title: 'Option2 Name' },
-          { id: 'option2_value', title: 'Option2 Value' },
-          { id: 'variant_sku', title: 'Variant SKU' },
-          { id: 'variant_price', title: 'Variant Price' },
-          { id: 'variant_inventory_policy', title: 'Variant Inventory Policy' },
-          { id: 'variant_inventory_quantity', title: 'Variant Inventory Quantity' },
-          { id: 'variant_weight', title: 'Variant Weight' },
-          { id: 'variant_weight_unit', title: 'Variant Weight Unit' },
-          { id: 'status', title: 'Status' },
-          { id: 'image_src', title: 'Image Src' },
-          { id: 'image_position', title: 'Image Position' }
-        ]
-      });
 
       // Handle oluştur (URL'den)
       const handle = product.title
@@ -631,8 +607,6 @@ export async function registerRoutes(app: Express) {
         .replace(/^-|-$/g, '');
 
       const csvRows = [];
-      const variants = product.variants || {};
-      const hasVariants = variants.sizes?.length > 0 || variants.colors?.length > 0;
 
       // Ana ürün bilgileri
       const baseProduct = {
@@ -664,6 +638,9 @@ export async function registerRoutes(app: Express) {
         image_position: ''
       };
 
+      const variants = product.variants || {};
+      const hasVariants = variants.sizes?.length > 0 || variants.colors?.length > 0;
+
       if (hasVariants) {
         const sizes = variants.sizes || [];
         const colors = variants.colors || [];
@@ -686,7 +663,7 @@ export async function registerRoutes(app: Express) {
           }
         }
       } else {
-        // Varyantsız ürün için sadece kârlı fiyatı ekle
+        // Varyantsız ürün için tek bir satır
         csvRows.push({
           ...baseProduct,
           variant_sku: handle,
@@ -698,11 +675,12 @@ export async function registerRoutes(app: Express) {
       // Görselleri ekle
       if (product.images && product.images.length > 0 && csvRows.length > 0) {
         // İlk görsel ana ürün varyantı için
-        csvRows[0] = {
+        const firstRow = {
           ...csvRows[0],
           image_src: product.images[0],
           image_position: '1'
         };
+        csvRows[0] = firstRow;
 
         // Diğer görseller için yeni satırlar
         for (let i = 1; i < product.images.length; i++) {
@@ -714,7 +692,36 @@ export async function registerRoutes(app: Express) {
         }
       }
 
-      // CSV dosyasını oluştur
+      // CSV başlıklarını oluştur
+      const csvWriter = createObjectCsvWriter({
+        path: join(tmpdir(), 'shopify_products.csv'),
+        header: [
+          { id: 'handle', title: 'Handle' },
+          { id: 'title', title: 'Title' },
+          { id: 'body', title: 'Body (HTML)' },
+          { id: 'vendor', title: 'Vendor' },
+          { id: 'product_category', title: 'Product Category' },
+          { id: 'custom_category', title: 'Custom Category' },
+          { id: 'type', title: 'Type' },
+          { id: 'tags', title: 'Tags' },
+          { id: 'published', title: 'Published' },
+          { id: 'option1_name', title: 'Option1 Name' },
+          { id: 'option1_value', title: 'Option1 Value' },
+          { id: 'option2_name', title: 'Option2 Name' },
+          { id: 'option2_value', title: 'Option2 Value' },
+          { id: 'variant_sku', title: 'Variant SKU' },
+          { id: 'variant_price', title: 'Variant Price' },
+          { id: 'variant_inventory_policy', title: 'Variant Inventory Policy' },
+          { id: 'variant_inventory_quantity', title: 'Variant Inventory Quantity' },
+          { id: 'variant_weight', title: 'Variant Weight' },
+          { id: 'variant_weight_unit', title: 'Variant Weight Unit' },
+          { id: 'status', title: 'Status' },
+          { id: 'image_src', title: 'Image Src' },
+          { id: 'image_position', title: 'Image Position' }
+        ]
+      });
+
+      // CSV dosyasını yaz
       await csvWriter.writeRecords(csvRows);
 
       // CSV dosyasını gönder
