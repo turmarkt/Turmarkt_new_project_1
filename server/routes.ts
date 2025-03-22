@@ -365,6 +365,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    const categories: string[] = [];
+    $('.breadcrumb li').each((_, el) => {
+      const category = $(el).text().trim();
+      if (category && !category.includes('>')) {
+        categories.push(category);
+      }
+    });
+
     const uniqueImages = Array.from(images).filter((url, index, arr) => {
       try {
         new URL(url);
@@ -374,15 +382,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-    const categories: string[] = [];
-    $('.breadcrumb li').each((_, el) => {
-      const category = $(el).text().trim();
-      if (category && !category.includes('>')) {
-        categories.push(category);
-      }
-    });
 
-    // Product nesnesini oluştururken varyant bilgilerini ekle
     const product: InsertProduct = {
       url,
       title,

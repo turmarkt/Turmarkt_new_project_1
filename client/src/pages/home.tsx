@@ -437,13 +437,24 @@ export default function Home() {
                                   <td className="p-2">
                                     {product?.images?.length || 0} görsel
                                     <div className="text-xs text-gray-500">
-                                      {product?.images?.slice(0, 2).map((url: string) => (
-                                        <div key={url} className="truncate max-w-[200px]">{url}</div>
+                                      {product?.images?.slice(0, 3).map((url: string, index: number) => (
+                                        <div key={index} className="truncate max-w-[200px] hover:text-white transition-colors">
+                                          {url}
+                                        </div>
                                       ))}
+                                      {product?.images?.length > 3 && (
+                                        <div className="text-gray-400">+{product.images.length - 3} daha fazla...</div>
+                                      )}
                                     </div>
                                   </td>
                                   <td className="p-2">{categoryConfig.shopifyCategory}</td>
-                                  <td className="p-2">{product.categories?.join(' > ')}</td>
+                                  <td className="p-2">
+                                    <div className="text-xs">
+                                      {product.fullCategoryPath ? 
+                                        product.fullCategoryPath.join(' > ') : 
+                                        product.categories?.join(' > ')}
+                                    </div>
+                                  </td>
                                 </tr>
                               </tbody>
                             </table>
