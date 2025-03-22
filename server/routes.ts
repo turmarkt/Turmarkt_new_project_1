@@ -233,9 +233,17 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         } : undefined
       });
 
-      // Stok kontrolü - her kaynaktan gelen stok bilgisini değerlendir
-      variants.sizes.add(sizeStr);
-      debug(`${source}: Beden eklendi: ${sizeStr}, Stok: ${variant.stock || 'Belirtilmemiş'}`);
+      // Stok kontrolü - sadece stokta olan ürünleri ekle
+      const isInStock = source === 'allVariants' 
+        ? variant.inStock === true  // allVariants için sadece inStock kontrolü
+        : (variant.inStock === true || variant.sellable === true); // diğer kaynaklar için daha geniş kontrol
+
+      if (isInStock) {
+        variants.sizes.add(sizeStr);
+        debug(`${source}: Stokta olan beden eklendi: ${sizeStr}, Stok: ${variant.stock || 'Belirtilmemiş'}`);
+      } else {
+        debug(`${source}: Stokta olmayan beden: ${sizeStr}`);
+      }
     }
 
     // Initial state'den varyant bilgilerini al
