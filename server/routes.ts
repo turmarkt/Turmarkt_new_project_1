@@ -217,17 +217,21 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     debug(`Marka: ${brand}`);
 
     const productName = $('.prdct-desc-cntnr-name').text().trim() ||
-                          $('.pr-in-w').first().text().trim().replace(/\d+(\.\d+)?\s*TL.*$/, '');
+                          $('.pr-in-w').first().text().trim()
+                          .replace(/\d+(\.\d+)?\s*TL.*$/, '')
+                          .replace(/\d+,\d+.*$/, '')
+                          .trim();
     debug(`Ürün adı: ${productName}`);
 
     let title = '';
     if (brand && productName) {
-      title = `${brand} ${productName}`;
+      title = `${brand} ${productName}`.replace(/\d+,\d+.*$/, '').trim();
     } else if (productName) {
       title = productName;
     } else {
       title = $('.pr-in-w').first().text().trim()
               .replace(/\d+(\.\d+)?\s*TL.*$/, '')
+              .replace(/\d+,\d+.*$/, '')
               .replace(/Tükeniyor!?/g, '')
               .trim();
     }
