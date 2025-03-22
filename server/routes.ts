@@ -306,6 +306,66 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
+    // Ürün özelliklerini çek
+    const attributes: Record<string, string> = {};
+
+    // Öne Çıkan Özellikler bölümünü çek
+    $('.details-section').each((_, section) => {
+      const $section = $(section);
+      const title = $section.find('.details-section-title').text().trim();
+
+      if (title === 'Öne Çıkan Özellikler') {
+        $section.find('.details-property').each((_, property) => {
+          const $property = $(property);
+          const key = $property.find('.details-property-key').text().trim();
+          const value = $property.find('.details-property-value').text().trim();
+          if (key && value) {
+            attributes[key] = value;
+            debug(`Özellik bulundu: ${key} = ${value}`);
+          }
+        });
+      }
+    });
+
+    // Ürün detaylarından özellik çek
+    $('.product-feature-container .featured-item').each((_, item) => {
+      const $item = $(item);
+      const key = $item.find('.feature-name').text().trim();
+      const value = $item.find('.feature-value').text().trim();
+      if (key && value) {
+        attributes[key] = value;
+        debug(`Özellik bulundu: ${key} = ${value}`);
+      }
+    });
+
+    // Alternatif özellik yapısını kontrol et
+    $('.product-information-items li').each((_, item) => {
+      const $item = $(item);
+      const text = $item.text().trim();
+      const [key, value] = text.split(':').map(part => part.trim());
+      if (key && value) {
+        attributes[key] = value;
+        debug(`Özellik bulundu: ${key} = ${value}`);
+      }
+    });
+
+    // JSON-LD'den özellikleri çek
+    $('script[type="application/ld+json"]').each((_, element) => {
+      try {
+        const data = JSON.parse($(element).html() || '');
+        if (data.additionalProperty) {
+          data.additionalProperty.forEach((prop: any) => {
+            if (prop.name && prop.value) {
+              attributes[prop.name] = prop.value;
+              debug(`JSON-LD'den özellik bulundu: ${prop.name} = ${prop.value}`);
+            }
+          });
+        }
+      } catch (error) {
+        debug(`JSON parse hatası: ${error}`);
+      }
+    });
+
     const product: InsertProduct = {
       url,
       title,
@@ -319,7 +379,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         colors: [],
         stockInfo: {}
       },
-      attributes: {},
+      attributes, // Burada güncellenmiş attributes objesini kullanıyoruz
       categories: categoryInfo.categories,
       fullCategoryPath: categoryInfo.fullPath,
       tags: categoryInfo.categories
