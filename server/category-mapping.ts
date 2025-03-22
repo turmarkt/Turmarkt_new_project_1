@@ -18,6 +18,17 @@ type CategoryMapping = Record<string, z.infer<typeof CategoryConfig>>;
 // Shopify'ın resmi kategori yapısına göre eşleştirme
 export const categoryMapping: CategoryMapping = {
   // Ayakkabı Kategorileri - En üst öncelik
+  "babet": {
+    shopifyCategory: "Apparel & Accessories > Shoes > Flats",
+    variantConfig: {
+      sizeLabel: "Numara",
+      colorLabel: "Renk",
+      defaultStock: 30,
+      hasVariants: true
+    },
+    attributes: ["Taban", "Materyal", "Kullanım Alanı"],
+    inventoryTracking: true
+  },
   "sneaker": {
     shopifyCategory: "Apparel & Accessories > Shoes > Athletic Shoes",
     variantConfig: {
@@ -37,7 +48,7 @@ export const categoryMapping: CategoryMapping = {
       defaultStock: 30,
       hasVariants: true
     },
-    attributes: ["Taban", "Materyal", "Bağcık", "Kullanım Alanı"],
+    attributes: ["Taban", "Materyal", "Kullanım Alanı"],
     inventoryTracking: true
   },
   "bot": {
@@ -122,40 +133,20 @@ export function getCategoryConfig(categories: string[]): z.infer<typeof Category
      .replace(/ç/g, 'c')
   );
 
-  // Önce ayakkabı kategorisi kontrolü
-  const isShoeCategory = normalizedCategories.some(c => 
-    c.includes('ayakkabi') || 
-    c.includes('sneaker') || 
-    c.includes('bot') || 
-    c.includes('cizme') ||
-    c.includes('sandalet') ||
-    c.includes('terlik')
-  );
+  // Spesifik ayakkabı kategorilerini kontrol et
+  const specificShoeTypes = ['babet', 'sneaker', 'bot', 'cizme', 'sandalet', 'terlik'];
+  for (const shoeType of specificShoeTypes) {
+    if (normalizedCategories.some(c => c.includes(shoeType))) {
+      return categoryMapping[shoeType] || categoryMapping['ayakkabi'];
+    }
+  }
 
-  if (isShoeCategory) {
+  // Genel ayakkabı kategorisi kontrolü
+  if (normalizedCategories.some(c => c.includes('ayakkabi'))) {
     return categoryMapping['ayakkabi'];
   }
 
-  // Tam eşleşme ara
-  for (const category of normalizedCategories) {
-    const exactMatch = Object.entries(categoryMapping).find(([key]) => 
-      category === key || category.includes(key)
-    );
-    if (exactMatch) {
-      return exactMatch[1];
-    }
-  }
-
-  // Kısmi eşleşme ara
-  for (const category of normalizedCategories) {
-    for (const [key, config] of Object.entries(categoryMapping)) {
-      if (category.includes(key)) {
-        return config;
-      }
-    }
-  }
-
-  // Cinsiyet bazlı varsayılan kategori
+  // Cinsiyet bazlı kategori kontrolü
   if (normalizedCategories.some(c => c.includes('erkek'))) {
     return categoryMapping['erkek'];
   }
