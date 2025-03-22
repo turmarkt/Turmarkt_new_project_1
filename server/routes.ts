@@ -217,20 +217,23 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     debug(`Marka: ${brand}`);
 
     const productName = $('.prdct-desc-cntnr-name').text().trim() ||
-                        $('.pr-in-w').first().text().trim()
-                        .replace(/\d+(\.\d+)?\s*TL.*$/, '')
-                        .replace(/\d+,\d+.*$/, '')
-                        .replace(new RegExp(brand, 'gi'), '') 
-                        .trim();
+                       $('.pr-in-w').first().text().trim()
+                       .replace(/\d+(\.\d+)?\s*TL.*$/, '')
+                       .replace(/\d+,\d+.*$/, '')
+                       .replace(/\d+\.?\d*,?\d*\s*(TL)?/g, '')  // More comprehensive price removal
+                       .replace(new RegExp(brand, 'gi'), '') 
+                       .trim();
     debug(`Ürün adı: ${productName}`);
 
     let title = '';
     if (brand && productName) {
+      // Put brand at the start, clean up the title
       title = `${brand} ${productName}`
-        .replace(/\d+,\d+.*$/, '') 
-        .replace(/\s+/g, ' ') 
-        .replace(new RegExp(`${brand}.*${brand}`, 'gi'), brand) 
-        .replace(/(.+?)\s+\1/gi, '$1') 
+        .replace(/\d+\.?\d*,?\d*\s*(TL)?/g, '')  // Remove any remaining price
+        .replace(/\s+/g, ' ')  // Normalize spaces
+        .replace(new RegExp(`${brand}.*${brand}`, 'gi'), brand)  // Remove duplicate brand mentions
+        .replace(/(.+?)\s+\1/gi, '$1')  // Remove duplicate phrases
+        .replace(/\s*,\s*$/, '')  // Remove trailing comma
         .trim();
     } else if (productName) {
       title = productName;
@@ -238,8 +241,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       title = $('.pr-in-w').first().text().trim()
               .replace(/\d+(\.\d+)?\s*TL.*$/, '')
               .replace(/\d+,\d+.*$/, '')
+              .replace(/\d+\.?\d*,?\d*\s*(TL)?/g, '')
               .replace(/Tükeniyor!?/g, '')
               .replace(/\s+/g, ' ')
+              .replace(/\s*,\s*$/, '')
               .trim();
     }
 
