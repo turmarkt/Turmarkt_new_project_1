@@ -156,6 +156,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     };
 
     function addSizeVariant(variant: any) {
+      if (!variant) return;
+
+      // Beden değerini al
       const value = variant.attributeValue || variant.value;
       if (!value) return;
 
@@ -177,6 +180,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
       debug(`Varyant bilgileri eklendi: ${sizeStr}`, {
         stok: variant.stock || 0,
+        durum: variant.inStock ? "Stokta var" : "Stokta yok",
         satılabilir: variant.sellable ? "Evet" : "Hayır",
         fiyat: variant.price?.discountedPrice?.value
       });
@@ -194,8 +198,38 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
             // Variants yapısından detaylı bilgileri al
             if (data.product?.variants) {
-              debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
+              debug("Variants yapısı:", JSON.stringify(data.product.variants, null, 2));
+
+              // Tüm varyantları kontrol et
               data.product.variants.forEach((variant: any) => {
+                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
+                  addSizeVariant(variant);
+                }
+              });
+            }
+
+            // SlicedAttributes'dan varyantları kontrol et
+            if (data.product?.slicedAttributes) {
+              data.product.slicedAttributes.forEach((attr: any) => {
+                if (attr.name === "Beden" || attr.name === "Numara") {
+                  attr.attributes.forEach((item: any) => {
+                    if (item) {
+                      addSizeVariant({
+                        attributeValue: item.value,
+                        inStock: item.inStock,
+                        sellable: item.sellable,
+                        stock: item.stock,
+                        price: item.price
+                      });
+                    }
+                  });
+                }
+              });
+            }
+
+            // AllVariants'dan varyantları kontrol et
+            if (data.product?.allVariants) {
+              data.product.allVariants.forEach((variant: any) => {
                 if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
                   addSizeVariant(variant);
                 }
@@ -211,7 +245,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            // Varyant detaylarını yazdır
+            // Varyant bilgilerini yazdır
             debug("Stok durumu ile varyant bilgileri:");
             variants.stockInfo.forEach((info, size) => {
               debug(`${size}:`, {
