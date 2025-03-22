@@ -24,7 +24,7 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
   try {
     // URL'yi normalize et
     if (!url.startsWith('http')) {
-      url = 'https://www.' + url;
+      url = 'https://www.' + url.replace(/^www\./, '');
     }
 
     debug(`Fetching URL: ${url}`);
@@ -38,23 +38,34 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
         'Pragma': 'no-cache',
         'Sec-Fetch-Dest': 'document',
         'Sec-Fetch-Mode': 'navigate',
-        'Sec-Fetch-Site': 'none',
+        'Sec-Fetch-Site': 'cross-site',
         'Sec-Fetch-User': '?1',
-        'Upgrade-Insecure-Requests': '1'
+        'Upgrade-Insecure-Requests': '1',
+        'Referer': 'https://www.trendyol.com/'
       },
-      redirect: 'follow'
+      follow: 10,
+      redirect: 'follow',
+      timeout: 10000
     });
 
     if (!response.ok) {
+      debug(`HTTP error! status: ${response.status}`);
       throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const html = await response.text();
+
+    if (!html || html.length < 1000) {
+      debug("Sayfa içeriği çok kısa veya boş");
+      throw new Error("Sayfa içeriği geçersiz");
+    }
+
     debug("HTML içeriği başarıyla alındı");
     return cheerio.load(html);
 
   } catch (error: any) {
     debug(`Veri çekme hatası: ${error.message}`);
+    debug(`URL: ${url}`);
     throw new TrendyolScrapingError("Sayfa yüklenemedi", {
       status: 500,
       statusText: "Fetch Error",
@@ -437,7 +448,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const uniqueImages = Array.from(images).filter((url, index, arr) => {
       try {
         new URL(url);
-        return index < arr.length - 1;
+        return index < arr.length -1;
       } catch {
         return false;
       }
