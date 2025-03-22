@@ -41,11 +41,13 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
         'Sec-Fetch-Site': 'cross-site',
         'Sec-Fetch-User': '?1',
         'Upgrade-Insecure-Requests': '1',
-        'Referer': 'https://www.trendyol.com/'
+        'Referer': 'https://www.trendyol.com/',
+        'Origin': 'https://www.trendyol.com',
+        'Connection': 'keep-alive'
       },
       follow: 10,
       redirect: 'follow',
-      timeout: 10000
+      timeout: 30000
     });
 
     if (!response.ok) {
@@ -60,12 +62,13 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
       throw new Error("Sayfa içeriği geçersiz");
     }
 
-    debug("HTML içeriği başarıyla alındı");
+    debug(`HTML içeriği başarıyla alındı (${html.length} bytes)`);
     return cheerio.load(html);
 
   } catch (error: any) {
     debug(`Veri çekme hatası: ${error.message}`);
     debug(`URL: ${url}`);
+    debug(`Stack trace: ${error.stack}`);
     throw new TrendyolScrapingError("Sayfa yüklenemedi", {
       status: 500,
       statusText: "Fetch Error",
