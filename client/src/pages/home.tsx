@@ -464,21 +464,21 @@ export default function Home() {
                     </Accordion>
                   </div>
 
-                  {/* Add category display */}
+                  {/* Kategori Gösterimi */}
                   <div className="mt-2 px-3 py-2 text-xs bg-gray-800/50 rounded-md space-y-2">
                     <div className="flex items-center gap-2">
-                      <Package className="h-3 w-3 text-primary" />
-                      <span className="text-gray-400">Shopify Kategori:</span>
-                    </div>
-                    <div className="font-medium">{categoryConfig.shopifyCategory}</div>
-
-                    <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
                       <Package className="h-3 w-3 text-primary" />
                       <span className="text-gray-400">Trendyol Kategori:</span>
                     </div>
                     <div className="font-medium text-xs">
                       {product.categories?.join(' > ')}
                     </div>
+
+                    <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
+                      <Package className="h-3 w-3 text-primary" />
+                      <span className="text-gray-400">Shopify Kategori:</span>
+                    </div>
+                    <div className="font-medium">{categoryConfig.shopifyCategory}</div>
                   </div>
 
                   <Button
