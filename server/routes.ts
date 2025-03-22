@@ -198,6 +198,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
       debug("Varyant işleniyor:", variant);
 
+      // Stok kontrolü yap - sadece stokta olanları ekle
+      if (!variant.inStock) {
+        debug(`Stokta olmayan beden: ${variant.value}, atlanıyor`);
+        return;
+      }
+
       // attributeValue veya value'dan değeri al
       if (variant.attributeValue) {
         sizeValue = variant.attributeValue;
@@ -225,9 +231,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         } : undefined
       });
 
-      // Stok durumuna bakılmaksızın beden ekleniyor
+      // Stokta olan bedeni ekle
       variants.sizes.add(sizeStr);
-      debug(`Beden eklendi: ${sizeStr}, Stok Durumu: ${variant.inStock ? 'Var' : 'Yok'}, Stok: ${variant.stock || 0}`);
+      debug(`Stokta olan beden eklendi: ${sizeStr}, Stok: ${variant.stock || 'Belirtilmemiş'}`);
     }
 
     // Initial state'den varyant bilgilerini al
