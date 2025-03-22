@@ -144,25 +144,42 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       colors: new Set<string>()
     };
 
-    // HTML'den doğrudan beden seçeneklerini al
+    // Beden seçeneklerini kontrol et ve ekle
+    function addSizeVariant(size: string) {
+      const sizeStr = size.toString().trim().toUpperCase();
+
+      // Sayısal beden kontrolü
+      if (/^\d+$/.test(sizeStr)) {
+        variants.sizes.add(sizeStr);
+        debug(`Numaralı beden eklendi: ${sizeStr}`);
+        return;
+      }
+
+      // Harfli beden kontrolü (S, M, L, XL, XXL, vs.)
+      if (/^[SML]|X{1,3}[SML]$/.test(sizeStr)) {
+        variants.sizes.add(sizeStr);
+        debug(`Harfli beden eklendi: ${sizeStr}`);
+        return;
+      }
+    }
+
+    // HTML'den beden seçeneklerini al
     $('.variant-list .v-v').each((_, element) => {
       const size = $(element).text().trim();
       if (size) {
-        variants.sizes.add(size);
-        debug(`HTML'den beden eklendi: ${size}`);
+        addSizeVariant(size);
       }
     });
 
-    // Alternatif olarak select-variant elementi içinden de kontrol et
+    // Select-variant'dan beden seçeneklerini al
     $('.select-variant:contains("Beden"), .select-variant:contains("Numara")').find('.v-v').each((_, element) => {
       const size = $(element).text().trim();
       if (size) {
-        variants.sizes.add(size);
-        debug(`Select variant'dan beden eklendi: ${size}`);
+        addSizeVariant(size);
       }
     });
 
-
+    // State'den varyantları al
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -170,7 +187,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
           if (match) {
             const data = JSON.parse(match[1]);
-            
+
             // Renk bilgisini al
             if (data.product?.color) {
               const color = data.product.color.split('-')[0].trim();
@@ -180,22 +197,19 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            // 1. SlicedAttributes'dan beden bilgilerini al (bu kısım artık yedek)
-            if (data.product?.slicedAttributes) {
-              data.product.slicedAttributes.forEach((attr: any) => {
-                if (attr.name === "Beden" || attr.name === "Numara") {
-                  attr.attributes.forEach((item: any) => {
-                    const value = item.value?.toString().trim();
-                    if (value) {
-                      variants.sizes.add(value);
-                      debug(`SlicedAttributes'dan beden eklendi: ${value}`);
-                    }
-                  });
+            // Variants yapısından beden bilgilerini al
+            if (data.product?.variants) {
+              data.product.variants.forEach((variant: any) => {
+                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
+                  const value = variant.attributeValue || variant.value;
+                  if (value) {
+                    addSizeVariant(value);
+                  }
                 }
               });
             }
 
-            // 2. ContentAttributes'dan beden bilgilerini al (bu kısım artık yedek)
+            // ContentAttributes'dan beden bilgilerini al
             if (data.product?.contentAttributes) {
               data.product.contentAttributes.forEach((attr: any) => {
                 if (attr.name === "Beden" || attr.name === "Numara") {
@@ -203,43 +217,22 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                   values.forEach((value: string) => {
                     const trimmedValue = value.trim();
                     if (trimmedValue) {
-                      variants.sizes.add(trimmedValue);
-                      debug(`ContentAttributes'dan beden eklendi: ${trimmedValue}`);
+                      addSizeVariant(trimmedValue);
                     }
                   });
                 }
               });
             }
 
-            // 3. Variants yapısından beden bilgilerini al (bu kısım artık yedek)
-            if (data.product?.variants) {
-              debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
-              data.product.variants.forEach((variant: any) => {
-                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  const value = variant.attributeValue || variant.value;
-                  if (value) {
-                    variants.sizes.add(value.toString().trim());
-                    debug(`Variants'dan beden eklendi: ${value}`);
-                  }
-                }
-              });
-            }
-
-
-            debug("Initial state yapısı:", {
-              slicedAttributes: data.product?.slicedAttributes,
-              contentAttributes: data.product?.contentAttributes,
-              variants: data.product?.variants
-            });
-
-            debug("Bulunan tüm bedenler:", Array.from(variants.sizes).join(', '));
-            debug("Bulunan tüm renkler:", Array.from(variants.colors).join(', '));
+            debug("Bulunan tüm beden seçenekleri:", Array.from(variants.sizes).join(', '));
+            debug("Bulunan tüm renk seçenekleri:", Array.from(variants.colors).join(', '));
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
         }
       }
     });
+
 
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
