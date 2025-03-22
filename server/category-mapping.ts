@@ -17,6 +17,41 @@ type CategoryMapping = Record<string, z.infer<typeof CategoryConfig>>;
 
 // Shopify'ın resmi kategori yapısına göre eşleştirme
 export const categoryMapping: CategoryMapping = {
+  // Ayakkabı Kategorileri - En üst öncelik
+  "sneaker": {
+    shopifyCategory: "Apparel & Accessories > Shoes > Athletic Shoes",
+    variantConfig: {
+      sizeLabel: "Numara",
+      colorLabel: "Renk",
+      defaultStock: 30,
+      hasVariants: true
+    },
+    attributes: ["Taban", "Materyal", "Bağcık", "Kullanım Alanı"],
+    inventoryTracking: true
+  },
+  "ayakkabi": {
+    shopifyCategory: "Apparel & Accessories > Shoes",
+    variantConfig: {
+      sizeLabel: "Numara",
+      colorLabel: "Renk",
+      defaultStock: 30,
+      hasVariants: true
+    },
+    attributes: ["Taban", "Materyal", "Bağcık", "Kullanım Alanı"],
+    inventoryTracking: true
+  },
+  "bot": {
+    shopifyCategory: "Apparel & Accessories > Shoes > Boots",
+    variantConfig: {
+      sizeLabel: "Numara",
+      colorLabel: "Renk",
+      defaultStock: 30,
+      hasVariants: true
+    },
+    attributes: ["Taban", "Materyal", "Bağcık", "Kullanım Alanı"],
+    inventoryTracking: true
+  },
+
   // Giyim Kategorileri
   "erkek": {
     shopifyCategory: "Apparel & Accessories > Clothing > Men's Clothing",
@@ -72,24 +107,36 @@ export const categoryMapping: CategoryMapping = {
     },
     attributes: ["Malzeme", "Boyut", "Kart Bölmesi"],
     inventoryTracking: true
-  },
-  "sneaker": {
-    shopifyCategory: "Apparel & Accessories > Shoes > Athletic Shoes",
-    variantConfig: {
-      sizeLabel: "Numara",
-      colorLabel: "Renk",
-      defaultStock: 30,
-      hasVariants: true
-    },
-    attributes: ["Taban", "Materyal", "Bağcık", "Kullanım Alanı"],
-    inventoryTracking: true
   }
 };
 
 export function getCategoryConfig(categories: string[]): z.infer<typeof CategoryConfig> {
-  const normalizedCategories = categories.map(c => c.toLowerCase().trim());
+  const normalizedCategories = categories.map(c => 
+    c.toLowerCase()
+     .trim()
+     .replace(/ı/g, 'i')
+     .replace(/ğ/g, 'g')
+     .replace(/ü/g, 'u')
+     .replace(/ş/g, 's')
+     .replace(/ö/g, 'o')
+     .replace(/ç/g, 'c')
+  );
 
-  // Önce tam eşleşme ara
+  // Önce ayakkabı kategorisi kontrolü
+  const isShoeCategory = normalizedCategories.some(c => 
+    c.includes('ayakkabi') || 
+    c.includes('sneaker') || 
+    c.includes('bot') || 
+    c.includes('cizme') ||
+    c.includes('sandalet') ||
+    c.includes('terlik')
+  );
+
+  if (isShoeCategory) {
+    return categoryMapping['ayakkabi'];
+  }
+
+  // Tam eşleşme ara
   for (const category of normalizedCategories) {
     const exactMatch = Object.entries(categoryMapping).find(([key]) => 
       category === key || category.includes(key)
@@ -112,7 +159,7 @@ export function getCategoryConfig(categories: string[]): z.infer<typeof Category
   if (normalizedCategories.some(c => c.includes('erkek'))) {
     return categoryMapping['erkek'];
   }
-  if (normalizedCategories.some(c => c.includes('kadın'))) {
+  if (normalizedCategories.some(c => c.includes('kadin'))) {
     return categoryMapping['kadın'];
   }
 
