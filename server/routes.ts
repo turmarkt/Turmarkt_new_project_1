@@ -379,7 +379,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         colors: [],
         stockInfo: {}
       },
-      attributes, // Burada güncellenmiş attributes objesini kullanıyoruz
+      attributes, // Güncellenmiş attributes objesini kullan
       categories: categoryInfo.categories,
       fullCategoryPath: categoryInfo.fullPath,
       tags: categoryInfo.categories
