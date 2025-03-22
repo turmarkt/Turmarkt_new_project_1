@@ -287,7 +287,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            // Bulunan tüm bilgileri yazdır
             debug("Tüm bulunan bedenler:", Array.from(variants.sizes).join(', '));
             debug("Tüm bulunan renkler:", Array.from(variants.colors).join(', '));
             debug("Stok bilgileri:");
