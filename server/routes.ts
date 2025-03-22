@@ -117,14 +117,47 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
-    const priceSelectors = ['.prc-box-dscntd', '.prc-box-sllng', '.product-price-container .prc-dsc'];
+    const priceSelectors = [
+      '.pr-in-w .prc-box-dscntd', 
+      '.pr-in-w .prc-box-sllng',
+      '.product-price-container .prc-dsc',
+      '.pr-in-w .prc-dsc',
+      '.prc-slg'
+    ];
     let rawPrice = '';
     for (const selector of priceSelectors) {
       const priceElement = $(selector).first();
       if (priceElement.length > 0) {
         rawPrice = priceElement.text().trim();
-        if (rawPrice) break;
+        if (rawPrice) {
+          debug(`Fiyat bulundu (${selector}): ${rawPrice}`);
+          break;
+        }
       }
+    }
+
+    // HTML'den fiyat bulunamadıysa initial state'den almayı dene
+    if (!rawPrice) {
+      $('script').each((_, element) => {
+        const scriptContent = $(element).html() || '';
+        if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+          try {
+            const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+            if (match) {
+              const data = JSON.parse(match[1]);
+              if (data.product?.price?.discountedPrice?.text) {
+                rawPrice = data.product.price.discountedPrice.text;
+                debug(`Fiyat initial state'den alındı: ${rawPrice}`);
+              } else if (data.product?.price?.sellingPrice?.text) {
+                rawPrice = data.product.price.sellingPrice.text;
+                debug(`Fiyat initial state'den alındı: ${rawPrice}`);
+              }
+            }
+          } catch (error) {
+            debug(`Fiyat parse hatası: ${error}`);
+          }
+        }
+      });
     }
 
     if (!rawPrice) {
@@ -133,6 +166,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
     const basePrice = cleanPrice(rawPrice);
     const price = (basePrice * 1.15).toFixed(2);
+    debug(`İşlenmiş fiyat: ${price} (baz: ${basePrice})`);
 
     const images: Set<string> = new Set();
     debug("Görsel yakalama başlatıldı");
