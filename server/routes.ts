@@ -221,7 +221,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                        .replace(/\d+(\.\d+)?\s*TL.*$/, '')
                        .replace(/\d+,\d+.*$/, '')
                        .replace(/\d+\.?\d*,?\d*\s*(TL)?/g, '')  // More comprehensive price removal
-                       .replace(new RegExp(brand, 'gi'), '') 
+                       .replace(new RegExp(brand, 'gi'), '')
                        .trim();
     debug(`Ürün adı: ${productName}`);
 
@@ -594,7 +594,7 @@ export async function registerRoutes(app: Express) {
       const categoryConfig = getCategoryConfig(product.categories);
       const categoryPath = parseCategoryPath(product.categories);
 
-      // Shopify CSV başlıkları
+      // CSV başlıklarını güncelle ve compare_at_price'ı kaldır
       const csvWriter = createObjectCsvWriter({
         path: join(tmpdir(), 'shopify_products.csv'),
         header: [
@@ -613,7 +613,6 @@ export async function registerRoutes(app: Express) {
           { id: 'option2_value', title: 'Option2 Value' },
           { id: 'variant_sku', title: 'Variant SKU' },
           { id: 'variant_price', title: 'Variant Price' },
-          { id: 'variant_compare_at_price', title: 'Variant Compare At Price' },
           { id: 'variant_inventory_policy', title: 'Variant Inventory Policy' },
           { id: 'variant_inventory_quantity', title: 'Variant Inventory Quantity' },
           { id: 'variant_weight', title: 'Variant Weight' },
@@ -657,7 +656,6 @@ export async function registerRoutes(app: Express) {
         option2_value: '',
         variant_sku: '',
         variant_price: '',
-        variant_compare_at_price: '',
         variant_inventory_policy: 'deny',
         variant_inventory_quantity: 0,
         variant_weight: '0.5',
@@ -682,19 +680,17 @@ export async function registerRoutes(app: Express) {
               option2_value: color || '',
               variant_sku: `${handle}-${size}${color ? `-${color}` : ''}`,
               variant_price: product.price,
-              variant_compare_at_price: product.basePrice,
               variant_inventory_quantity: categoryConfig.variantConfig.defaultStock || 50
             };
             csvRows.push(variant);
           }
         }
       } else {
-        // Varyantsız ürün
+        // Varyantsız ürün için sadece kârlı fiyatı ekle
         csvRows.push({
           ...baseProduct,
           variant_sku: handle,
           variant_price: product.price,
-          variant_compare_at_price: product.basePrice,
           variant_inventory_quantity: categoryConfig.variantConfig.defaultStock || 50
         });
       }
