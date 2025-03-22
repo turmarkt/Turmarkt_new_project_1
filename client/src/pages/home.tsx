@@ -464,16 +464,6 @@ export default function Home() {
                     </Accordion>
                   </div>
 
-                  <Button
-                    onClick={() => exportMutation.mutate()}
-                    disabled={exportMutation.isPending}
-                    className="w-full py-2 text-sm mt-4"
-                  >
-                    {exportMutation.isPending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : null}
-                    Shopify CSV'sine Aktar
-                  </Button>
                   {/* Add category display */}
                   <div className="mt-2 px-3 py-2 text-xs bg-gray-800/50 rounded-md space-y-2">
                     <div className="flex items-center gap-2">
@@ -490,6 +480,17 @@ export default function Home() {
                       {product.categories?.join(' > ')}
                     </div>
                   </div>
+
+                  <Button
+                    onClick={() => exportMutation.mutate()}
+                    disabled={exportMutation.isPending}
+                    className="w-full py-2 text-sm mt-4"
+                  >
+                    {exportMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Shopify CSV'sine Aktar
+                  </Button>
                 </CardContent>
               </Card>
             </motion.div>
