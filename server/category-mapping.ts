@@ -17,7 +17,36 @@ type CategoryMapping = Record<string, z.infer<typeof CategoryConfig>>;
 
 // Shopify'ın resmi kategori yapısına göre eşleştirme
 export const categoryMapping: CategoryMapping = {
-  // Ayakkabı Kategorileri - En üst öncelik
+  // Kozmetik Kategorileri
+  "sampuan": {
+    shopifyCategory: "Health & Beauty > Personal Care > Hair Care > Shampoo & Conditioner",
+    variantConfig: {
+      defaultStock: 50,
+      hasVariants: false
+    },
+    attributes: ["Etki", "Hacim", "Saç Tipi", "İçerik"],
+    inventoryTracking: true
+  },
+  "kozmetik": {
+    shopifyCategory: "Health & Beauty > Personal Care",
+    variantConfig: {
+      defaultStock: 50,
+      hasVariants: false
+    },
+    attributes: ["Etki", "Kullanım Alanı", "İçerik"],
+    inventoryTracking: true
+  },
+  "bakim": {
+    shopifyCategory: "Health & Beauty > Personal Care > Skin Care",
+    variantConfig: {
+      defaultStock: 50,
+      hasVariants: false
+    },
+    attributes: ["Etki", "Cilt Tipi", "İçerik"],
+    inventoryTracking: true
+  },
+
+  // Ayakkabı Kategorileri
   "babet": {
     shopifyCategory: "Apparel & Accessories > Shoes > Flats",
     variantConfig: {
@@ -122,16 +151,24 @@ export const categoryMapping: CategoryMapping = {
 };
 
 export function getCategoryConfig(categories: string[]): z.infer<typeof CategoryConfig> {
-  const normalizedCategories = categories.map(c => 
+  const normalizedCategories = categories.map(c =>
     c.toLowerCase()
-     .trim()
-     .replace(/ı/g, 'i')
-     .replace(/ğ/g, 'g')
-     .replace(/ü/g, 'u')
-     .replace(/ş/g, 's')
-     .replace(/ö/g, 'o')
-     .replace(/ç/g, 'c')
+      .trim()
+      .replace(/ı/g, 'i')
+      .replace(/ğ/g, 'g')
+      .replace(/ü/g, 'u')
+      .replace(/ş/g, 's')
+      .replace(/ö/g, 'o')
+      .replace(/ç/g, 'c')
   );
+
+  // Kozmetik kategorilerini kontrol et
+  if (normalizedCategories.some(c => c.includes('sampuan') || c.includes('sac'))) {
+    return categoryMapping['sampuan'];
+  }
+  if (normalizedCategories.some(c => c.includes('kozmetik') || c.includes('bakim'))) {
+    return categoryMapping['kozmetik'];
+  }
 
   // Spesifik ayakkabı kategorilerini kontrol et
   const specificShoeTypes = ['babet', 'sneaker', 'bot', 'cizme', 'sandalet', 'terlik'];
@@ -156,12 +193,10 @@ export function getCategoryConfig(categories: string[]): z.infer<typeof Category
 
   // Genel varsayılan kategori
   return {
-    shopifyCategory: "Apparel & Accessories > Clothing",
+    shopifyCategory: "Health & Beauty > Personal Care",
     variantConfig: {
-      sizeLabel: "Beden",
-      colorLabel: "Renk",
       defaultStock: 50,
-      hasVariants: true
+      hasVariants: false
     },
     attributes: [],
     inventoryTracking: true
