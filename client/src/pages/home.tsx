@@ -473,14 +473,15 @@ export default function Home() {
                       </AccordionItem>
                     </Accordion>
                   </div>
-
                   <div className="mt-2 px-3 py-2 text-xs bg-gray-800/50 rounded-md space-y-2">
                     <div className="flex items-center gap-2">
                       <Package className="h-3 w-3 text-primary" />
                       <span className="text-gray-400">Trendyol Kategori:</span>
                     </div>
                     <div className="font-medium text-xs">
-                      {product.fullCategoryPath ? product.fullCategoryPath.join(' > ') : product.categories?.join(' > ')}
+                      {product.fullCategoryPath ? 
+                        product.fullCategoryPath.join(' > ') : 
+                        product.categories?.join(' > ')}
                     </div>
 
                     <div className="flex items-center gap-2 pt-2 border-t border-gray-700">

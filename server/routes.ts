@@ -94,15 +94,6 @@ function extractCategories($: cheerio.CheerioAPI): { categories: string[], fullP
   const categories: string[] = [];
   const fullPath: string[] = [];
 
-  // Breadcrumb'dan kategorileri al
-  $('.breadcrumb li').each((_, el) => {
-    const category = $(el).text().trim();
-    if (category && !category.includes('>') && category !== 'Anasayfa') {
-      categories.push(category);
-      fullPath.push(category);
-    }
-  });
-
   // JavaScript state'den detaylı kategori yolunu al
   $('script').each((_, element) => {
     const scriptContent = $(element).html() || '';
@@ -112,23 +103,42 @@ function extractCategories($: cheerio.CheerioAPI): { categories: string[], fullP
         if (match) {
           const data = JSON.parse(match[1]);
           if (data.product?.category?.hierarchy) {
-            fullPath.length = 0; // Önceki verileri temizle
             data.product.category.hierarchy.forEach((cat: any) => {
-              if (cat.name) fullPath.push(cat.name);
+              if (cat.name) {
+                categories.push(cat.name);
+                fullPath.push(cat.name);
+              }
             });
             debug(`Detaylı kategori yolu bulundu: ${fullPath.join(' > ')}`);
           }
         }
       } catch (error) {
-        debug(`Kategori parse hatası: ${error}`);
+        debug(`State parse hatası: ${error}`);
       }
     }
   });
 
-  return {
-    categories: categories.length > 0 ? categories : ['Giyim'],
-    fullPath: fullPath.length > 0 ? fullPath : categories
-  };
+  // Eğer state'den kategori bulunamazsa breadcrumb'dan al
+  if (categories.length === 0) {
+    $('.breadcrumb li').each((_, el) => {
+      const category = $(el).text().trim();
+      if (category && !category.includes('>') && category !== 'Anasayfa') {
+        categories.push(category);
+        fullPath.push(category);
+      }
+    });
+  }
+
+  // Hala kategori bulunamadıysa varsayılan kategorileri kullan
+  if (categories.length === 0) {
+    const defaultCategories = ['Giyim'];
+    return {
+      categories: defaultCategories,
+      fullPath: defaultCategories
+    };
+  }
+
+  return { categories, fullPath };
 }
 
 async function scrapeProduct(url: string): Promise<InsertProduct> {
