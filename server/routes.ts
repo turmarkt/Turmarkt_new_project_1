@@ -154,7 +154,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }>()
     };
 
-    let sizeValue: any = null; //Added to fix scope issue
+    let sizeValue: any = null; 
 
     function addSizeVariant(variant: any) {
       if (!variant) {
@@ -206,54 +206,34 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu:", JSON.stringify(data.product, null, 2));
 
-            // 1. Variants yapısını kontrol et
+            // 1. allVariants'dan varyantları kontrol et - bu en güvenilir kaynak
+            if (data.product?.allVariants) {
+              debug("allVariants verisi:", JSON.stringify(data.product.allVariants, null, 2));
+              data.product.allVariants.forEach((variant: any) => {
+                // Direkt olarak beden/numara kontrolü yapmıyoruz çünkü allVariants sadece beden bilgilerini içeriyor
+                if (variant.value) {
+                  addSizeVariant({
+                    value: variant.value,
+                    inStock: variant.inStock,
+                    stock: variant.stock,
+                    barcode: variant.barcode,
+                    itemNumber: variant.itemNumber,
+                    price: {
+                      discountedPrice: { value: variant.price },
+                      sellingPrice: { value: variant.price }
+                    }
+                  });
+                }
+              });
+            }
+
+            // 2. Variants yapısını kontrol et (yedek)
             if (data.product?.variants) {
               debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
                 if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
                   debug("Variant işleniyor:", variant);
                   addSizeVariant(variant);
-                }
-              });
-            }
-
-            // 2. SlicedAttributes yapısını kontrol et
-            if (data.product?.slicedAttributes) {
-              debug("SlicedAttributes verisi:", JSON.stringify(data.product.slicedAttributes, null, 2));
-              data.product.slicedAttributes.forEach((attr: any) => {
-                if (attr.name === "Beden" || attr.name === "Numara") {
-                  if (attr.attributes) {
-                    attr.attributes.forEach((item: any) => {
-                      debug("SlicedAttribute item:", item);
-                      addSizeVariant(item);
-                    });
-                  }
-                }
-              });
-            }
-
-            // 3. allVariants yapısını kontrol et
-            if (data.product?.allVariants) {
-              debug("allVariants verisi:", JSON.stringify(data.product.allVariants, null, 2));
-              data.product.allVariants.forEach((variant: any) => {
-                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  debug("allVariants işleniyor:", variant);
-                  addSizeVariant(variant);
-                }
-              });
-            }
-
-            // 4. Contentattributes'dan beden bilgilerini al
-            if (data.product?.contentAttributes) {
-              data.product.contentAttributes.forEach((attr: any) => {
-                if (attr.name === "Beden" || attr.name === "Numara") {
-                  const values = attr.value?.split(',') || [];
-                  values.forEach((value: string) => {
-                    const trimmedValue = value.trim();
-                    if (trimmedValue) {
-                      addSizeVariant({value: trimmedValue});
-                    }
-                  });
                 }
               });
             }
