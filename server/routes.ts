@@ -501,7 +501,11 @@ export async function registerRoutes(app: Express) {
       const baseProduct = {
         handle,
         title: product.title,
-        body: product.description || '',
+        body: `${product.description || ''}\n\n<h3>Ürün Özellikleri</h3>\n<ul>${
+          Object.entries(product.attributes)
+            .map(([key, value]) => `<li><strong>${key}:</strong> ${value}</li>`)
+            .join('\n')
+        }</ul>`,
         vendor: product.categories[0] || 'Trendyol',
         product_category: categoryConfig.shopifyCategory,
         type: product.categories[product.categories.length - 1] || 'Giyim',
