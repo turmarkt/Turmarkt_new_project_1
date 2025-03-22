@@ -99,7 +99,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                        $('.pr-in-w').first().text().trim().replace(/\d+(\.\d+)?\s*TL.*$/, '');
     debug(`Ürün adı: ${productName}`);
 
-    // Başlığı birleştir
     let title = '';
     if (brand && productName) {
       title = `${brand} ${productName}`;
@@ -155,13 +154,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }>()
     };
 
+    let sizeValue: any = null; //Added to fix scope issue
+
     function addSizeVariant(variant: any) {
       if (!variant) return;
 
       debug("İşlenen varyant:", variant);
-
-      // Önce değeri al
-      let sizeValue = null;
 
       // attributeValue veya value'dan değeri al
       if (variant.attributeValue) {
@@ -203,7 +201,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
           if (match) {
             const data = JSON.parse(match[1]);
-            debug("Product detail state bulundu");
+            debug("Product detail state bulundu:", JSON.stringify(data.product, null, 2));
 
             // 1. Variants yapısını kontrol et
             if (data.product?.variants) {
@@ -218,25 +216,29 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
             // 2. SlicedAttributes yapısını kontrol et
             if (data.product?.slicedAttributes) {
+              debug("SlicedAttributes verisi:", JSON.stringify(data.product.slicedAttributes, null, 2));
               data.product.slicedAttributes.forEach((attr: any) => {
                 if (attr.name === "Beden" || attr.name === "Numara") {
                   if (attr.attributes) {
                     attr.attributes.forEach((item: any) => {
+                      debug("SlicedAttribute item:", item);
                       addSizeVariant(item);
                     });
                   }
                 }
               });
             }
-
-            // 3. AllVariants yapısını kontrol et
+            // 3. allVariants yapısını kontrol et
             if (data.product?.allVariants) {
-              data.product.allVariants.forEach((variant: any) => {
-                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  addSizeVariant(variant);
-                }
-              });
-            }
+                debug("allVariants verisi:", JSON.stringify(data.product.allVariants, null, 2));
+                data.product.allVariants.forEach((variant: any) => {
+                  if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
+                    debug("allVariants işleniyor:", variant);
+                    addSizeVariant(variant);
+                  }
+                });
+              }
+
 
             // Renk bilgisini al
             if (data.product?.color) {
@@ -261,7 +263,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
     });
 
-
+    // Görsel bilgilerini al
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -310,7 +312,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const uniqueImages = Array.from(images).filter((url, index, arr) => {
       try {
         new URL(url);
-        // Son görseli hariç tut
         return index < arr.length - 1;
       } catch {
         return false;
@@ -324,16 +325,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         categories.push(category);
       }
     });
-
-    if (Object.keys(attributes).length === 0) {
-      debug("Hiç özellik bulunamadı!");
-    } else {
-      debug(`Toplam ${Object.keys(attributes).length} özellik bulundu`);
-      debug("Bulunan özellikler:");
-      Object.entries(attributes).forEach(([key, value]) => {
-        debug(`${key}: ${value}`);
-      });
-    }
 
     // Product nesnesini oluştururken varyant bilgilerini ekle
     const product: InsertProduct = {
