@@ -157,9 +157,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     let sizeValue: any = null; //Added to fix scope issue
 
     function addSizeVariant(variant: any) {
-      if (!variant) return;
+      if (!variant) {
+        debug("Varyant boş");
+        return;
+      }
 
-      debug("İşlenen varyant:", variant);
+      debug("Varyant işleniyor:", variant);
 
       // attributeValue veya value'dan değeri al
       if (variant.attributeValue) {
@@ -228,17 +231,32 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
                 }
               });
             }
+
             // 3. allVariants yapısını kontrol et
             if (data.product?.allVariants) {
-                debug("allVariants verisi:", JSON.stringify(data.product.allVariants, null, 2));
-                data.product.allVariants.forEach((variant: any) => {
-                  if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                    debug("allVariants işleniyor:", variant);
-                    addSizeVariant(variant);
-                  }
-                });
-              }
+              debug("allVariants verisi:", JSON.stringify(data.product.allVariants, null, 2));
+              data.product.allVariants.forEach((variant: any) => {
+                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
+                  debug("allVariants işleniyor:", variant);
+                  addSizeVariant(variant);
+                }
+              });
+            }
 
+            // 4. Contentattributes'dan beden bilgilerini al
+            if (data.product?.contentAttributes) {
+              data.product.contentAttributes.forEach((attr: any) => {
+                if (attr.name === "Beden" || attr.name === "Numara") {
+                  const values = attr.value?.split(',') || [];
+                  values.forEach((value: string) => {
+                    const trimmedValue = value.trim();
+                    if (trimmedValue) {
+                      addSizeVariant({value: trimmedValue});
+                    }
+                  });
+                }
+              });
+            }
 
             // Renk bilgisini al
             if (data.product?.color) {
