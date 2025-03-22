@@ -155,30 +155,30 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }>()
     };
 
-    // Beden/numara seçeneklerini kontrol et ve ekle
-    function addSizeVariant(size: string, variantInfo: any) {
-      const sizeStr = size.toString().trim();
+    function addSizeVariant(variant: any) {
+      const value = variant.attributeValue || variant.value;
+      if (!value) return;
 
-      // Hem sayısal hem harfli bedenleri ekle
+      const sizeStr = value.toString().trim();
       variants.sizes.add(sizeStr);
 
       // Stok bilgilerini ekle
       variants.stockInfo.set(sizeStr, {
-        inStock: variantInfo.inStock || false,
-        sellable: variantInfo.sellable || false,
-        barcode: variantInfo.barcode,
-        itemNumber: variantInfo.itemNumber,
-        stock: variantInfo.stock,
-        price: variantInfo.price ? {
-          discounted: variantInfo.price.discountedPrice?.value,
-          original: variantInfo.price.sellingPrice?.value
+        inStock: variant.inStock || false,
+        sellable: variant.sellable || false,
+        barcode: variant.barcode,
+        itemNumber: variant.itemNumber,
+        stock: variant.stock,
+        price: variant.price ? {
+          discounted: variant.price.discountedPrice?.value,
+          original: variant.price.sellingPrice?.value
         } : undefined
       });
 
       debug(`Varyant bilgileri eklendi: ${sizeStr}`, {
-        stok: variantInfo.stock || 0,
-        satılabilir: variantInfo.sellable ? "Evet" : "Hayır",
-        fiyat: variantInfo.price?.discountedPrice?.value
+        stok: variant.stock || 0,
+        satılabilir: variant.sellable ? "Evet" : "Hayır",
+        fiyat: variant.price?.discountedPrice?.value
       });
     }
 
@@ -197,10 +197,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
                 if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  const value = variant.attributeValue || variant.value;
-                  if (value) {
-                    addSizeVariant(value, variant);
-                  }
+                  addSizeVariant(variant);
                 }
               });
             }
