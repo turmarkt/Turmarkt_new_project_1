@@ -158,38 +158,37 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     function addSizeVariant(variant: any) {
       if (!variant) return;
 
-      // Beden/numara değerini al
+      debug("İşlenen varyant:", variant);
+
+      // Beden/numara değerini al 
       const value = variant.attributeValue || variant.value;
-      if (!value) return;
+      if (!value) {
+        debug("Varyant değeri bulunamadı");
+        return;
+      }
 
       const sizeStr = value.toString().trim();
 
-      // Stok kontrolü yap
+      // Stok kontrolü yap ve ekle
       if (variant.inStock) {
         variants.sizes.add(sizeStr);
-
-        // Stok bilgilerini ekle
-        variants.stockInfo.set(sizeStr, {
-          inStock: true,
-          sellable: variant.sellable || false,
-          barcode: variant.barcode,
-          itemNumber: variant.itemNumber,
-          stock: variant.stock,
-          price: variant.price ? {
-            discounted: variant.price.discountedPrice?.value,
-            original: variant.price.sellingPrice?.value
-          } : undefined
-        });
-
-        debug(`Stokta olan beden eklendi: ${sizeStr}`, {
-          stok: variant.stock || 0,
-          durum: "Stokta var",
-          satılabilir: variant.sellable ? "Evet" : "Hayır",
-          fiyat: variant.price?.discountedPrice?.value
-        });
+        debug(`Stokta olan beden eklendi: ${sizeStr}, Stok: ${variant.stock}`);
       } else {
         debug(`Stokta olmayan beden: ${sizeStr}`);
       }
+
+      // Stok bilgilerini ekle
+      variants.stockInfo.set(sizeStr, {
+        inStock: variant.inStock || false,
+        sellable: variant.sellable || false,
+        barcode: variant.barcode,
+        itemNumber: variant.itemNumber,
+        stock: variant.stock,
+        price: variant.price ? {
+          discounted: variant.price.discountedPrice?.value,
+          original: variant.price.sellingPrice?.value
+        } : undefined
+      });
     }
 
     // Initial state'den varyant bilgilerini al
@@ -202,11 +201,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu");
 
-            // Variants yapısından bilgileri al
+            // Varyantları kontrol et
             if (data.product?.variants) {
-              debug("Variants yapısı:", JSON.stringify(data.product.variants, null, 2));
+              debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
                 if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
+                  debug("Beden/Numara varyantı bulundu:", variant);
                   addSizeVariant(variant);
                 }
               });
@@ -237,6 +237,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         }
       }
     });
+
 
 
     $('script').each((_, element) => {
