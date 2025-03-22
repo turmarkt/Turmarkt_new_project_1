@@ -415,21 +415,15 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
   }
 }
 
+function parseCategoryPath(categories: string[]): string {
+  return categories
+    .map(cat => cat.trim())
+    .filter(cat => cat && !cat.includes('>'))
+    .join(' > ');
+}
+
 export async function registerRoutes(app: Express) {
   const httpServer = createServer(app);
-
-  app.get("/api/history", async (req, res) => {
-    try {
-      const history = storage.getHistory();
-      res.json({
-        urls: history,
-        developer: "Erdem Çalışgan tarafından geliştirilmiştir"
-      });
-    } catch (error) {
-      const { status, message, details } = handleError(error);
-      res.status(status).json({ message, details });
-    }
-  });
 
   app.post("/api/scrape", async (req, res) => {
     try {
@@ -460,6 +454,7 @@ export async function registerRoutes(app: Express) {
       }
 
       const categoryConfig = getCategoryConfig(product.categories);
+      const categoryPath = parseCategoryPath(product.categories);
 
       // Shopify CSV başlıkları
       const csvWriter = createObjectCsvWriter({
@@ -470,6 +465,7 @@ export async function registerRoutes(app: Express) {
           { id: 'body', title: 'Body (HTML)' },
           { id: 'vendor', title: 'Vendor' },
           { id: 'product_category', title: 'Product Category' },
+          { id: 'custom_category', title: 'Custom Category' },
           { id: 'type', title: 'Type' },
           { id: 'tags', title: 'Tags' },
           { id: 'published', title: 'Published' },
@@ -508,6 +504,7 @@ export async function registerRoutes(app: Express) {
         }</ul>`,
         vendor: product.categories[0] || 'Trendyol',
         product_category: categoryConfig.shopifyCategory,
+        custom_category: categoryPath,
         type: product.categories[product.categories.length - 1] || 'Giyim',
         tags: product.tags?.join(', ') || '',
         published: 'TRUE',

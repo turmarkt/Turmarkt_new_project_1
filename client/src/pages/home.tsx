@@ -32,7 +32,7 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { UrlHistory } from "@/components/UrlHistory";
+//import { UrlHistory } from "@/components/UrlHistory"; // Removed UrlHistory import
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
@@ -120,7 +120,7 @@ export default function Home() {
 
   const exportMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/export", { product });
+      const res = await apiRequest("POST", "/api/export", { product, categoryConfig }); //Added categoryConfig
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.message);
@@ -192,6 +192,7 @@ export default function Home() {
             <Package className="w-10 h-10 mx-auto mb-3 text-primary" />
             <h1 className="text-2xl font-bold mb-2">Trendyol Ürün Aktarıcı</h1>
             <p className="text-sm text-gray-400">Ürün verilerini Shopify'a uyumlu formata dönüştürün</p>
+            <p className="text-xs text-gray-500 mt-2">ERDEM ÇALIŞGAN tarafından geliştirilmiştir</p>
           </div>
 
           {error && (
@@ -235,11 +236,6 @@ export default function Home() {
                 )}
               </Button>
             </div>
-
-            <UrlHistory onSelect={(url) => {
-              form.setValue("url", url);
-              setError(null);
-            }} />
           </form>
         </motion.div>
 
@@ -253,7 +249,7 @@ export default function Home() {
               <Card className="bg-gray-900 border-gray-800">
                 <CardContent className="p-4 space-y-4">
                   <div className="text-xs text-gray-400 mb-2">
-                    {["Trendyol", ...product.categories].join(" / ")}
+                    {product.fullCategoryPath ? product.fullCategoryPath.join(" / ") : ["Trendyol", ...product.categories].join(" / ")} {/*Improved category path display*/}
                   </div>
 
                   <div className="space-y-3 border-b border-gray-800 pb-4">
@@ -330,7 +326,7 @@ export default function Home() {
                               }}
                             />
                             <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg">
-                              <a 
+                              <a
                                 href={image}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -385,8 +381,8 @@ export default function Home() {
                                 <h3 className="text-sm font-medium mb-2">Renk Seçenekleri</h3>
                                 <div className="flex flex-wrap gap-2">
                                   {product.variants.colors.map((color: string, index: number) => (
-                                    <span 
-                                      key={index} 
+                                    <span
+                                      key={index}
                                       className="px-3 py-1 bg-gray-800 rounded-full text-xs hover:bg-gray-700 transition-colors"
                                     >
                                       {color}
@@ -399,16 +395,16 @@ export default function Home() {
                             {product.variants?.sizes?.length > 0 && (
                               <div>
                                 <h3 className="text-sm font-medium mb-2">
-                                  {product.categories?.some((cat: string) => 
-                                    cat.toLowerCase().includes('ayakkabı') || 
-                                    cat.toLowerCase().includes('bot') || 
+                                  {product.categories?.some((cat: string) =>
+                                    cat.toLowerCase().includes('ayakkabı') ||
+                                    cat.toLowerCase().includes('bot') ||
                                     cat.toLowerCase().includes('çizme')
                                   ) ? 'Numara Seçenekleri' : 'Beden Seçenekleri'}
                                 </h3>
                                 <div className="flex flex-wrap gap-2">
                                   {product.variants.sizes.map((size: string, index: number) => (
-                                    <span 
-                                      key={index} 
+                                    <span
+                                      key={index}
                                       className="w-12 h-12 flex items-center justify-center bg-gray-800 rounded-md text-sm font-medium hover:bg-gray-700 transition-colors"
                                     >
                                       {size}
@@ -438,6 +434,7 @@ export default function Home() {
                                   <th className="text-left p-2">Vendor</th>
                                   <th className="text-left p-2">Price</th>
                                   <th className="text-left p-2">Images</th>
+                                  <th className="text-left p-2">Shopify Category</th> {/* Added Shopify Category column */}
                                 </tr>
                               </thead>
                               <tbody>
@@ -455,6 +452,7 @@ export default function Home() {
                                       ))}
                                     </div>
                                   </td>
+                                  <td className="p-2">{categoryConfig.shopifyCategory}</td> {/* Added Shopify Category data */}
                                 </tr>
                               </tbody>
                             </table>
@@ -471,7 +469,7 @@ export default function Home() {
                       <span className="text-gray-400">Trendyol Kategori:</span>
                     </div>
                     <div className="font-medium text-xs">
-                      {product.categories?.join(' > ')}
+                      {product.fullCategoryPath ? product.fullCategoryPath.join(' > ') : product.categories?.join(' > ')} {/*Improved category path display*/}
                     </div>
 
                     <div className="flex items-center gap-2 pt-2 border-t border-gray-700">
