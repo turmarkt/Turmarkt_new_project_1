@@ -6,13 +6,20 @@ interface Props {
   onSelect: (url: string) => void;
 }
 
+interface HistoryResponse {
+  urls?: string[];
+  developer?: string;
+}
+
 export function UrlHistory({ onSelect }: Props) {
-  const { data: history = [] } = useQuery({
+  const { data } = useQuery<HistoryResponse>({
     queryKey: ['/api/history'],
-    refetchInterval: 1000 // Her saniye güncelle
+    refetchInterval: 1000
   });
 
-  if (history.length === 0) return null;
+  const urls = data?.urls || [];
+
+  if (urls.length === 0) return null;
 
   return (
     <div className="flex flex-col gap-2 mt-2">
@@ -21,7 +28,7 @@ export function UrlHistory({ onSelect }: Props) {
         <span>Son kullanılan URL'ler</span>
       </div>
       <div className="flex flex-col gap-1">
-        {history.map((url: string) => (
+        {urls.map((url: string) => (
           <Button
             key={url}
             variant="ghost"

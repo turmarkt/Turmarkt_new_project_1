@@ -418,7 +418,10 @@ export async function registerRoutes(app: Express) {
   app.get("/api/history", async (req, res) => {
     try {
       const history = storage.getHistory();
-      res.json({...history, developer: "Erdem Çalışgan tarafından geliştirilmiştir"});
+      res.json({
+        urls: history,
+        developer: "Erdem Çalışgan tarafından geliştirilmiştir"
+      });
     } catch (error) {
       const { status, message, details } = handleError(error);
       res.status(status).json({ message, details });
