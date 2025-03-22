@@ -138,52 +138,46 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const images: Set<string> = new Set();
     debug("Görsel yakalama başlatıldı");
 
-    // Varyant verilerini başlat
+    // Varyantları topla
     const variants = {
       sizes: new Set<string>(),
       colors: new Set<string>()
     };
 
-    // JSON-LD'den beden bilgilerini al
-    let schemaData: any = null;
-    $('script[type="application/ld+json"]').each((_, element) => {
-      try {
-        const data = JSON.parse($(element).html() || '{}');
-        if (data.hasVariant) {
-          schemaData = data;
-          return false; // jQuery each'den çık
-        }
-      } catch (error) {
-        debug(`JSON parse hatası: ${error}`);
+    // HTML'den beden seçeneklerini al
+    const sizeOptions = $('div[data-pk]');
+    sizeOptions.each((_, element) => {
+      const size = $(element).text().trim();
+      if (size && !$(element).hasClass('disabled')) {
+        variants.sizes.add(size);
+        debug(`Beden seçeneği bulundu: ${size}`);
       }
     });
 
-    if (schemaData?.hasVariant) {
-      debug("Schema data bulundu:", JSON.stringify(schemaData, null, 2));
-      // Tüm varyantları döngüyle kontrol et
-      schemaData.hasVariant.forEach((variant: any) => {
-        // Her varyantın size özelliğini kontrol et
-        if (variant.size) {
-          if (Array.isArray(variant.size)) {
-            variant.size.forEach((size: string) => {
-              variants.sizes.add(size);
-              debug(`Beden eklendi (array): ${size}`);
-            });
-          } else {
-            variants.sizes.add(variant.size);
-            debug(`Beden eklendi (tekil): ${variant.size}`);
+    // Renk bilgisini state'den al
+    $('script').each((_, element) => {
+      const scriptContent = $(element).html() || '';
+      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+        try {
+          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+          if (match) {
+            const data = JSON.parse(match[1]);
+            if (data.product?.color) {
+              const color = data.product.color.split('-')[0].trim();
+              if (color) {
+                variants.colors.add(color);
+                debug(`Renk bulundu: ${color}`);
+              }
+            }
           }
+        } catch (error) {
+          debug(`State parse hatası: ${error}`);
         }
-        // Renk bilgisini al
-        if (variant.color) {
-          variants.colors.add(variant.color.split('-')[0].trim());
-          debug(`Renk eklendi: ${variant.color}`);
-        }
-      });
-    }
+      }
+    });
 
-    debug("Tüm bulunan bedenler:", Array.from(variants.sizes).join(', '));
-    debug("Tüm bulunan renkler:", Array.from(variants.colors).join(', '));
+    debug("Bulunan tüm bedenler:", Array.from(variants.sizes).join(', '));
+    debug("Bulunan tüm renkler:", Array.from(variants.colors).join(', '));
 
 
     $('script').each((_, element) => {
