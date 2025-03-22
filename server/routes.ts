@@ -158,32 +158,38 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     function addSizeVariant(variant: any) {
       if (!variant) return;
 
-      // Beden değerini al
+      // Beden/numara değerini al
       const value = variant.attributeValue || variant.value;
       if (!value) return;
 
       const sizeStr = value.toString().trim();
-      variants.sizes.add(sizeStr);
 
-      // Stok bilgilerini ekle
-      variants.stockInfo.set(sizeStr, {
-        inStock: variant.inStock || false,
-        sellable: variant.sellable || false,
-        barcode: variant.barcode,
-        itemNumber: variant.itemNumber,
-        stock: variant.stock,
-        price: variant.price ? {
-          discounted: variant.price.discountedPrice?.value,
-          original: variant.price.sellingPrice?.value
-        } : undefined
-      });
+      // Stok kontrolü yap
+      if (variant.inStock) {
+        variants.sizes.add(sizeStr);
 
-      debug(`Varyant bilgileri eklendi: ${sizeStr}`, {
-        stok: variant.stock || 0,
-        durum: variant.inStock ? "Stokta var" : "Stokta yok",
-        satılabilir: variant.sellable ? "Evet" : "Hayır",
-        fiyat: variant.price?.discountedPrice?.value
-      });
+        // Stok bilgilerini ekle
+        variants.stockInfo.set(sizeStr, {
+          inStock: true,
+          sellable: variant.sellable || false,
+          barcode: variant.barcode,
+          itemNumber: variant.itemNumber,
+          stock: variant.stock,
+          price: variant.price ? {
+            discounted: variant.price.discountedPrice?.value,
+            original: variant.price.sellingPrice?.value
+          } : undefined
+        });
+
+        debug(`Stokta olan beden eklendi: ${sizeStr}`, {
+          stok: variant.stock || 0,
+          durum: "Stokta var",
+          satılabilir: variant.sellable ? "Evet" : "Hayır",
+          fiyat: variant.price?.discountedPrice?.value
+        });
+      } else {
+        debug(`Stokta olmayan beden: ${sizeStr}`);
+      }
     }
 
     // Initial state'den varyant bilgilerini al
@@ -196,40 +202,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu");
 
-            // Variants yapısından detaylı bilgileri al
+            // Variants yapısından bilgileri al
             if (data.product?.variants) {
               debug("Variants yapısı:", JSON.stringify(data.product.variants, null, 2));
-
-              // Tüm varyantları kontrol et
               data.product.variants.forEach((variant: any) => {
-                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  addSizeVariant(variant);
-                }
-              });
-            }
-
-            // SlicedAttributes'dan varyantları kontrol et
-            if (data.product?.slicedAttributes) {
-              data.product.slicedAttributes.forEach((attr: any) => {
-                if (attr.name === "Beden" || attr.name === "Numara") {
-                  attr.attributes.forEach((item: any) => {
-                    if (item) {
-                      addSizeVariant({
-                        attributeValue: item.value,
-                        inStock: item.inStock,
-                        sellable: item.sellable,
-                        stock: item.stock,
-                        price: item.price
-                      });
-                    }
-                  });
-                }
-              });
-            }
-
-            // AllVariants'dan varyantları kontrol et
-            if (data.product?.allVariants) {
-              data.product.allVariants.forEach((variant: any) => {
                 if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
                   addSizeVariant(variant);
                 }
@@ -245,7 +221,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            // Varyant bilgilerini yazdır
+            // Stok durumu bilgilerini yazdır
             debug("Stok durumu ile varyant bilgileri:");
             variants.stockInfo.forEach((info, size) => {
               debug(`${size}:`, {
