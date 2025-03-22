@@ -195,18 +195,18 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       }
 
       debug(`${source} varyant işleniyor:`, variant);
-      let sizeValue = null;
+      let sizeValue: string | null = null;
 
       // Kaynak tipine göre değeri al
       switch (source) {
         case 'allVariants':
-          sizeValue = variant.value;
+          sizeValue = variant.value?.toString();
           break;
         case 'slicedAttributes':
-          sizeValue = variant.value;
+          sizeValue = variant.value?.toString();
           break;
         case 'variants':
-          sizeValue = variant.attributeValue || variant.value;
+          sizeValue = (variant.attributeValue || variant.value)?.toString();
           break;
         default:
           debug(`Bilinmeyen varyant kaynağı: ${source}`);
@@ -218,7 +218,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         return;
       }
 
-      const sizeStr = sizeValue.toString().trim();
+      const sizeStr = sizeValue.trim();
 
       // Stok bilgilerini ekle
       variants.stockInfo.set(sizeStr, {
@@ -228,18 +228,21 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         itemNumber: variant.itemNumber,
         stock: variant.stock || 0,
         price: variant.price ? {
-          discounted: variant.price.discountedPrice?.value,
-          original: variant.price.sellingPrice?.value
+          discounted: variant.price.discountedPrice?.value || variant.price,
+          original: variant.price.sellingPrice?.value || variant.price
         } : undefined
       });
 
-      // Stok kontrolü - herhangi bir stok göstergesi varsa ekle
-      if (
+      // Stok kontrolü - daha kapsamlı kontrol kriterleri
+      const hasStock = 
         variant.inStock === true || // Direkt stok durumu
-        variant.stock > 0 || // Stok sayısı
+        (variant.stock !== undefined && variant.stock > 0) || // Stok sayısı varsa ve 0'dan büyükse
         variant.sellable === true || // Satılabilir durumu
-        (variant.price?.discountedPrice?.value || variant.price?.sellingPrice?.value) // Fiyat varsa muhtemelen stokta var
-      ) {
+        variant.available === true || // Mevcut durumu
+        variant.price !== undefined || // Fiyat varsa muhtemelen stokta var
+        (variant.price?.discountedPrice?.value || variant.price?.sellingPrice?.value); // Fiyat detayları varsa
+
+      if (hasStock) {
         variants.sizes.add(sizeStr);
         debug(`${source}: Stokta olan beden eklendi: ${sizeStr}, Stok: ${variant.stock || 'Belirtilmemiş'}`);
       } else {
@@ -257,7 +260,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu:", JSON.stringify(data.product, null, 2));
 
-            // 1. allVariants yapısından kontrol et
+            // 1. allVariants yapısından kontrol et - en detaylı varyant bilgisi burada
             if (data.product?.allVariants) {
               debug("allVariants verisi:", JSON.stringify(data.product.allVariants, null, 2));
               data.product.allVariants.forEach((variant: any) => {
@@ -265,7 +268,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               });
             }
 
-            // 2. slicedAttributes yapısından kontrol et
+            // 2. slicedAttributes yapısından kontrol et - beden grupları burada
             if (data.product?.slicedAttributes) {
               debug("SlicedAttributes verisi:", JSON.stringify(data.product.slicedAttributes, null, 2));
               data.product.slicedAttributes.forEach((attr: any) => {
@@ -279,7 +282,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               });
             }
 
-            // 3. Variants yapısından kontrol et
+            // 3. Variants yapısından kontrol et - detaylı stok ve fiyat bilgileri burada
             if (data.product?.variants) {
               debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
@@ -306,7 +309,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               debug(`${size} beden bilgileri:`, {
                 stok: info.stock || 0,
                 durum: info.inStock ? "Stokta var" : "Stokta yok",
-                fiyat: info.price?.discounted
+                fiyat: info.price?.discounted || info.price?.original
               });
             });
           }
