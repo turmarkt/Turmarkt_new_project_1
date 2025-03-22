@@ -42,6 +42,7 @@ export default function Home() {
     details?: string;
     solution?: string;
   } | null>(null);
+  const [categoryConfig, setCategoryConfig] = useState({ shopifyCategory: 'N/A' }); // Added state for category
 
   const { toast } = useToast();
 
@@ -95,6 +96,8 @@ export default function Home() {
     onSuccess: (data) => {
       setProduct(data);
       setError(null);
+      // Assuming category information is part of the API response
+      setCategoryConfig({ shopifyCategory: data.category || 'N/A' }); // Update category state
       toast({
         title: "Başarılı",
         description: "Ürün verileri başarıyla çekildi"
@@ -471,6 +474,14 @@ export default function Home() {
                     ) : null}
                     Shopify CSV'sine Aktar
                   </Button>
+                  {/* Add category display */}
+                  <div className="mt-2 px-3 py-2 text-xs bg-gray-800/50 rounded-md">
+                    <div className="flex items-center gap-2">
+                      <Package className="h-3 w-3 text-primary" />
+                      <span className="text-gray-400">Shopify Kategori:</span>
+                    </div>
+                    <div className="mt-1 font-medium">{categoryConfig.shopifyCategory}</div>
+                  </div>
                 </CardContent>
               </Card>
             </motion.div>
