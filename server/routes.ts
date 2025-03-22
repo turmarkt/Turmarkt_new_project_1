@@ -310,42 +310,27 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const attributes: Record<string, string> = {};
 
     // Öne Çıkan Özellikler bölümünü çek
-    $('.details-section').each((_, section) => {
+    $('.detail-attr-container').each((_, section) => {
       const $section = $(section);
-      const title = $section.find('.details-section-title').text().trim();
-
-      if (title === 'Öne Çıkan Özellikler') {
-        $section.find('.details-property').each((_, property) => {
-          const $property = $(property);
-          const key = $property.find('.details-property-key').text().trim();
-          const value = $property.find('.details-property-value').text().trim();
-          if (key && value) {
-            attributes[key] = value;
-            debug(`Özellik bulundu: ${key} = ${value}`);
-          }
-        });
-      }
+      $section.find('.detail-attr-item').each((_, item) => {
+        const $item = $(item);
+        const key = $item.find('.detail-attr-key').text().trim();
+        const value = $item.find('.detail-attr-value').text().trim();
+        if (key && value) {
+          attributes[key] = value;
+          debug(`Özellik bulundu (detail-attr): ${key} = ${value}`);
+        }
+      });
     });
 
-    // Ürün detaylarından özellik çek
+    // HTML'den özellikleri çek
     $('.product-feature-container .featured-item').each((_, item) => {
       const $item = $(item);
       const key = $item.find('.feature-name').text().trim();
       const value = $item.find('.feature-value').text().trim();
       if (key && value) {
         attributes[key] = value;
-        debug(`Özellik bulundu: ${key} = ${value}`);
-      }
-    });
-
-    // Alternatif özellik yapısını kontrol et
-    $('.product-information-items li').each((_, item) => {
-      const $item = $(item);
-      const text = $item.text().trim();
-      const [key, value] = text.split(':').map(part => part.trim());
-      if (key && value) {
-        attributes[key] = value;
-        debug(`Özellik bulundu: ${key} = ${value}`);
+        debug(`Özellik bulundu (featured): ${key} = ${value}`);
       }
     });
 
@@ -355,9 +340,9 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         const data = JSON.parse($(element).html() || '');
         if (data.additionalProperty) {
           data.additionalProperty.forEach((prop: any) => {
-            if (prop.name && prop.value) {
-              attributes[prop.name] = prop.value;
-              debug(`JSON-LD'den özellik bulundu: ${prop.name} = ${prop.value}`);
+            if (prop.name && (prop.value || prop.unitText)) {
+              attributes[prop.name] = prop.value || prop.unitText;
+              debug(`Özellik bulundu (JSON-LD): ${prop.name} = ${prop.value || prop.unitText}`);
             }
           });
         }
@@ -463,22 +448,32 @@ export async function registerRoutes(app: Express) {
 
       const csvRows = [];
 
+      // Body HTML oluştur
+      const generateProductBody = (description: string, attributes: Record<string, string>) => {
+        let html = description ? `<p>${description}</p>\n\n` : '';
+
+        if (Object.keys(attributes).length > 0) {
+          html += `<h3>Ürün Özellikleri</h3>\n<ul>`;
+          for (const [key, value] of Object.entries(attributes)) {
+            html += `\n  <li><strong>${key}:</strong> ${value}</li>`;
+          }
+          html += '\n</ul>';
+        }
+
+        return html;
+      };
+
       // Ana ürün bilgileri
       const baseProduct = {
         handle,
         title: product.title,
-        body: `${product.description || ''}\n\n<h3>Ürün Özellikleri</h3>\n<ul>${
-          Object.entries(product.attributes)
-            .map(([key, value]) => `<li><strong>${key}:</strong> ${value}</li>`)
-            .join('\n')
-        }</ul>`,
+        body: generateProductBody(product.description, product.attributes),
         vendor: product.categories[0] || 'Trendyol',
         product_category: categoryConfig.shopifyCategory,
         custom_category: categoryPath,
         type: product.categories[product.categories.length - 1] || 'Giyim',
         tags: product.tags?.join(', ') || '',
         published: 'TRUE',
-        status: 'active',
         option1_name: '',
         option1_value: '',
         option2_name: '',
