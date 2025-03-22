@@ -147,6 +147,28 @@ export const categoryMapping: CategoryMapping = {
     },
     attributes: ["Malzeme", "Boyut", "Kart Bölmesi"],
     inventoryTracking: true
+  },
+  "tisort": {
+    shopifyCategory: "Apparel & Accessories > Clothing > Shirts & Tops",
+    variantConfig: {
+      sizeLabel: "Beden",
+      colorLabel: "Renk",
+      defaultStock: 50,
+      hasVariants: true
+    },
+    attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
+    inventoryTracking: true
+  },
+  "tshirt": {
+    shopifyCategory: "Apparel & Accessories > Clothing > Shirts & Tops",
+    variantConfig: {
+      sizeLabel: "Beden",
+      colorLabel: "Renk",
+      defaultStock: 50,
+      hasVariants: true
+    },
+    attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
+    inventoryTracking: true
   }
 };
 
@@ -189,6 +211,14 @@ export function getCategoryConfig(categories: string[]): z.infer<typeof Category
   }
   if (normalizedCategories.some(c => c.includes('kadin'))) {
     return categoryMapping['kadın'];
+  }
+
+  // T-shirt/Tisört kontrolü
+  if (normalizedCategories.some(c =>
+    c.includes('tisort') ||
+    c.includes('tshirt') ||
+    c.includes('t-shirt'))) {
+    return categoryMapping['tisort'];
   }
 
   // Genel varsayılan kategori
