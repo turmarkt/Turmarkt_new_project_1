@@ -145,12 +145,20 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     };
 
     // HTML'den beden seçeneklerini al
-    const sizeOptions = $('div[data-pk]');
-    sizeOptions.each((_, element) => {
+    $('.vrn-item').each((_, element) => {
       const size = $(element).text().trim();
-      if (size && !$(element).hasClass('disabled')) {
+      if (size) {
         variants.sizes.add(size);
         debug(`Beden seçeneği bulundu: ${size}`);
+      }
+    });
+
+    // Alternatif beden seçici dene
+    $('.sp-itm:contains("Beden"), .sp-itm:contains("Numara")').find('.vrn-item').each((_, element) => {
+      const size = $(element).text().trim();
+      if (size) {
+        variants.sizes.add(size);
+        debug(`Beden/Numara seçeneği bulundu: ${size}`);
       }
     });
 
