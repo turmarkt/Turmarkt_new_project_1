@@ -367,46 +367,74 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         debug(`Renkler bulundu: ${colors.join(', ')}`);
       }
 
-      // Beden/Numara bilgilerini al
+      // Tüm varyant kaynaklarını kontrol et
+      const allSizes = new Set<string>();
+      const stockInfo: Record<string, any> = {};
+
+      // 1. variants yapısından al
       if (productData.product.variants) {
-        const sizeVariants = productData.product.variants.filter((v: any) => 
-          v.attributeName === "Beden" || v.attributeName === "Numara"
-        );
-
-        const sizes = sizeVariants
-          .filter((v: any) => v.inStock || v.sellable)
-          .map((v: any) => v.value || v.attributeValue)
-          .filter(Boolean);
-
-        variants.sizes = [...new Set(sizes)];
-        debug(`Bedenler bulundu: ${variants.sizes.join(', ')}`);
-
-        // Stok bilgilerini al
-        sizeVariants.forEach((v: any) => {
-          const sizeKey = v.value || v.attributeValue;
-          if (sizeKey) {
-            variants.stockInfo[sizeKey] = {
+        productData.product.variants.forEach((v: any) => {
+          if ((v.attributeName === "Beden" || v.attributeName === "Numara") && 
+              (v.value || v.attributeValue)) {
+            const sizeKey = v.value || v.attributeValue;
+            stockInfo[sizeKey] = {
               inStock: v.inStock || false,
               sellable: v.sellable || false,
               stock: v.stock || 0
             };
+
+            if (v.inStock || v.sellable) {
+              allSizes.add(sizeKey);
+            }
           }
         });
       }
 
-      // SlicedAttributes'dan ek beden bilgilerini al
+      // 2. slicedAttributes yapısından al
       if (productData.product.slicedAttributes) {
         productData.product.slicedAttributes.forEach((attr: any) => {
           if (attr.name === "Beden" || attr.name === "Numara") {
-            const availableSizes = attr.attributes
-              .filter((item: any) => item.inStock || item.sellable)
-              .map((item: any) => item.value)
-              .filter(Boolean);
+            attr.attributes?.forEach((item: any) => {
+              if (item.value) {
+                stockInfo[item.value] = {
+                  inStock: item.inStock || false,
+                  sellable: item.sellable || false,
+                  stock: item.stock || 0
+                };
 
-            variants.sizes = [...new Set([...variants.sizes, ...availableSizes])];
+                if (item.inStock || item.sellable) {
+                  allSizes.add(item.value);
+                }
+              }
+            });
           }
         });
       }
+
+      // 3. allVariants yapısından al
+      if (productData.product.allVariants) {
+        productData.product.allVariants.forEach((variant: any) => {
+          if (variant.value || variant.attributeValue) {
+            const sizeKey = variant.value || variant.attributeValue;
+            stockInfo[sizeKey] = {
+              inStock: variant.inStock || false,
+              sellable: variant.sellable || false,
+              stock: variant.stock || 0
+            };
+
+            if (variant.inStock || variant.sellable) {
+              allSizes.add(sizeKey);
+            }
+          }
+        });
+      }
+
+      // Bulunan tüm bedenleri variants objesine ekle
+      variants.sizes = Array.from(allSizes);
+      variants.stockInfo = stockInfo;
+
+      debug(`Tüm bulunan bedenler: ${variants.sizes.join(', ')}`);
+      debug(`Stok bilgileri: ${JSON.stringify(stockInfo, null, 2)}`);
     }
 
     const product: InsertProduct = {
@@ -417,7 +445,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       basePrice: basePrice.toString(),
       images: uniqueImages,
       video: null,
-      variants, // Güncellenmiş varyant bilgilerini kullan
+      variants,
       attributes,
       categories: categoryInfo.categories,
       fullCategoryPath: categoryInfo.fullPath,
