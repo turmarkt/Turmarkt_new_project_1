@@ -144,7 +144,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       colors: new Set<string>()
     };
 
-    // Initial state'den beden bilgilerini al
+    // Initial state'den varyant bilgilerini al
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -154,13 +154,13 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu");
 
-            // Varyantları kontrol et
+            // Tüm varyantları kontrol et
             if (data.product?.variants) {
+              debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
-                const value = variant.attributeValue;
-                if (value && variant.inStock) {
-                  variants.sizes.add(value);
-                  debug(`Stokta olan beden bulundu: ${value}`);
+                if (variant.attributeValue) {
+                  variants.sizes.add(variant.attributeValue);
+                  debug(`Beden seçeneği eklendi: ${variant.attributeValue}`);
                 }
               });
             }
@@ -174,9 +174,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            debug("State içindeki varyant yapısı:", data.product?.variants);
-            debug("Bulunan bedenler:", Array.from(variants.sizes).join(', '));
-            debug("Bulunan renkler:", Array.from(variants.colors).join(', '));
+            debug("Bulunan tüm bedenler:", Array.from(variants.sizes).join(', '));
+            debug("Bulunan tüm renkler:", Array.from(variants.colors).join(', '));
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
