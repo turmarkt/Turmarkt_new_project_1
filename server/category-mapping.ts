@@ -17,26 +17,6 @@ type CategoryMapping = Record<string, z.infer<typeof CategoryConfig>>;
 
 // Shopify'ın resmi kategori yapısına göre eşleştirme
 export const categoryMapping: CategoryMapping = {
-  // Saat ve Aksesuar Kategorileri
-  "saat": {
-    shopifyCategory: "Apparel & Accessories > Jewelry > Watches",
-    variantConfig: {
-      defaultStock: 30,
-      hasVariants: false
-    },
-    attributes: ["Kasa Çapı", "Su Geçirmezlik", "Kordon Tipi"],
-    inventoryTracking: true
-  },
-  "akıllı saat": {
-    shopifyCategory: "Electronics > Electronics Accessories > Wearable Technology",
-    variantConfig: {
-      defaultStock: 30,
-      hasVariants: false
-    },
-    attributes: ["Ekran Boyutu", "Batarya Ömrü", "Sensörler"],
-    inventoryTracking: true
-  },
-
   // Erkek Kategorileri
   "erkek": {
     shopifyCategory: "Apparel & Accessories > Clothing > Men's Clothing",
@@ -76,7 +56,53 @@ export const categoryMapping: CategoryMapping = {
     inventoryTracking: true
   },
 
-  // Elektronik Kategorileri
+  // Saat ve Aksesuar
+  "saat": {
+    shopifyCategory: "Apparel & Accessories > Jewelry > Watches",
+    variantConfig: {
+      defaultStock: 30,
+      hasVariants: false
+    },
+    attributes: ["Kasa Çapı", "Su Geçirmezlik", "Kordon Tipi"],
+    inventoryTracking: true
+  },
+
+  "akıllı saat": {
+    shopifyCategory: "Electronics > Electronics Accessories > Wearable Technology",
+    variantConfig: {
+      defaultStock: 30,
+      hasVariants: false
+    },
+    attributes: ["Ekran Boyutu", "Batarya Ömrü", "Sensörler"],
+    inventoryTracking: true
+  },
+
+  // Ayakkabı
+  "ayakkabı": {
+    shopifyCategory: "Apparel & Accessories > Shoes",
+    variantConfig: {
+      sizeLabel: "Numara",
+      colorLabel: "Renk",
+      defaultStock: 30,
+      hasVariants: true
+    },
+    attributes: ["Taban", "Materyal", "Kullanım Alanı"],
+    inventoryTracking: true
+  },
+
+  // Çanta
+  "çanta": {
+    shopifyCategory: "Apparel & Accessories > Handbags",
+    variantConfig: {
+      colorLabel: "Renk",
+      defaultStock: 30,
+      hasVariants: true
+    },
+    attributes: ["Materyal", "Boyut", "Kullanım Alanı"],
+    inventoryTracking: true
+  },
+
+  // Elektronik
   "elektronik": {
     shopifyCategory: "Electronics",
     variantConfig: {
@@ -125,11 +151,14 @@ export function getCategoryConfig(categories: string[]): z.infer<typeof Category
 
   // Diğer kategori kontrolleri
   for (const category of normalizedCategories) {
-    for (const [key, value] of Object.entries(categoryMapping)) {
-      if (category.includes(key)) {
-        return value;
-      }
+    if (category.includes('ayakkabi')) return categoryMapping['ayakkabı'];
+    if (category.includes('canta')) return categoryMapping['çanta'];
+    if (category.includes('tisort') || category.includes('tshirt') || category.includes('t-shirt')) {
+      return categoryMapping['t-shirt'];
     }
+    if (category.includes('erkek')) return categoryMapping['erkek'];
+    if (category.includes('kadin')) return categoryMapping['kadın'];
+    if (category.includes('elektronik')) return categoryMapping['elektronik'];
   }
 
   // Varsayılan kategori
