@@ -32,7 +32,6 @@ import {
   AlertTitle,
 } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
-//import { UrlHistory } from "@/components/UrlHistory"; // Removed UrlHistory import
 
 export default function Home() {
   const [product, setProduct] = useState<any>(null);
@@ -42,7 +41,7 @@ export default function Home() {
     details?: string;
     solution?: string;
   } | null>(null);
-  const [categoryConfig, setCategoryConfig] = useState({ shopifyCategory: 'N/A' }); // Added state for category
+  const [categoryConfig, setCategoryConfig] = useState({ shopifyCategory: 'N/A' });
 
   const { toast } = useToast();
 
@@ -53,7 +52,6 @@ export default function Home() {
     }
   });
 
-  // Watch for URL changes from history selection
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
       if (type === "change" && name === "url") {
@@ -63,7 +61,6 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
-  // Update form when URL is selected from history
   const updateUrl = (url: string) => {
     form.setValue("url", url);
   };
@@ -96,8 +93,7 @@ export default function Home() {
     onSuccess: (data) => {
       setProduct(data);
       setError(null);
-      // Assuming category information is part of the API response
-      setCategoryConfig({ shopifyCategory: data.category || 'N/A' }); // Update category state
+      setCategoryConfig({ shopifyCategory: data.category || 'N/A' });
       toast({
         title: "Başarılı",
         description: "Ürün verileri başarıyla çekildi"
@@ -120,7 +116,7 @@ export default function Home() {
 
   const exportMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/export", { product, categoryConfig }); //Added categoryConfig
+      const res = await apiRequest("POST", "/api/export", { product, categoryConfig });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.message);
@@ -249,18 +245,16 @@ export default function Home() {
               <Card className="bg-gray-900 border-gray-800">
                 <CardContent className="p-4 space-y-4">
                   <div className="text-xs text-gray-400 mb-2">
-                    {product.fullCategoryPath ? product.fullCategoryPath.join(" / ") : ["Trendyol", ...product.categories].join(" / ")} {/*Improved category path display*/}
+                    {product.fullCategoryPath ? product.fullCategoryPath.join(" / ") : ["Trendyol", ...product.categories].join(" / ")}
                   </div>
 
                   <div className="space-y-3 border-b border-gray-800 pb-4">
                     <h2 className="text-lg font-semibold">{product.title}</h2>
                     <div className="flex items-baseline gap-2">
                       <span className="text-base font-bold">{product.price} TL</span>
-                      {/*<span className="text-xs text-gray-400 line-through">{product.basePrice} TL</span>*/}
                     </div>
                   </div>
 
-                  {/* Ürün Görselleri Bölümü */}
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-sm text-gray-400">
                       <ImageIcon className="w-4 h-4" />
@@ -279,7 +273,6 @@ export default function Home() {
                                 const img = e.target as HTMLImageElement;
                                 const originalSrc = img.src;
 
-                                // CDN URL'sini düzgün şekilde oluştur
                                 const getCdnUrl = (url: string) => {
                                   try {
                                     const urlObj = new URL(url);
@@ -292,21 +285,18 @@ export default function Home() {
                                   }
                                 };
 
-                                // Görsel yükleme stratejileri
                                 const loadStrategies = [
-                                  () => getCdnUrl(image), // Önce CDN URL'sini dene
-                                  () => image.replace('_org_zoom', ''), // Zoom'suz versiyon
-                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'), // JPG formatı
-                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.webp'), // WEBP formatı
-                                  () => image.replace(/\/mnresize\/[^/]+\//, '/'), // Boyutlandırma parametrelerini kaldır
-                                  () => image.replace(/_org_zoom/, '').replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'), // Kombinasyon
+                                  () => getCdnUrl(image),
+                                  () => image.replace('_org_zoom', ''),
+                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'),
+                                  () => image.replace(/\.(jpg|jpeg|png|webp)$/, '.webp'),
+                                  () => image.replace(/\/mnresize\/[^/]+\//, '/'),
+                                  () => image.replace(/_org_zoom/, '').replace(/\.(jpg|jpeg|png|webp)$/, '.jpg'),
                                 ];
 
-                                // Stratejileri sırayla dene
                                 const tryNextStrategy = (strategyIndex = 0) => {
                                   if (strategyIndex >= loadStrategies.length) {
                                     console.warn(`Görsel yüklenemedi: ${originalSrc}`);
-                                    // Daha büyük ve estetik bir hata görseli
                                     img.src = `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='3' width='18' height='18' rx='2' ry='2' fill='%23222'/%3E%3Ccircle cx='8.5' cy='8.5' r='1.5'/%3E%3Cpolyline points='21 15 16 10 5 21'/%3E%3Ctext x='12' y='12' text-anchor='middle' fill='%23666' font-size='2'%3EGörsel Yüklenemedi%3C/text%3E%3C/svg%3E`;
                                     img.style.objectFit = 'contain';
                                     img.style.padding = '1rem';
@@ -344,7 +334,6 @@ export default function Home() {
                     </ScrollArea>
                   </div>
 
-                  {/* Ürün Özellikleri ve CSV Önizleme Bölümü */}
                   <div className="space-y-2">
                     <Accordion type="single" collapsible className="w-full">
                       <AccordionItem value="features" className="border-gray-800">
@@ -434,7 +423,8 @@ export default function Home() {
                                   <th className="text-left p-2">Vendor</th>
                                   <th className="text-left p-2">Price</th>
                                   <th className="text-left p-2">Images</th>
-                                  <th className="text-left p-2">Shopify Category</th> {/* Added Shopify Category column */}
+                                  <th className="text-left p-2">Shopify Category</th>
+                                  <th className="text-left p-2">Trendyol Category</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -447,12 +437,13 @@ export default function Home() {
                                   <td className="p-2">
                                     {product?.images?.length || 0} görsel
                                     <div className="text-xs text-gray-500">
-                                      {product?.images?.map((url: string) => (
+                                      {product?.images?.slice(0, 2).map((url: string) => (
                                         <div key={url} className="truncate max-w-[200px]">{url}</div>
                                       ))}
                                     </div>
                                   </td>
-                                  <td className="p-2">{categoryConfig.shopifyCategory}</td> {/* Added Shopify Category data */}
+                                  <td className="p-2">{categoryConfig.shopifyCategory}</td>
+                                  <td className="p-2">{product.categories?.join(' > ')}</td>
                                 </tr>
                               </tbody>
                             </table>
@@ -462,14 +453,13 @@ export default function Home() {
                     </Accordion>
                   </div>
 
-                  {/* Kategori Gösterimi */}
                   <div className="mt-2 px-3 py-2 text-xs bg-gray-800/50 rounded-md space-y-2">
                     <div className="flex items-center gap-2">
                       <Package className="h-3 w-3 text-primary" />
                       <span className="text-gray-400">Trendyol Kategori:</span>
                     </div>
                     <div className="font-medium text-xs">
-                      {product.fullCategoryPath ? product.fullCategoryPath.join(' > ') : product.categories?.join(' > ')} {/*Improved category path display*/}
+                      {product.fullCategoryPath ? product.fullCategoryPath.join(' > ') : product.categories?.join(' > ')}
                     </div>
 
                     <div className="flex items-center gap-2 pt-2 border-t border-gray-700">

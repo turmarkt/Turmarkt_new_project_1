@@ -397,7 +397,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         stockInfo: Object.fromEntries(variants.stockInfo)
       },
       attributes,
-      categories: categories.length > 0 ? categories : ['Giyim'],
+      categories: categories.length > 0 ? categories : ['Kozmetik'],
+      fullCategoryPath: categories,
       tags: categories
     };
 
