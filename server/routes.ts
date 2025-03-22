@@ -200,9 +200,9 @@ function extractCategories($: cheerio.CheerioAPI): { categories: string[], fullP
     }
   }
 
-  return { 
-    categories: categories.length > 0 ? categories : ['Diğer'], 
-    fullPath: fullPath.length > 0 ? fullPath : ['Diğer'] 
+  return {
+    categories: categories.length > 0 ? categories : ['Diğer'],
+    fullPath: fullPath.length > 0 ? fullPath : ['Diğer']
   };
 }
 
@@ -213,11 +213,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const $ = await fetchProductPage(url);
 
     const brand = $('.pr-new-br span').first().text().trim() ||
-                     $('h1.pr-new-br').first().text().trim();
+                    $('h1.pr-new-br').first().text().trim();
     debug(`Marka: ${brand}`);
 
     const productName = $('.prdct-desc-cntnr-name').text().trim() ||
-                        $('.pr-in-w').first().text().trim().replace(/\d+(\.\d+)?\s*TL.*$/, '');
+                          $('.pr-in-w').first().text().trim().replace(/\d+(\.\d+)?\s*TL.*$/, '');
     debug(`Ürün adı: ${productName}`);
 
     let title = '';
@@ -615,7 +615,11 @@ export async function registerRoutes(app: Express) {
         .replace(/-+/g, '-')
         .replace(/^-|-$/g, '');
 
-      // Temel ürün bilgileri
+      const csvRows = [];
+      const variants = product.variants || {};
+      const hasVariants = variants.sizes?.length > 0 || variants.colors?.length > 0;
+
+      // Ana ürün bilgileri
       const baseProduct = {
         handle,
         title: product.title,
@@ -631,14 +635,22 @@ export async function registerRoutes(app: Express) {
         tags: product.tags?.join(', ') || '',
         published: 'TRUE',
         status: 'active',
+        option1_name: '',
+        option1_value: '',
+        option2_name: '',
+        option2_value: '',
+        variant_sku: '',
+        variant_price: '',
+        variant_compare_at_price: '',
+        variant_inventory_policy: 'deny',
+        variant_inventory_quantity: 0,
+        variant_weight: '0.5',
+        variant_weight_unit: 'kg',
+        image_src: '',
+        image_position: ''
       };
 
-      const csvRows = [];
-      const variants = product.variants || {};
-      const hasVariants = variants.sizes?.length > 0 || variants.colors?.length > 0;
-
       if (hasVariants) {
-        // Beden ve renk varyantları için
         const sizes = variants.sizes || [];
         const colors = variants.colors || [];
 
@@ -651,14 +663,11 @@ export async function registerRoutes(app: Express) {
             const variant = {
               ...baseProduct,
               option1_value: size,
-              option2_value: color,
+              option2_value: color || '',
               variant_sku: `${handle}-${size}${color ? `-${color}` : ''}`,
               variant_price: product.price,
               variant_compare_at_price: product.basePrice,
-              variant_inventory_policy: 'deny',
-              variant_inventory_quantity: categoryConfig.variantConfig.defaultStock || 50,
-              variant_weight: '0.5',
-              variant_weight_unit: 'kg'
+              variant_inventory_quantity: categoryConfig.variantConfig.defaultStock || 50
             };
             csvRows.push(variant);
           }
@@ -670,23 +679,22 @@ export async function registerRoutes(app: Express) {
           variant_sku: handle,
           variant_price: product.price,
           variant_compare_at_price: product.basePrice,
-          variant_inventory_policy: 'deny',
-          variant_inventory_quantity: categoryConfig.variantConfig.defaultStock || 50,
-          variant_weight: '0.5',
-          variant_weight_unit: 'kg'
+          variant_inventory_quantity: categoryConfig.variantConfig.defaultStock || 50
         });
       }
 
       // Görselleri ekle
-      for (let i = 0; i < product.images.length; i++) {
-        if (i === 0) {
-          csvRows[0].image_src = product.images[i];
-          csvRows[0].image_position = 1;
-        } else {
+      if (product.images && product.images.length > 0) {
+        // İlk görsel ana ürün varyantına ait
+        csvRows[0].image_src = product.images[0];
+        csvRows[0].image_position = '1';
+
+        // Diğer görseller için yeni satırlar ekle
+        for (let i = 1; i < product.images.length; i++) {
           csvRows.push({
             handle,
             image_src: product.images[i],
-            image_position: i + 1
+            image_position: (i + 1).toString()
           });
         }
       }
