@@ -141,30 +141,44 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     // Varyant verilerini başlat
     const variants = {
       sizes: new Set<string>(),
-      colors: new Set<string>()
+      colors: new Set<string>(),
+      stockInfo: new Map<string, {
+        inStock: boolean,
+        sellable: boolean,
+        barcode?: string,
+        itemNumber?: number,
+        price?: {
+          discounted: number,
+          original: number
+        }
+      }>()
     };
 
     // Beden seçeneklerini kontrol et ve ekle
-    function addSizeVariant(size: string, inStock: boolean = false) {
-      if (!inStock) {
-        debug(`Stokta olmayan beden: ${size}`);
-        return; // Stokta olmayan bedenleri ekleme
-      }
-
+    function addSizeVariant(size: string, variantInfo: any) {
       const sizeStr = size.toString().trim().toUpperCase();
 
       // Sayısal beden kontrolü (34, 35, 36, vs.)
-      if (/^\d+$/.test(sizeStr)) {
+      if (/^\d+$/.test(sizeStr) || /^[SML]|X{1,3}[SML]$/.test(sizeStr)) {
         variants.sizes.add(sizeStr);
-        debug(`Stokta olan numaralı beden eklendi: ${sizeStr}`);
-        return;
-      }
 
-      // Harfli beden kontrolü (S, M, L, XL, XXL, vs.)
-      if (/^[SML]|X{1,3}[SML]$/.test(sizeStr)) {
-        variants.sizes.add(sizeStr);
-        debug(`Stokta olan harfli beden eklendi: ${sizeStr}`);
-        return;
+        // Stok bilgilerini ekle
+        variants.stockInfo.set(sizeStr, {
+          inStock: variantInfo.inStock || false,
+          sellable: variantInfo.sellable || false,
+          barcode: variantInfo.barcode,
+          itemNumber: variantInfo.itemNumber,
+          price: variantInfo.price ? {
+            discounted: variantInfo.price.discountedPrice?.value,
+            original: variantInfo.price.sellingPrice?.value
+          } : undefined
+        });
+
+        debug(`Beden bilgileri eklendi: ${sizeStr}`, {
+          inStock: variantInfo.inStock,
+          sellable: variantInfo.sellable,
+          price: variantInfo.price?.discountedPrice?.value
+        });
       }
     }
 
@@ -172,7 +186,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     $('.variant-list .v-v').each((_, element) => {
       const size = $(element).text().trim();
       if (size) {
-        addSizeVariant(size);
+        addSizeVariant(size, {}); //Passing empty object as there's no variant info here.
       }
     });
 
@@ -180,11 +194,11 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     $('.select-variant:contains("Beden"), .select-variant:contains("Numara")').find('.v-v').each((_, element) => {
       const size = $(element).text().trim();
       if (size) {
-        addSizeVariant(size);
+        addSizeVariant(size, {}); //Passing empty object as there's no variant info here.
       }
     });
 
-    // State'den varyantları al
+    // Initial state'den varyant bilgilerini al
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -194,14 +208,14 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu");
 
-            // Variants yapısından beden bilgilerini al
+            // Variants yapısından detaylı beden bilgilerini al
             if (data.product?.variants) {
               debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
                 if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
                   const value = variant.attributeValue || variant.value;
                   if (value) {
-                    addSizeVariant(value, variant.inStock || false);
+                    addSizeVariant(value, variant);
                   }
                 }
               });
@@ -216,8 +230,15 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            debug("Bulunan stokta olan bedenler:", Array.from(variants.sizes).join(', '));
-            debug("Bulunan renkler:", Array.from(variants.colors).join(', '));
+            // Detaylı varyant bilgilerini yazdır
+            debug("Stok durumu ile varyant bilgileri:");
+            variants.stockInfo.forEach((info, size) => {
+              debug(`${size}:`, {
+                stokta: info.inStock ? "Var" : "Yok",
+                satılabilir: info.sellable ? "Evet" : "Hayır",
+                fiyat: info.price?.discounted
+              });
+            });
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
@@ -309,7 +330,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
       video: null,
       variants: {
         sizes: Array.from(variants.sizes),
-        colors: Array.from(variants.colors)
+        colors: Array.from(variants.colors),
+        stockInfo: Object.fromEntries(variants.stockInfo) // Convert Map to object for JSON serialization
       },
       attributes,
       categories: categories.length > 0 ? categories : ['Giyim'],
