@@ -137,6 +137,11 @@ function extractCategories($: cheerio.CheerioAPI): { categories: string[], fullP
               }
             });
             debug(`Detaylı kategori yolu bulundu: ${fullPath.join(' > ')}`);
+          } else if (data.product?.category?.name) {
+            // Ana kategori adını al
+            categories.push(data.product.category.name);
+            fullPath.push(data.product.category.name);
+            debug(`Ana kategori bulundu: ${data.product.category.name}`);
           }
         }
       } catch (error) {
@@ -147,25 +152,58 @@ function extractCategories($: cheerio.CheerioAPI): { categories: string[], fullP
 
   // Eğer state'den kategori bulunamazsa breadcrumb'dan al
   if (categories.length === 0) {
-    $('.breadcrumb li').each((_, el) => {
+    $('.breadcrumb-wrapper .breadcrumb li').each((_, el) => {
       const category = $(el).text().trim();
       if (category && !category.includes('>') && category !== 'Anasayfa') {
         categories.push(category);
         fullPath.push(category);
       }
     });
+    debug(`Breadcrumb'dan kategoriler alındı: ${categories.join(', ')}`);
   }
 
-  // Hala kategori bulunamadıysa varsayılan kategorileri kullan
+  // Alternatif kategori çekme yöntemi
   if (categories.length === 0) {
-    const defaultCategories = ['Giyim'];
-    return {
-      categories: defaultCategories,
-      fullPath: defaultCategories
-    };
+    $('.product-container .product-detail-container [data-tracker-id="Category Info"]').each((_, el) => {
+      const category = $(el).text().trim();
+      if (category) {
+        const parts = category.split('>').map(part => part.trim());
+        categories.push(...parts);
+        fullPath.push(...parts);
+      }
+    });
+    debug(`Ürün detayından kategoriler alındı: ${categories.join(', ')}`);
   }
 
-  return { categories, fullPath };
+  // Son çare: Sayfa başlığından kategori çıkarımı
+  if (categories.length === 0) {
+    const pageTitle = $('title').text().trim();
+    const titleMatch = pageTitle.match(/(?:in|de) ([^>]+?) (?:Modelleri|Fiyatları|Ürünleri)/i);
+    if (titleMatch && titleMatch[1]) {
+      categories.push(titleMatch[1].trim());
+      fullPath.push(titleMatch[1].trim());
+      debug(`Sayfa başlığından kategori çıkarıldı: ${titleMatch[1]}`);
+    }
+  }
+
+  // Hala kategori bulunamadıysa, ürün başlığından ipucu ara
+  if (categories.length === 0) {
+    const productTitle = $('.pr-new-br').text().trim() || $('.prdct-desc-cntnr-name').text().trim();
+    if (productTitle) {
+      let defaultCategory = 'Diğer';
+      if (productTitle.toLowerCase().includes('saat')) defaultCategory = 'Saat';
+      else if (productTitle.toLowerCase().includes('ayakkabı')) defaultCategory = 'Ayakkabı';
+      else if (productTitle.toLowerCase().includes('çanta')) defaultCategory = 'Çanta';
+      categories.push(defaultCategory);
+      fullPath.push(defaultCategory);
+      debug(`Ürün başlığından varsayılan kategori belirlendi: ${defaultCategory}`);
+    }
+  }
+
+  return { 
+    categories: categories.length > 0 ? categories : ['Diğer'], 
+    fullPath: fullPath.length > 0 ? fullPath : ['Diğer'] 
+  };
 }
 
 async function scrapeProduct(url: string): Promise<InsertProduct> {

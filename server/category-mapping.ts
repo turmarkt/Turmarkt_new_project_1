@@ -17,19 +17,28 @@ type CategoryMapping = Record<string, z.infer<typeof CategoryConfig>>;
 
 // Shopify'ın resmi kategori yapısına göre eşleştirme
 export const categoryMapping: CategoryMapping = {
-  // Erkek Kategorileri
-  "erkek": {
-    shopifyCategory: "Apparel & Accessories > Clothing > Men's Clothing",
+  // Saat ve Aksesuar Kategorileri
+  "saat": {
+    shopifyCategory: "Apparel & Accessories > Jewelry > Watches",
     variantConfig: {
-      sizeLabel: "Beden",
-      colorLabel: "Renk",
-      defaultStock: 50,
-      hasVariants: true
+      defaultStock: 30,
+      hasVariants: false
     },
-    attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
+    attributes: ["Kasa Çapı", "Su Geçirmezlik", "Kordon Tipi"],
     inventoryTracking: true
   },
-  "erkek giyim": {
+  "akıllı saat": {
+    shopifyCategory: "Electronics > Electronics Accessories > Wearable Technology",
+    variantConfig: {
+      defaultStock: 30,
+      hasVariants: false
+    },
+    attributes: ["Ekran Boyutu", "Batarya Ömrü", "Sensörler"],
+    inventoryTracking: true
+  },
+
+  // Erkek Kategorileri
+  "erkek": {
     shopifyCategory: "Apparel & Accessories > Clothing > Men's Clothing",
     variantConfig: {
       sizeLabel: "Beden",
@@ -53,17 +62,6 @@ export const categoryMapping: CategoryMapping = {
     attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
     inventoryTracking: true
   },
-  "kadın giyim": {
-    shopifyCategory: "Apparel & Accessories > Clothing > Women's Clothing",
-    variantConfig: {
-      sizeLabel: "Beden",
-      colorLabel: "Renk",
-      defaultStock: 50,
-      hasVariants: true
-    },
-    attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
-    inventoryTracking: true
-  },
 
   // T-shirt ve Üst Giyim
   "t-shirt": {
@@ -77,50 +75,33 @@ export const categoryMapping: CategoryMapping = {
     attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
     inventoryTracking: true
   },
-  "tişört": {
-    shopifyCategory: "Apparel & Accessories > Clothing > Shirts & Tops",
+
+  // Elektronik Kategorileri
+  "elektronik": {
+    shopifyCategory: "Electronics",
     variantConfig: {
-      sizeLabel: "Beden",
-      colorLabel: "Renk",
-      defaultStock: 50,
-      hasVariants: true
+      defaultStock: 20,
+      hasVariants: false
     },
-    attributes: ["Kumaş", "Desen", "Yaka Tipi", "Kol Boyu"],
+    attributes: ["Marka", "Model", "Özellikler"],
     inventoryTracking: true
   },
 
-  // Kozmetik ve Bakım
-  "kozmetik": {
-    shopifyCategory: "Health & Beauty > Personal Care",
+  // Varsayılan kategori
+  "diğer": {
+    shopifyCategory: "Other",
     variantConfig: {
-      defaultStock: 50,
+      defaultStock: 30,
       hasVariants: false
     },
-    attributes: ["Etki", "Kullanım Alanı", "İçerik"],
-    inventoryTracking: true
-  },
-  "kişisel bakım": {
-    shopifyCategory: "Health & Beauty > Personal Care",
-    variantConfig: {
-      defaultStock: 50,
-      hasVariants: false
-    },
-    attributes: ["Etki", "Kullanım Alanı", "İçerik"],
+    attributes: [],
     inventoryTracking: true
   }
 };
 
 export function getCategoryConfig(categories: string[]): z.infer<typeof CategoryConfig> {
   if (!categories || categories.length === 0) {
-    return {
-      shopifyCategory: "Health & Beauty > Personal Care",
-      variantConfig: {
-        defaultStock: 50,
-        hasVariants: false
-      },
-      attributes: [],
-      inventoryTracking: true
-    };
+    return categoryMapping['diğer'];
   }
 
   const normalizedCategories = categories.map(c =>
@@ -134,7 +115,15 @@ export function getCategoryConfig(categories: string[]): z.infer<typeof Category
       .replace(/ç/g, 'c')
   );
 
-  // Her kategoriyi kontrol et
+  // Özel kategorileri kontrol et
+  if (normalizedCategories.some(c => c.includes('saat'))) {
+    if (normalizedCategories.some(c => c.includes('akilli') || c.includes('smart'))) {
+      return categoryMapping['akıllı saat'];
+    }
+    return categoryMapping['saat'];
+  }
+
+  // Diğer kategori kontrolleri
   for (const category of normalizedCategories) {
     for (const [key, value] of Object.entries(categoryMapping)) {
       if (category.includes(key)) {
@@ -143,34 +132,6 @@ export function getCategoryConfig(categories: string[]): z.infer<typeof Category
     }
   }
 
-  // Eğer hiçbir eşleşme bulunamazsa, kategoriye göre varsayılan değerler
-  if (normalizedCategories.some(c => c.includes('kozmetik') || c.includes('bakim'))) {
-    return categoryMapping['kozmetik'];
-  }
-
-  if (normalizedCategories.some(c => c.includes('erkek'))) {
-    return categoryMapping['erkek'];
-  }
-
-  if (normalizedCategories.some(c => c.includes('kadin'))) {
-    return categoryMapping['kadın'];
-  }
-
-  if (normalizedCategories.some(c => 
-    c.includes('tisort') || 
-    c.includes('tshirt') || 
-    c.includes('t-shirt'))) {
-    return categoryMapping['tişört'];
-  }
-
-  // En genel varsayılan kategori
-  return {
-    shopifyCategory: "Health & Beauty > Personal Care",
-    variantConfig: {
-      defaultStock: 50,
-      hasVariants: false
-    },
-    attributes: [],
-    inventoryTracking: true
-  };
+  // Varsayılan kategori
+  return categoryMapping['diğer'];
 }
