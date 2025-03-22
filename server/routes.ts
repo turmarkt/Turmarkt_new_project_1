@@ -63,7 +63,17 @@ async function fetchProductPage(url: string): Promise<cheerio.CheerioAPI> {
     }
 
     debug(`HTML içeriği başarıyla alındı (${html.length} bytes)`);
-    return cheerio.load(html);
+
+    // Ürün sayfası kontrolü ekle
+    const $ = cheerio.load(html);
+    const isProductPage = $('.pr-new-br').length > 0 || $('.product-detail-container').length > 0;
+
+    if (!isProductPage) {
+      debug("Geçerli bir ürün sayfası bulunamadı");
+      throw new Error("Geçerli bir ürün sayfası değil");
+    }
+
+    return $;
 
   } catch (error: any) {
     debug(`Veri çekme hatası: ${error.message}`);
@@ -212,11 +222,31 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
   try {
     const $ = await fetchProductPage(url);
 
-    const brand = $('.pr-new-br span').first().text().trim() ||
+    // Ürün verilerini parse et
+    const productData = $('script').map((_, element) => {
+      const content = $(element).html() || '';
+      if (content.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
+        try {
+          const match = content.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
+          if (match) {
+            return JSON.parse(match[1]);
+          }
+        } catch (error) {
+          debug(`JSON parse hatası: ${error}`);
+        }
+      }
+      return null;
+    }).get().find(data => data !== null);
+
+    if (!productData || !productData.product) {
+      throw new Error("Ürün verisi bulunamadı");
+    }
+
+    const brand = productData.product.brand?.name || $('.pr-new-br span').first().text().trim() ||
                   $('h1.pr-new-br').first().text().trim();
     debug(`Marka: ${brand}`);
 
-    const productName = $('.prdct-desc-cntnr-name').text().trim() ||
+    const productName = productData.product.name || $('.prdct-desc-cntnr-name').text().trim() ||
                        $('.pr-in-w').first().text().trim()
                        .replace(/\d+(\.\d+)?\s*TL.*$/, '')
                        .replace(/\d+,\d+.*$/, '')
@@ -235,277 +265,42 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         .replace(/(.+?)\s+\1/gi, '$1')  // Remove duplicate phrases
         .replace(/\s*,\s*$/, '')  // Remove trailing comma
         .trim();
-    } else if (productName) {
-      title = productName;
     } else {
-      title = $('.pr-in-w').first().text().trim()
-              .replace(/\d+(\.\d+)?\s*TL.*$/, '')
-              .replace(/\d+,\d+.*$/, '')
-              .replace(/\d+\.?\d*,?\d*\s*(TL)?/g, '')
-              .replace(/Tükeniyor!?/g, '')
-              .replace(/\s+/g, ' ')
-              .replace(/\s*,\s*$/, '')
-              .trim();
+      throw new ProductDataError("Ürün başlığı oluşturulamadı", "title");
     }
-
-    debug(`Birleştirilmiş başlık: ${title}`);
 
     if (!title) {
       throw new ProductDataError("Ürün başlığı bulunamadı", "title");
     }
 
-    const priceSelectors = [
-      '.pr-in-w .prc-box-dscntd',
-      '.pr-in-w .prc-box-sllng',
-      '.product-price-container .prc-dsc',
-      '.pr-in-w .prc-dsc',
-      '.prc-slg'
-    ];
-    let rawPrice = '';
-    for (const selector of priceSelectors) {
-      const priceElement = $(selector).first();
-      if (priceElement.length > 0) {
-        rawPrice = priceElement.text().trim();
-        if (rawPrice) {
-          debug(`Fiyat bulundu (${selector}): ${rawPrice}`);
-          break;
-        }
-      }
-    }
+    // Fiyat bilgisini al
+    const price = productData.product.price?.discountedPrice?.value || 
+                  productData.product.price?.sellingPrice?.value;
 
-    // HTML'den fiyat bulunamadıysa initial state'den almayı dene
-    if (!rawPrice) {
-      $('script').each((_, element) => {
-        const scriptContent = $(element).html() || '';
-        if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
-          try {
-            const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
-            if (match) {
-              const data = JSON.parse(match[1]);
-              if (data.product?.price?.discountedPrice?.text) {
-                rawPrice = data.product.price.discountedPrice.text;
-                debug(`Fiyat initial state'den alındı: ${rawPrice}`);
-              } else if (data.product?.price?.sellingPrice?.text) {
-                rawPrice = data.product.price.sellingPrice.text;
-                debug(`Fiyat initial state'den alındı: ${rawPrice}`);
-              }
-            }
-          } catch (error) {
-            debug(`Fiyat parse hatası: ${error}`);
-          }
-        }
-      });
-    }
-
-    if (!rawPrice) {
+    if (!price) {
       throw new ProductDataError("Ürün fiyatı bulunamadı", "price");
     }
 
-    const basePrice = cleanPrice(rawPrice);
-    const price = (basePrice * 1.15).toFixed(2);
-    debug(`İşlenmiş fiyat: ${price} (baz: ${basePrice})`);
-
-    const images: Set<string> = new Set();
-    debug("Görsel yakalama başlatıldı");
-
-    // Varyant verilerini başlat
-    const variants = {
-      sizes: new Set<string>(),
-      colors: new Set<string>(),
-      stockInfo: new Map<string, {
-        inStock: boolean,
-        sellable: boolean,
-        barcode?: string,
-        itemNumber?: number,
-        stock?: number,
-        price?: {
-          discounted: number,
-          original: number
-        }
-      }>()
-    };
-
-    function addSizeVariant(variant: any, source: string) {
-      if (!variant) {
-        debug(`${source}: Varyant boş`);
-        return;
-      }
-
-      debug(`${source} varyant işleniyor:`, variant);
-      let sizeValue: string | null = null;
-
-      // Kaynak tipine göre değeri al
-      switch (source) {
-        case 'allVariants':
-          sizeValue = variant.value?.toString();
-          break;
-        case 'slicedAttributes':
-          sizeValue = variant.value?.toString();
-          break;
-        case 'variants':
-          sizeValue = (variant.attributeValue || variant.value)?.toString();
-          break;
-        default:
-          debug(`Bilinmeyen varyant kaynağı: ${source}`);
-          return;
-      }
-
-      if (!sizeValue) {
-        debug(`${source}: Beden değeri bulunamadı`);
-        return;
-      }
-
-      const sizeStr = sizeValue.trim();
-
-      // Stok bilgilerini ekle
-      variants.stockInfo.set(sizeStr, {
-        inStock: variant.inStock || false,
-        sellable: variant.sellable || false,
-        barcode: variant.barcode,
-        itemNumber: variant.itemNumber,
-        stock: variant.stock || 0,
-        price: variant.price ? {
-          discounted: variant.price.discountedPrice?.value || variant.price,
-          original: variant.price.sellingPrice?.value || variant.price
-        } : undefined
-      });
-
-      // Stok kontrolü - sadece stokta olan ürünleri ekle
-      const isInStock = source === 'allVariants'
-        ? variant.inStock === true  // allVariants için sadece inStock kontrolü
-        : (variant.inStock === true || variant.sellable === true); // diğer kaynaklar için daha geniş kontrol
-
-      if (isInStock) {
-        variants.sizes.add(sizeStr);
-        debug(`${source}: Stokta olan beden eklendi: ${sizeStr}, Stok: ${variant.stock || 'Belirtilmemiş'}`);
-      } else {
-        debug(`${source}: Stokta olmayan beden: ${sizeStr}`);
-      }
-    }
-
-    // Initial state'den varyant bilgilerini al
-    $('script').each((_, element) => {
-      const scriptContent = $(element).html() || '';
-      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
-        try {
-          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
-          if (match) {
-            const data = JSON.parse(match[1]);
-            debug("Product detail state bulundu:", JSON.stringify(data.product, null, 2));
-
-            // 1. allVariants yapısından kontrol et - en detaylı varyant bilgisi burada
-            if (data.product?.allVariants) {
-              debug("allVariants verisi:", JSON.stringify(data.product.allVariants, null, 2));
-              data.product.allVariants.forEach((variant: any) => {
-                addSizeVariant(variant, 'allVariants');
-              });
-            }
-
-            // 2. Variants yapısından kontrol et - detaylı stok ve fiyat bilgileri burada
-            if (data.product?.variants) {
-              debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
-              data.product.variants.forEach((variant: any) => {
-                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  addSizeVariant(variant, 'variants');
-                }
-              });
-            }
-
-            // 3. slicedAttributes yapısından kontrol et - beden grupları burada
-            if (data.product?.slicedAttributes) {
-              debug("SlicedAttributes verisi:", JSON.stringify(data.product.slicedAttributes, null, 2));
-              data.product.slicedAttributes.forEach((attr: any) => {
-                if (attr.name === "Beden" || attr.name === "Numara") {
-                  if (attr.attributes) {
-                    attr.attributes.forEach((item: any) => {
-                      addSizeVariant(item, 'slicedAttributes');
-                    });
-                  }
-                }
-              });
-            }
-
-            // Renk bilgisini al
-            if (data.product?.color) {
-              const color = data.product.color.split('-')[0].trim();
-              if (color) {
-                variants.colors.add(color);
-                debug(`Renk bulundu: ${color}`);
-              }
-            }
-
-            // Bulunan varyant bilgilerini yazdır
-            debug("Bulunan bedenler:", Array.from(variants.sizes).join(', '));
-            debug("Bulunan renkler:", Array.from(variants.colors).join(', '));
-            debug("Stok bilgileri:");
-            variants.stockInfo.forEach((info, size) => {
-              debug(`${size} beden bilgileri:`, {
-                stok: info.stock || 0,
-                durum: info.inStock ? "Stokta var" : "Stokta yok",
-                fiyat: info.price?.discounted || info.price?.original
-              });
-            });
-          }
-        } catch (error) {
-          debug(`State parse hatası: ${error}`);
-        }
-      }
-    });
-
-    // Görsel bilgilerini al
-    $('script').each((_, element) => {
-      const scriptContent = $(element).html() || '';
-      if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
-        try {
-          const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
-          if (match) {
-            const data = JSON.parse(match[1]);
-            const productImages = data?.product?.images || [];
-            debug(`JSON'dan ${productImages.length} adet görsel bulundu`);
-            productImages.forEach((img: any) => {
-              if (typeof img === 'string') {
-                const imgUrl = normalizeImageUrl(img);
-                if (imgUrl) images.add(imgUrl);
-              } else if (img.url) {
-                const imgUrl = normalizeImageUrl(img.url);
-                if (imgUrl) images.add(imgUrl);
-              }
-            });
-          }
-        } catch (error: any) {
-          debug(`JSON parse hatası: ${error.message}`);
-        }
-      }
-    });
-
-    // Ürün özelliklerini çek
-    const attributes: Record<string, string> = {};
-
-    // JSON-LD'den özellikleri çek
-    $('script[type="application/ld+json"]').each((_, element) => {
-      try {
-        const data = JSON.parse($(element).html() || '');
-        if (data.additionalProperty) {
-          data.additionalProperty.forEach((prop: any) => {
-            if (prop.name && prop.unitText) {
-              attributes[prop.name] = prop.unitText;
-              debug(`JSON-LD'den özellik bulundu: ${prop.name} = ${prop.unitText}`);
-            }
-          });
-        }
-      } catch (error) {
-        debug(`JSON parse hatası: ${error}`);
-      }
-    });
-
+    const basePrice = price;
+    const finalPrice = (basePrice * 1.15).toFixed(2);
+    debug(`İşlenmiş fiyat: ${finalPrice} (baz: ${basePrice})`);
 
     // Kategori bilgisini güncelle
     const categoryInfo = extractCategories($);
 
-    const uniqueImages = Array.from(images).filter((url, index, arr) => {
+    // Görselleri al
+    const images = new Set<string>();
+    if (productData.product.images) {
+      productData.product.images.forEach((img: any) => {
+        const imgUrl = normalizeImageUrl(typeof img === 'string' ? img : img.url);
+        if (imgUrl) images.add(imgUrl);
+      });
+    }
+
+    const uniqueImages = Array.from(images).filter((url, index) => {
       try {
         new URL(url);
-        return index < arr.length -1;
+        return index < 8; // Maksimum 8 görsel al
       } catch {
         return false;
       }
@@ -514,17 +309,17 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const product: InsertProduct = {
       url,
       title,
-      description: $('.product-description').text().trim() || "",
-      price: price.toString(),
+      description: productData.product.description || $('.product-description').text().trim() || "",
+      price: finalPrice.toString(),
       basePrice: basePrice.toString(),
       images: uniqueImages,
       video: null,
       variants: {
-        sizes: Array.from(variants.sizes),
-        colors: Array.from(variants.colors),
-        stockInfo: Object.fromEntries(variants.stockInfo)
+        sizes: [],
+        colors: [],
+        stockInfo: {}
       },
-      attributes,
+      attributes: {},
       categories: categoryInfo.categories,
       fullCategoryPath: categoryInfo.fullPath,
       tags: categoryInfo.categories
