@@ -138,13 +138,31 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     const images: Set<string> = new Set();
     debug("Görsel yakalama başlatıldı");
 
-    // Varyantları topla
+    // Varyant verilerini başlat
     const variants = {
       sizes: new Set<string>(),
       colors: new Set<string>()
     };
 
-    // Initial state'den varyant bilgilerini al
+    // HTML'den doğrudan beden seçeneklerini al
+    $('.variant-list .v-v').each((_, element) => {
+      const size = $(element).text().trim();
+      if (size) {
+        variants.sizes.add(size);
+        debug(`HTML'den beden eklendi: ${size}`);
+      }
+    });
+
+    // Alternatif olarak select-variant elementi içinden de kontrol et
+    $('.select-variant:contains("Beden"), .select-variant:contains("Numara")').find('.v-v').each((_, element) => {
+      const size = $(element).text().trim();
+      if (size) {
+        variants.sizes.add(size);
+        debug(`Select variant'dan beden eklendi: ${size}`);
+      }
+    });
+
+
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
       if (scriptContent.includes('window.__PRODUCT_DETAIL_APP_INITIAL_STATE__')) {
@@ -152,9 +170,17 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
           if (match) {
             const data = JSON.parse(match[1]);
-            debug("Product detail state bulundu");
+            
+            // Renk bilgisini al
+            if (data.product?.color) {
+              const color = data.product.color.split('-')[0].trim();
+              if (color) {
+                variants.colors.add(color);
+                debug(`Renk bulundu: ${color}`);
+              }
+            }
 
-            // 1. SlicedAttributes'dan beden bilgilerini al
+            // 1. SlicedAttributes'dan beden bilgilerini al (bu kısım artık yedek)
             if (data.product?.slicedAttributes) {
               data.product.slicedAttributes.forEach((attr: any) => {
                 if (attr.name === "Beden" || attr.name === "Numara") {
@@ -169,7 +195,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               });
             }
 
-            // 2. ContentAttributes'dan beden bilgilerini al
+            // 2. ContentAttributes'dan beden bilgilerini al (bu kısım artık yedek)
             if (data.product?.contentAttributes) {
               data.product.contentAttributes.forEach((attr: any) => {
                 if (attr.name === "Beden" || attr.name === "Numara") {
@@ -185,7 +211,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               });
             }
 
-            // 3. Variants yapısından beden bilgilerini al
+            // 3. Variants yapısından beden bilgilerini al (bu kısım artık yedek)
             if (data.product?.variants) {
               debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
@@ -199,16 +225,7 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               });
             }
 
-            // Renk bilgisini al
-            if (data.product?.color) {
-              const color = data.product.color.split('-')[0].trim();
-              if (color) {
-                variants.colors.add(color);
-                debug(`Renk bulundu: ${color}`);
-              }
-            }
 
-            // Debug için tüm yapıyı yazdır
             debug("Initial state yapısı:", {
               slicedAttributes: data.product?.slicedAttributes,
               contentAttributes: data.product?.contentAttributes,
@@ -223,7 +240,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         }
       }
     });
-
 
     $('script').each((_, element) => {
       const scriptContent = $(element).html() || '';
