@@ -1,15 +1,36 @@
 # Trendyol to Shopify Product Converter
 
-Bu uygulama Trendyol ürünlerini Shopify'a uyumlu formata dönüştürür.
+Bu uygulama Trendyol ürünlerini Shopify'a uyumlu formata dönüştürür ve CSV olarak dışa aktarır.
 
 ## Özellikler
 
-- Trendyol ürün verilerini otomatik çekme
+### Ürün Veri Çekme
+- Trendyol ürün URL'sinden otomatik veri çekme
+- Ürün başlığı ve açıklaması
 - Fiyat hesaplama (%15 kar marjı)
-- Kategori yolu gösterimi
+- Ürün özellikleri ve detayları
+- Tüm ürün görselleri
 - Beden ve renk varyantları
-- Ürün özelliklerini accordion menüde gösterme
-- Shopify uyumlu CSV export
+- Stok durumu
+
+### Kategori Yönetimi
+- Otomatik kategori tespiti
+- Shopify uyumlu kategori eşleştirme
+- Özel kategori yolları
+- Akıllı ürün sınıflandırma
+
+### Varyant İşleme
+- Beden varyantları (S, M, L, XL vb.)
+- Renk seçenekleri
+- Stok durumu takibi
+- Varyant bazlı fiyatlandırma
+
+### CSV Dışa Aktarım
+- Shopify uyumlu CSV formatı
+- Tüm ürün detayları
+- Varyant bilgileri
+- Stok durumu
+- Görsel URL'leri
 
 ## Kurulum
 
@@ -81,10 +102,23 @@ Uygulama varsayılan olarak 5000 portunda çalışacaktır: http://localhost:500
 
 ## Kullanım
 
-1. Trendyol ürün URL'sini girin
-2. Ürün verileri otomatik olarak çekilecek
-3. "Shopify CSV'sine Aktar" butonuna tıklayarak CSV dosyasını indirin
-4. CSV dosyasını Shopify'a import edin
+1. Ana sayfada Trendyol ürün URL'sini girin
+2. "Ürün Bilgilerini Getir" butonuna tıklayın
+3. Çekilen ürün bilgilerini kontrol edin:
+   - Ürün başlığı ve açıklaması
+   - Fiyat bilgisi
+   - Ürün özellikleri
+   - Varyant bilgileri (beden/renk)
+   - Görseller
+4. "Shopify CSV'sine Aktar" butonuna tıklayarak CSV dosyasını indirin
+5. İndirilen CSV dosyasını Shopify'a import edin
+
+## Önemli Notlar
+
+- Ürün fiyatları otomatik olarak %15 kar marjı ile hesaplanır
+- Stok bilgileri varsayılan olarak kategori bazlı ayarlanır
+- Görsel URL'leri otomatik olarak normalize edilir
+- CSV dosyası Shopify'ın en güncel formatına uyumludur
 
 ## Lisans
 
