@@ -160,22 +160,22 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
 
       debug("İşlenen varyant:", variant);
 
-      // Beden/numara değerini al 
-      const value = variant.attributeValue || variant.value;
-      if (!value) {
-        debug("Varyant değeri bulunamadı");
+      // Önce değeri al
+      let sizeValue = null;
+
+      // attributeValue veya value'dan değeri al
+      if (variant.attributeValue) {
+        sizeValue = variant.attributeValue;
+      } else if (variant.value) {
+        sizeValue = variant.value;
+      }
+
+      if (!sizeValue) {
+        debug("Beden değeri bulunamadı");
         return;
       }
 
-      const sizeStr = value.toString().trim();
-
-      // Stok kontrolü yap ve ekle
-      if (variant.inStock) {
-        variants.sizes.add(sizeStr);
-        debug(`Stokta olan beden eklendi: ${sizeStr}, Stok: ${variant.stock}`);
-      } else {
-        debug(`Stokta olmayan beden: ${sizeStr}`);
-      }
+      const sizeStr = sizeValue.toString().trim();
 
       // Stok bilgilerini ekle
       variants.stockInfo.set(sizeStr, {
@@ -189,6 +189,10 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           original: variant.price.sellingPrice?.value
         } : undefined
       });
+
+      // Stok durumuna bakılmaksızın beden ekleniyor
+      variants.sizes.add(sizeStr);
+      debug(`Beden eklendi: ${sizeStr}, Stok Durumu: ${variant.inStock ? 'Var' : 'Yok'}, Stok: ${variant.stock || 0}`);
     }
 
     // Initial state'den varyant bilgilerini al
@@ -201,12 +205,34 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
             const data = JSON.parse(match[1]);
             debug("Product detail state bulundu");
 
-            // Varyantları kontrol et
+            // 1. Variants yapısını kontrol et
             if (data.product?.variants) {
               debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
               data.product.variants.forEach((variant: any) => {
                 if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  debug("Beden/Numara varyantı bulundu:", variant);
+                  debug("Variant işleniyor:", variant);
+                  addSizeVariant(variant);
+                }
+              });
+            }
+
+            // 2. SlicedAttributes yapısını kontrol et
+            if (data.product?.slicedAttributes) {
+              data.product.slicedAttributes.forEach((attr: any) => {
+                if (attr.name === "Beden" || attr.name === "Numara") {
+                  if (attr.attributes) {
+                    attr.attributes.forEach((item: any) => {
+                      addSizeVariant(item);
+                    });
+                  }
+                }
+              });
+            }
+
+            // 3. AllVariants yapısını kontrol et
+            if (data.product?.allVariants) {
+              data.product.allVariants.forEach((variant: any) => {
+                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
                   addSizeVariant(variant);
                 }
               });
@@ -221,15 +247,12 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            // Stok durumu bilgilerini yazdır
-            debug("Stok durumu ile varyant bilgileri:");
+            // Bulunan tüm bilgileri yazdır
+            debug("Tüm bulunan bedenler:", Array.from(variants.sizes).join(', '));
+            debug("Tüm bulunan renkler:", Array.from(variants.colors).join(', '));
+            debug("Stok bilgileri:");
             variants.stockInfo.forEach((info, size) => {
-              debug(`${size}:`, {
-                stok: info.stock || 0,
-                durum: info.inStock ? "Stokta var" : "Stokta yok",
-                satılabilir: info.sellable ? "Evet" : "Hayır",
-                fiyat: info.price?.discounted
-              });
+              debug(`${size}: Stok:${info.stock}, Durum:${info.inStock ? 'Var' : 'Yok'}`);
             });
           }
         } catch (error) {
@@ -237,7 +260,6 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
         }
       }
     });
-
 
 
     $('script').each((_, element) => {
