@@ -696,12 +696,15 @@ export async function registerRoutes(app: Express) {
       }
 
       // Görselleri ekle
-      if (product.images && product.images.length > 0) {
-        // İlk görsel ana ürün varyantına ait
-        csvRows[0].image_src = product.images[0];
-        csvRows[0].image_position = '1';
+      if (product.images && product.images.length > 0 && csvRows.length > 0) {
+        // İlk görsel ana ürün varyantı için
+        csvRows[0] = {
+          ...csvRows[0],
+          image_src: product.images[0],
+          image_position: '1'
+        };
 
-        // Diğer görseller için yeni satırlar ekle
+        // Diğer görseller için yeni satırlar
         for (let i = 1; i < product.images.length; i++) {
           csvRows.push({
             handle,
