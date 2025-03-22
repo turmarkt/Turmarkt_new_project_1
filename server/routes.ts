@@ -145,20 +145,25 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
     };
 
     // Beden seçeneklerini kontrol et ve ekle
-    function addSizeVariant(size: string) {
+    function addSizeVariant(size: string, inStock: boolean = false) {
+      if (!inStock) {
+        debug(`Stokta olmayan beden: ${size}`);
+        return; // Stokta olmayan bedenleri ekleme
+      }
+
       const sizeStr = size.toString().trim().toUpperCase();
 
-      // Sayısal beden kontrolü
+      // Sayısal beden kontrolü (34, 35, 36, vs.)
       if (/^\d+$/.test(sizeStr)) {
         variants.sizes.add(sizeStr);
-        debug(`Numaralı beden eklendi: ${sizeStr}`);
+        debug(`Stokta olan numaralı beden eklendi: ${sizeStr}`);
         return;
       }
 
       // Harfli beden kontrolü (S, M, L, XL, XXL, vs.)
       if (/^[SML]|X{1,3}[SML]$/.test(sizeStr)) {
         variants.sizes.add(sizeStr);
-        debug(`Harfli beden eklendi: ${sizeStr}`);
+        debug(`Stokta olan harfli beden eklendi: ${sizeStr}`);
         return;
       }
     }
@@ -187,6 +192,20 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
           const match = scriptContent.match(/window\.__PRODUCT_DETAIL_APP_INITIAL_STATE__\s*=\s*({.*?});/s);
           if (match) {
             const data = JSON.parse(match[1]);
+            debug("Product detail state bulundu");
+
+            // Variants yapısından beden bilgilerini al
+            if (data.product?.variants) {
+              debug("Variants verisi:", JSON.stringify(data.product.variants, null, 2));
+              data.product.variants.forEach((variant: any) => {
+                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
+                  const value = variant.attributeValue || variant.value;
+                  if (value) {
+                    addSizeVariant(value, variant.inStock || false);
+                  }
+                }
+              });
+            }
 
             // Renk bilgisini al
             if (data.product?.color) {
@@ -197,35 +216,8 @@ async function scrapeProduct(url: string): Promise<InsertProduct> {
               }
             }
 
-            // Variants yapısından beden bilgilerini al
-            if (data.product?.variants) {
-              data.product.variants.forEach((variant: any) => {
-                if (variant.attributeName === "Beden" || variant.attributeName === "Numara") {
-                  const value = variant.attributeValue || variant.value;
-                  if (value) {
-                    addSizeVariant(value);
-                  }
-                }
-              });
-            }
-
-            // ContentAttributes'dan beden bilgilerini al
-            if (data.product?.contentAttributes) {
-              data.product.contentAttributes.forEach((attr: any) => {
-                if (attr.name === "Beden" || attr.name === "Numara") {
-                  const values = attr.value?.split(',') || [];
-                  values.forEach((value: string) => {
-                    const trimmedValue = value.trim();
-                    if (trimmedValue) {
-                      addSizeVariant(trimmedValue);
-                    }
-                  });
-                }
-              });
-            }
-
-            debug("Bulunan tüm beden seçenekleri:", Array.from(variants.sizes).join(', '));
-            debug("Bulunan tüm renk seçenekleri:", Array.from(variants.colors).join(', '));
+            debug("Bulunan stokta olan bedenler:", Array.from(variants.sizes).join(', '));
+            debug("Bulunan renkler:", Array.from(variants.colors).join(', '));
           }
         } catch (error) {
           debug(`State parse hatası: ${error}`);
