@@ -7,6 +7,10 @@ import * as cheerio from "cheerio";
 import { urlSchema, type InsertProduct } from "@shared/schema";
 import { TrendyolScrapingError, ProductDataError, handleError } from "./errors";
 import fetch from "node-fetch";
+import { createObjectCsvWriter } from 'csv-writer';
+import { getCategoryConfig } from './category-mapping';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 function debug(message: string, ...args: any[]) {
   console.log(`[DEBUG] ${message}`, ...args);
@@ -443,6 +447,135 @@ export async function registerRoutes(app: Express) {
 
     } catch (error) {
       debug("API hatası");
+      const { status, message, details } = handleError(error);
+      res.status(status).json({ message, details });
+    }
+  });
+
+  app.post("/api/export", async (req, res) => {
+    try {
+      const { product } = req.body;
+      if (!product) {
+        throw new Error("Ürün verisi bulunamadı");
+      }
+
+      const categoryConfig = getCategoryConfig(product.categories);
+
+      // Shopify CSV başlıkları
+      const csvWriter = createObjectCsvWriter({
+        path: join(tmpdir(), 'shopify_products.csv'),
+        header: [
+          { id: 'handle', title: 'Handle' },
+          { id: 'title', title: 'Title' },
+          { id: 'body', title: 'Body (HTML)' },
+          { id: 'vendor', title: 'Vendor' },
+          { id: 'product_category', title: 'Product Category' },
+          { id: 'type', title: 'Type' },
+          { id: 'tags', title: 'Tags' },
+          { id: 'published', title: 'Published' },
+          { id: 'option1_name', title: 'Option1 Name' },
+          { id: 'option1_value', title: 'Option1 Value' },
+          { id: 'option2_name', title: 'Option2 Name' },
+          { id: 'option2_value', title: 'Option2 Value' },
+          { id: 'variant_sku', title: 'Variant SKU' },
+          { id: 'variant_price', title: 'Variant Price' },
+          { id: 'variant_compare_at_price', title: 'Variant Compare At Price' },
+          { id: 'variant_inventory_policy', title: 'Variant Inventory Policy' },
+          { id: 'variant_inventory_quantity', title: 'Variant Inventory Quantity' },
+          { id: 'variant_weight', title: 'Variant Weight' },
+          { id: 'variant_weight_unit', title: 'Variant Weight Unit' },
+          { id: 'status', title: 'Status' },
+          { id: 'image_src', title: 'Image Src' },
+          { id: 'image_position', title: 'Image Position' }
+        ]
+      });
+
+      // Handle oluştur (URL'den)
+      const handle = product.title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      // Temel ürün bilgileri
+      const baseProduct = {
+        handle,
+        title: product.title,
+        body: product.description || '',
+        vendor: product.categories[0] || 'Trendyol',
+        product_category: categoryConfig.shopifyCategory,
+        type: product.categories[product.categories.length - 1] || 'Giyim',
+        tags: product.tags?.join(', ') || '',
+        published: 'TRUE',
+        status: 'active',
+      };
+
+      const csvRows = [];
+      const variants = product.variants || {};
+      const hasVariants = variants.sizes?.length > 0 || variants.colors?.length > 0;
+
+      if (hasVariants) {
+        // Beden ve renk varyantları için
+        const sizes = variants.sizes || [];
+        const colors = variants.colors || [];
+
+        if (sizes.length > 0) baseProduct.option1_name = categoryConfig.variantConfig.sizeLabel || 'Beden';
+        if (colors.length > 0) baseProduct.option2_name = categoryConfig.variantConfig.colorLabel || 'Renk';
+
+        // Her beden için bir varyant oluştur
+        for (const size of sizes) {
+          for (const color of colors.length > 0 ? colors : [null]) {
+            const variant = {
+              ...baseProduct,
+              option1_value: size,
+              option2_value: color,
+              variant_sku: `${handle}-${size}${color ? `-${color}` : ''}`,
+              variant_price: product.price,
+              variant_compare_at_price: product.basePrice,
+              variant_inventory_policy: 'deny',
+              variant_inventory_quantity: categoryConfig.variantConfig.defaultStock || 50,
+              variant_weight: '0.5',
+              variant_weight_unit: 'kg'
+            };
+            csvRows.push(variant);
+          }
+        }
+      } else {
+        // Varyantsız ürün
+        csvRows.push({
+          ...baseProduct,
+          variant_sku: handle,
+          variant_price: product.price,
+          variant_compare_at_price: product.basePrice,
+          variant_inventory_policy: 'deny',
+          variant_inventory_quantity: categoryConfig.variantConfig.defaultStock || 50,
+          variant_weight: '0.5',
+          variant_weight_unit: 'kg'
+        });
+      }
+
+      // Görselleri ekle
+      for (let i = 0; i < product.images.length; i++) {
+        if (i === 0) {
+          csvRows[0].image_src = product.images[i];
+          csvRows[0].image_position = 1;
+        } else {
+          csvRows.push({
+            handle,
+            image_src: product.images[i],
+            image_position: i + 1
+          });
+        }
+      }
+
+      // CSV dosyasını oluştur
+      await csvWriter.writeRecords(csvRows);
+
+      // CSV dosyasını gönder
+      res.download(join(tmpdir(), 'shopify_products.csv'), 'shopify_products.csv');
+
+    } catch (error: any) {
+      debug("CSV export hatası");
       const { status, message, details } = handleError(error);
       res.status(status).json({ message, details });
     }
